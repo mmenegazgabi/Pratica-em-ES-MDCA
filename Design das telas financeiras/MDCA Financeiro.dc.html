@@ -71,7 +71,7 @@
             </div>
           </div>
           <div style="display: grid; gap: 10px; margin-top: 4px">
-            <button class="btn btn-primary btn-block" style="min-height: 50px; font-size: 15px">Enviar para aprovação</button>
+            <button class="btn btn-primary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ goLancamentos }}">Enviar para aprovação</button>
             <button class="btn btn-secondary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ goLancamentos }}">Ver meus lançamentos</button>
           </div>
         </div>
@@ -318,8 +318,8 @@
                     </div>
                     <div style="display: flex; gap: 8px; flex: none">
                       <button class="btn btn-secondary" style="font-size: 13px" onClick="{{ p.onDetalhe }}">Ver</button>
-                      <button class="btn btn-secondary" style="font-size: 13px">Rejeitar</button>
-                      <button class="btn btn-primary" style="font-size: 13px">Aprovar</button>
+                      <button class="btn btn-secondary" style="font-size: 13px" onClick="{{ p.onDetalhe }}">Rejeitar</button>
+                      <button class="btn btn-primary" style="font-size: 13px" onClick="{{ p.onDetalhe }}">Aprovar</button>
                     </div>
                   </div>
                 </sc-for>
@@ -922,7 +922,6 @@ class Component extends DCLogic {
         { label: 'Saldo disponível', value: this.k(totOrc - totReal), note: '1 projeto acima de 100%', colStyle: { padding: '18px 0 18px 24px', borderLeft: '1px solid var(--color-divider)' } }
       ],
       goOrcamentos: go('orcamentos'), goForm: go('orcamento-form'), goLancamentos: go('lancamentos'),
-      goAprovacao: go('aprovacao'), goDashboard: go('dashboard'),
       goConciliacao: go('conciliacao'),
       navGroups: this.navDef().map(([title, items]) => ({
         title,
