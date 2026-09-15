@@ -115,10 +115,10 @@
         </sc-if>
         <sc-if value="{{ showShell }}" hint-placeholder-val="{{ true }}">
           <aside style="width: 246px; flex: none; border-right: 1px solid var(--color-divider); display: flex; flex-direction: column; background: var(--color-neutral-100)">
-            <div style="padding: 20px 20px 16px; border-bottom: 1px solid var(--color-divider)">
+            <a href="#" onClick="{{ goShell }}" style="display: block; padding: 20px 20px 16px; border-bottom: 1px solid var(--color-divider); text-decoration: none; color: inherit">
               <div style="font-family: var(--font-heading); font-size: 19px; font-weight: 600; letter-spacing: -0.01em">MDCA</div>
               <div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-accent)">Gestão de Finanças</div>
-            </div>
+            </a>
             <div style="padding: 14px 20px; border-bottom: 1px solid var(--color-divider)">
               <div class="seg" style="width: 100%">
                 <label class="seg-opt" style="flex: 1; justify-content: center"><input type="radio" name="mod"><span>Casos</span></label>
@@ -148,8 +148,25 @@
           <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
             <header style="display: flex; align-items: center; gap: 18px; padding: 16px 30px; border-bottom: 1px solid var(--color-divider)">
               <div style="min-width: 0">
-                <div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-accent); font-variant-numeric: tabular-nums">{{ kicker }}</div>
-                <div style="font-family: var(--font-heading); font-size: 22px; line-height: 1.15; margin-top: 2px">{{ title }}</div>
+                <div style="display: flex; align-items: baseline; gap: 5px; font-size: 11px; color: var(--color-neutral-600)">
+                  <a href="#" onClick="{{ goShell }}">Início</a>
+                  <sc-if value="{{ breadcrumbGroup }}" hint-placeholder-val="{{ true }}">
+                    <span>›</span>
+                    <sc-if value="{{ breadcrumbGroupClick }}" hint-placeholder-val="{{ false }}">
+                      <a href="#" onClick="{{ breadcrumbGroupClick }}">{{ breadcrumbGroup }}</a>
+                    </sc-if>
+                    <sc-if value="{{ breadcrumbGroupText }}" hint-placeholder-val="{{ true }}">
+                      <span>{{ breadcrumbGroup }}</span>
+                    </sc-if>
+                  </sc-if>
+                  <sc-if value="{{ breadcrumbCurrent }}" hint-placeholder-val="{{ false }}">
+                    <span>›</span><span style="color: var(--color-text)">{{ breadcrumbCurrent }}</span>
+                  </sc-if>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 3px">
+                  <div style="font-family: var(--font-heading); font-size: 22px; line-height: 1.15">{{ title }}</div>
+                  <span style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); font-variant-numeric: tabular-nums; white-space: nowrap">{{ kicker }}</span>
+                </div>
               </div>
               <div style="margin-left: auto; display: flex; align-items: center; gap: 14px">
                 <button class="btn btn-ghost" style="font-size: 13px" onClick="{{ goNotificacoes }}">Notificações <span class="tag tag-outline" style="margin-left: 6px; font-variant-numeric: tabular-nums">{{ notifCount }}</span></button>
@@ -171,12 +188,12 @@
                 </div>
               </sc-if>
               <sc-if value="{{ sOrcamentos }}" hint-placeholder-val="{{ true }}">
-                <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px">
+                <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); margin-bottom: 24px">
                   <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="3">
-                    <div class="card">
-                      <div class="card-kicker">{{ k.label }}</div>
-                      <div style="font-family: var(--font-heading); font-size: 34px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -0.015em">{{ k.value }}</div>
-                      <div class="card-meta">{{ k.note }}</div>
+                    <div style="{{ k.colStyle }}">
+                      <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">{{ k.label }}</div>
+                      <div style="font-family: var(--font-heading); font-size: 34px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -0.015em; margin-top: 8px">{{ k.value }}</div>
+                      <div style="font-size: 12px; color: var(--color-neutral-700); margin-top: 5px">{{ k.note }}</div>
                     </div>
                   </sc-for>
                 </div>
@@ -218,7 +235,7 @@
                           <div style="font-size: 11px; margin-top: 4px; color: var(--color-neutral-700)">{{ p.pctLabel }} · {{ p.alerta }}</div>
                         </td>
                         <td><span class="tag {{ p.tagClass }}">{{ p.status }}</span></td>
-                        <td style="text-align: right"><sc-if value="{{ escreve }}" hint-placeholder-val="{{ true }}"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ goForm }}">Editar</button></sc-if></td>
+                        <td style="text-align: right; white-space: nowrap"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ goLancamentos }}">Lançamentos</button> <sc-if value="{{ escreve }}" hint-placeholder-val="{{ true }}"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ goForm }}">Editar</button></sc-if></td>
                       </tr>
                     </sc-for>
                   </tbody>
@@ -270,17 +287,17 @@
               </sc-if>
               <sc-if value="{{ sLancamentos }}" hint-placeholder-val="{{ false }}">
                 <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 4px">
-                  <div class="seg" style="flex: none; white-space: nowrap">
-                    <label class="seg-opt"><input type="radio" name="ls" checked><span>Todos</span></label>
+                  <select class="input" style="width: 170px">
+                    <option>Todos os status</option>
                     <sc-if value="{{ mostraStatusPend }}" hint-placeholder-val="{{ true }}">
-                      <label class="seg-opt"><input type="radio" name="ls"><span>Pendentes</span></label>
+                      <option>Pendente</option>
                     </sc-if>
-                    <label class="seg-opt"><input type="radio" name="ls"><span>Aprovados</span></label>
+                    <option>Aprovado</option>
                     <sc-if value="{{ mostraStatusPend }}" hint-placeholder-val="{{ true }}">
-                      <label class="seg-opt"><input type="radio" name="ls"><span>Rejeitados</span></label>
+                      <option>Rejeitado</option>
                     </sc-if>
-                    <label class="seg-opt"><input type="radio" name="ls"><span>Conciliados</span></label>
-                  </div>
+                    <option>Conciliado</option>
+                  </select>
                   <select class="input" style="width: 230px">
                     <option>Todos os projetos</option>
                     <sc-for list="{{ filtroProjetos }}" as="fp" hint-placeholder-count="2">
@@ -302,7 +319,7 @@
                         <td style="font-size: 13px; color: var(--color-neutral-700)">{{ l.autor }}</td>
                         <td style="text-align: right; white-space: nowrap">{{ l.valor }}</td>
                         <td><span class="tag {{ l.tagClass }}">{{ l.status }}</span></td>
-                        <td style="text-align: right"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ l.onClick }}">Detalhe</button></td>
+                        <td style="text-align: right"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ l.onClick }}">Detalhes</button></td>
                       </tr>
                     </sc-for>
                   </tbody>
@@ -346,6 +363,9 @@
                         <button class="btn btn-primary" onClick="{{ goDespesa }}">Refazer lançamento</button>
                       </sc-if>
                       <button class="btn btn-secondary" onClick="{{ goLancamentos }}">Voltar à lista</button>
+                      <sc-if value="{{ podeVerValores }}" hint-placeholder-val="{{ true }}">
+                        <button class="btn btn-ghost" onClick="{{ goOrcamentos }}">Ver orçamento do projeto</button>
+                      </sc-if>
                     </div>
                   </div>
                   <aside>
@@ -360,7 +380,10 @@
               <sc-if value="{{ sAprovacao }}" hint-placeholder-val="{{ false }}">
                 <div style="display: flex; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--color-divider); margin-bottom: 18px">
                   <span class="tag tag-outline">3 pendentes · R$ 3.607,40</span>
-                  <span style="margin-left: auto; font-size: 12px; color: var(--color-neutral-600)">Rejeição exige motivo</span>
+                  <span style="margin-left: 14px; font-size: 12px; color: var(--color-neutral-600)">Rejeição exige motivo</span>
+                  <sc-if value="{{ podeConciliar }}" hint-placeholder-val="{{ true }}">
+                    <a href="#" onClick="{{ goConciliacao }}" style="margin-left: auto; font-size: 12px">Ver conciliação bancária →</a>
+                  </sc-if>
                 </div>
                 <div style="display: grid; gap: 14px; max-width: 1000px">
                   <sc-for list="{{ pendentes }}" as="p" hint-placeholder-count="3">
@@ -474,6 +497,9 @@
                 </div>
               </sc-if>
               <sc-if value="{{ sRelatorio }}" hint-placeholder-val="{{ false }}">
+                <div style="max-width: 900px; margin: 0 auto 14px">
+                  <a href="#" onClick="{{ goGerar }}" style="font-size: 12px">← Gerar outro relatório</a>
+                </div>
                 <div style="max-width: 900px; margin: 0 auto; border: 1px solid var(--color-divider); background: var(--color-neutral-100); padding: 40px 46px" class="elev-sm">
                   <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--color-divider); padding-bottom: 18px">
                     <div>
@@ -515,12 +541,12 @@
                   </div>
                   <button class="btn btn-secondary" style="margin-left: auto; font-size: 13px">Exportar consolidado</button>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 28px">
+                <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); margin-bottom: 28px">
                   <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="3">
-                    <div class="card">
-                      <div class="card-kicker">{{ k.label }}</div>
-                      <div style="font-family: var(--font-heading); font-size: 36px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -0.015em">{{ k.value }}</div>
-                      <div class="card-meta">{{ k.note }}</div>
+                    <div style="{{ k.colStyle }}">
+                      <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">{{ k.label }}</div>
+                      <div style="font-family: var(--font-heading); font-size: 36px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -0.015em; margin-top: 8px">{{ k.value }}</div>
+                      <div style="font-size: 12px; color: var(--color-neutral-700); margin-top: 5px">{{ k.note }}</div>
                     </div>
                   </sc-for>
                 </div>
@@ -548,27 +574,27 @@
                   <thead><tr><th>Projeto</th><th style="text-align: right">Orçado</th><th style="text-align: right">Realizado</th><th style="text-align: right">Saldo</th><th style="width: 90px">Consumo</th><th>Status</th></tr></thead>
                   <tbody>
                     <sc-for list="{{ projetos }}" as="p" hint-placeholder-count="5">
-                      <tr><td style="font-size: 14px">{{ p.nome }}</td><td style="text-align: right; white-space: nowrap">{{ p.orcado }}</td><td style="text-align: right; white-space: nowrap">{{ p.realizado }}</td><td style="text-align: right; white-space: nowrap; color: {{ p.saldoColor }}">{{ p.saldo }}</td><td>{{ p.pctLabel }}</td><td><span class="tag {{ p.tagClass }}">{{ p.status }}</span></td></tr>
+                      <tr><td style="font-size: 14px"><a href="#" onClick="{{ goOrcamentos }}" style="color: inherit">{{ p.nome }}</a></td><td style="text-align: right; white-space: nowrap">{{ p.orcado }}</td><td style="text-align: right; white-space: nowrap">{{ p.realizado }}</td><td style="text-align: right; white-space: nowrap; color: {{ p.saldoColor }}">{{ p.saldo }}</td><td>{{ p.pctLabel }}</td><td><span class="tag {{ p.tagClass }}">{{ p.status }}</span></td></tr>
                     </sc-for>
                   </tbody>
                 </table>
               </sc-if>
               <sc-if value="{{ sShell }}" hint-placeholder-val="{{ false }}">
                 <hr class="hr" style="margin-top: 0">
-                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; max-width: 860px">
-                  <div class="card" style="border-color: var(--color-accent)">
-                    <div class="card-kicker">Módulo ativo</div>
-                    <div class="card-title">Gestão de Finanças</div>
-                    <p class="card-body">Orçamentos por centro de custo, lançamentos e aprovação de despesas, conciliação e prestação de contas.</p>
-                    <div class="card-meta">11 telas · Épicos 1 a 3</div>
-                    <button class="btn btn-primary" style="align-self: flex-start" onClick="{{ goOrcamentos }}">Continuar</button>
+                <div style="display: grid; grid-template-columns: 1.4fr 1fr; border: 1px solid var(--color-divider); max-width: 860px">
+                  <div style="padding: 34px 36px">
+                    <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Módulo ativo</div>
+                    <h3 style="font-family: var(--font-heading); font-size: 28px; font-weight: 400; margin: 10px 0 10px">Gestão de Finanças</h3>
+                    <p style="font-size: 14px; color: var(--color-neutral-800); text-align: justify; max-width: 42ch; margin: 0 0 18px">Orçamentos por centro de custo, lançamentos e aprovação de despesas, conciliação e prestação de contas.</p>
+                    <div style="font-size: 12px; color: var(--color-neutral-600); margin-bottom: 22px">11 telas · Épicos 1 a 3</div>
+                    <button class="btn btn-primary" onClick="{{ goOrcamentos }}">Continuar</button>
                   </div>
-                  <div class="card">
-                    <div class="card-kicker">Outro módulo</div>
-                    <div class="card-title">Gestão de Casos</div>
-                    <p class="card-body">Acompanhamento de crianças, adolescentes e famílias atendidas. Fornece ao financeiro os projetos e os papéis de acesso.</p>
-                    <div class="card-meta">Grupo do Módulo de Gerenciamento</div>
-                    <button class="btn btn-secondary" style="align-self: flex-start">Abrir módulo</button>
+                  <div style="padding: 34px 36px; border-left: 1px solid var(--color-divider); display: flex; flex-direction: column; justify-content: center; background: var(--color-neutral-100)">
+                    <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600)">Outro módulo</div>
+                    <h4 style="font-family: var(--font-heading); font-size: 19px; font-weight: 400; margin: 10px 0 8px">Gestão de Casos</h4>
+                    <p style="font-size: 13px; color: var(--color-neutral-700); margin: 0 0 16px">Acompanhamento de crianças, adolescentes e famílias atendidas. Fornece ao financeiro os projetos e os papéis de acesso.</p>
+                    <div style="font-size: 11px; color: var(--color-neutral-600); margin-bottom: 16px">Grupo do Módulo de Gerenciamento</div>
+                    <a href="#" style="font-size: 13px">Abrir módulo →</a>
                   </div>
                 </div>
                 <div style="margin-top: 26px; max-width: 860px">
@@ -640,7 +666,7 @@
                   <span style="margin-left: auto; font-size: 12px; color: var(--color-neutral-600)">Registro transversal · leitura de Coordenação e Direção</span>
                 </div>
                 <table class="table" style="font-variant-numeric: tabular-nums">
-                  <thead><tr><th style="width: 150px">Quando</th><th style="width: 170px">Quem</th><th style="width: 130px">Ação</th><th>Objeto</th><th>Detalhe</th></tr></thead>
+                  <thead><tr><th style="width: 150px">Quando</th><th style="width: 170px">Quem</th><th style="width: 130px">Ação</th><th>Objeto</th><th>Detalhes</th></tr></thead>
                   <tbody>
                     <sc-for list="{{ auditoria }}" as="a" hint-placeholder-count="7">
                       <tr>
@@ -757,7 +783,7 @@ class Component extends DCLogic {
   navDef() {
     return [
       ['Orçamento', [['Orçamentos e saldo', 'orcamentos'], ['Novo orçamento', 'orcamento-form']]],
-      ['Lançamentos', [['Lançar despesa', 'despesa-mobile'], ['Todos os lançamentos', 'lancamentos'], ['Detalhe do lançamento', 'lancamento-detalhe'], ['Aprovações pendentes', 'aprovacao'], ['Conciliação bancária', 'conciliacao']]],
+      ['Lançamentos', [['Lançar despesa', 'despesa-mobile'], ['Todos os lançamentos', 'lancamentos'], ['Aprovações pendentes', 'aprovacao'], ['Conciliação bancária', 'conciliacao']]],
       ['Prestação de contas', [['Gerar prestação', 'gerar'], ['Relatório emitido', 'relatorio'], ['Dashboard executivo', 'dashboard']]],
       ['Plataforma', [['Início · módulos', 'shell'], ['Projetos', 'projetos'], ['Usuários e papéis', 'usuarios'], ['Trilha de auditoria', 'auditoria'], ['Notificações', 'notificacoes'], ['Sair · login', 'login']]]
     ];
@@ -824,6 +850,10 @@ class Component extends DCLogic {
     const ok = P.telas.indexOf(s) >= 0;
     const on = (k) => ok && s === k;
     const go = (key) => () => this.setState({ screen: key });
+    const grupoDe = (key) => {
+      const found = this.navDef().find(([, items]) => items.some(([, k]) => k === key));
+      return found ? found[0] : '';
+    };
     const setPersona = (key) => () => {
       const np = this.personasDef()[key];
       this.setState({ persona: key, screen: np.telas.indexOf(this.cur()) >= 0 ? this.cur() : np.home });
@@ -875,6 +905,11 @@ class Component extends DCLogic {
       tabs: [{ title: 'MDCA · Plataforma' }, { title: 'Extrato — Banco' }],
       kicker: ok ? (M[0] || '') : 'Acesso restrito',
       title: ok ? (M[1] || '') : 'Sem permissão',
+      breadcrumbGroup: s === 'shell' ? '' : s === 'lancamento-detalhe' ? 'Lançamentos' : grupoDe(s),
+      breadcrumbGroupClick: s === 'lancamento-detalhe' ? go('lancamentos') : null,
+      breadcrumbGroupText: s !== 'lancamento-detalhe',
+      breadcrumbCurrent: s === 'lancamento-detalhe' ? 'Detalhes' : '',
+      podeConciliar: P.telas.indexOf('conciliacao') >= 0,
       escreve: P.editaOrcamento === true,
       podeVerValores: P.telas.indexOf('orcamentos') >= 0,
       naoVeValores: P.telas.indexOf('orcamentos') < 0,
@@ -995,13 +1030,14 @@ class Component extends DCLogic {
         { nome: 'Serviços de terceiros', limite: this.brl(72000) }
       ],
       kpis: [
-        { label: 'Orçado — todos os projetos', value: this.k(totOrc), note: '5 centros de custo · exercício 2026' },
-        { label: 'Realizado (aprovado)', value: this.k(totReal), note: Math.round(totReal / totOrc * 100) + '% do orçado consumido' },
-        { label: 'Saldo disponível', value: this.k(totOrc - totReal), note: '1 projeto acima de 100%' }
+        { label: 'Orçado — todos os projetos', value: this.k(totOrc), note: '5 centros de custo · exercício 2026', colStyle: { padding: '18px 24px 18px 0' } },
+        { label: 'Realizado (aprovado)', value: this.k(totReal), note: Math.round(totReal / totOrc * 100) + '% do orçado consumido', colStyle: { padding: '18px 24px', borderLeft: '1px solid var(--color-divider)' } },
+        { label: 'Saldo disponível', value: this.k(totOrc - totReal), note: '1 projeto acima de 100%', colStyle: { padding: '18px 0 18px 24px', borderLeft: '1px solid var(--color-divider)' } }
       ],
       goOrcamentos: go('orcamentos'), goForm: go('orcamento-form'), goLancamentos: go('lancamentos'),
       goNotificacoes: go('notificacoes'), goProjetos: go('projetos'), goDetalhe: go('lancamento-detalhe'),
       goAprovacao: go('aprovacao'), goRelatorio: go('relatorio'), goDashboard: go('dashboard'),
+      goShell: go('shell'), goGerar: go('gerar'), goConciliacao: go('conciliacao'),
       navGroups: this.navDef().map(([title, items]) => ({
         title,
         items: items.filter(([, key]) => P.telas.indexOf(key) >= 0).map(([label, key]) => ({
