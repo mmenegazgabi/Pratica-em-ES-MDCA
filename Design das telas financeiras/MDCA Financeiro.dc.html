@@ -19,10 +19,9 @@
     a:hover { color: var(--color-accent-700); }
   </style>
 </helmet>
-<div style="min-height: 100vh; background: var(--color-neutral-200); display: block; overflow: auto; font-family: var(--font-body)">
- <div style="display: flex; width: fit-content; margin: 0 auto; padding: 36px">
+<div style="min-height: 100vh; background: var(--color-neutral-200); font-family: var(--font-body)">
   <sc-if value="{{ isPhone }}" hint-placeholder-val="{{ false }}">
-   <div style="flex: none; display: flex; flex-direction: column; align-items: center; gap: 14px">
+   <div style="display: flex; width: fit-content; margin: 0 auto; padding: 36px; flex-direction: column; align-items: center; gap: 14px">
     <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" title="Nova despesa" style="flex: none" hint-size="390px,844px">
       <div style="height: 100%; overflow: auto; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); padding: 18px 18px 40px">
         <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px">
@@ -89,9 +88,7 @@
    </div>
   </sc-if>
   <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
-   <div style="flex: none">
-    <x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ w }}" height="{{ h }}" url="{{ url }}" tabs="{{ tabs }}" style="flex: none" hint-size="1240px,780px">
-      <div style="height: 100%; display: flex; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 15px">
+      <div style="min-height: 100vh; width: 100%; display: flex; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 15px">
         <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
           <div style="flex: 1; display: grid; grid-template-columns: 1.05fr 1fr">
             <div style="padding: 64px 56px; display: flex; flex-direction: column; justify-content: space-between; border-right: 1px solid var(--color-divider)">
@@ -686,10 +683,7 @@
           </div>
         </sc-if>
       </div>
-    </x-import>
-   </div>
   </sc-if>
- </div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;orcamentos&quot;,&quot;orcamento-form&quot;,&quot;saldo&quot;,&quot;despesa-mobile&quot;,&quot;lancamentos&quot;,&quot;lancamento-detalhe&quot;,&quot;aprovacao&quot;,&quot;conciliacao&quot;,&quot;gerar&quot;,&quot;relatorio&quot;,&quot;dashboard&quot;,&quot;login&quot;,&quot;shell&quot;,&quot;usuarios&quot;,&quot;projetos&quot;,&quot;auditoria&quot;,&quot;notificacoes&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;,&quot;admin&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
