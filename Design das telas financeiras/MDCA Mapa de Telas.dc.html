@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/classical-9ce1d6f6-3ae9-489d-a674-ee392f5455c8/styles.css">
+  <script src="_ds/classical-9ce1d6f6-3ae9-489d-a674-ee392f5455c8/_ds_bundle.js"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; }
+    a { color: var(--color-accent); }
+    a:hover { color: var(--color-accent-700); }
+  </style>
+</helmet>
+<div style="background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); padding: 56px 60px 80px; width: 1900px">
+  <div style="display: flex; align-items: flex-end; gap: 40px; border-bottom: 1px solid var(--color-divider); padding-bottom: 22px">
+    <div>
+      <div style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-accent)">MDCA · Módulo de Gestão de Finanças · E1 · Grupo 4</div>
+      <h1 style="font-size: 56px; font-weight: 300; margin: 14px 0 0; letter-spacing: -0.02em">Mapa de telas</h1>
+    </div>
+    <p style="max-width: 56ch; margin: 0 0 4px; text-align: justify; font-size: 14px; color: var(--color-neutral-800)">Dezesseis telas desenhadas: dez exclusivas do módulo financeiro (Épicos 1 a 3) e seis compartilhadas com o Módulo de Gerenciamento. Cada quadro é a tela real do protótipo — abra <a href="MDCA Financeiro.dc.html">o protótipo navegável</a> para percorrê-las.</p>
+    <div style="margin-left: auto; text-align: right; font-size: 12px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums; line-height: 1.9">
+      Personas<br>Luana · Coordenação Adm.-Financeira<br>Marcos · Educador<br>Jane · Diretoria<br>Lucas · Voluntário Financeiro
+    </div>
+  </div>
+
+  <h2 style="font-size: 30px; font-weight: 400; margin: 44px 0 6px">Parte 1 — Telas exclusivas do módulo financeiro</h2>
+  <div style="font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 26px">Épicos 1 a 3 · responsabilidade direta do grupo</div>
+  <div style="display: grid; grid-template-columns: repeat(3, 560px); gap: 46px 40px">
+    <sc-for list="{{ financeiras }}" as="t" hint-placeholder-count="10">
+      <figure>
+        <div style="width: 560px; height: 382px; overflow: hidden; border: 1px solid var(--color-divider); background: var(--color-neutral-200); position: relative">
+          <div style="width: 1320px; height: 900px; transform: scale(0.4242); transform-origin: top left">
+            <dc-import name="MDCA Financeiro" screen="{{ t.screen }}" persona="{{ t.papel }}" style="{{ t.mountStyle }}" hint-size="1320px,900px"></dc-import>
+          </div>
+        </div>
+        <figcaption style="margin-top: 12px; font-size: 13px; color: var(--color-text)">
+          <div style="display: flex; align-items: baseline; gap: 10px">
+            <span style="font-family: var(--font-heading); font-size: 20px; font-variant-numeric: tabular-nums; color: var(--color-accent-700)">{{ t.num }}</span>
+            <span style="font-family: var(--font-heading); font-size: 19px">{{ t.nome }}</span>
+            <span style="margin-left: auto; font-size: 11px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ t.us }}</span>
+          </div>
+          <div style="font-size: 12px; color: var(--color-neutral-700); margin-top: 3px">{{ t.desc }}</div>
+          <div style="font-size: 11px; color: var(--color-neutral-600); margin-top: 2px">{{ t.persona }}</div>
+        </figcaption>
+      </figure>
+    </sc-for>
+  </div>
+
+  <h2 style="font-size: 30px; font-weight: 400; margin: 60px 0 6px">Parte 2 — Telas compartilhadas</h2>
+  <div style="font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 26px">Mesma base de usuários, autenticação e infraestrutura do Módulo de Gerenciamento</div>
+  <div style="display: grid; grid-template-columns: repeat(3, 560px); gap: 46px 40px">
+    <sc-for list="{{ compartilhadas }}" as="t" hint-placeholder-count="6">
+      <figure>
+        <div style="width: 560px; height: 382px; overflow: hidden; border: 1px solid var(--color-divider); background: var(--color-neutral-200); position: relative">
+          <div style="width: 1320px; height: 900px; transform: scale(0.4242); transform-origin: top left">
+            <dc-import name="MDCA Financeiro" screen="{{ t.screen }}" persona="{{ t.papel }}" style="{{ t.mountStyle }}" hint-size="1320px,900px"></dc-import>
+          </div>
+        </div>
+        <figcaption style="margin-top: 12px; font-size: 13px; color: var(--color-text)">
+          <div style="display: flex; align-items: baseline; gap: 10px">
+            <span style="font-family: var(--font-heading); font-size: 20px; color: var(--color-accent-700)">{{ t.num }}</span>
+            <span style="font-family: var(--font-heading); font-size: 19px">{{ t.nome }}</span>
+            <span style="margin-left: auto; font-size: 11px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ t.us }}</span>
+          </div>
+          <div style="font-size: 12px; color: var(--color-neutral-700); margin-top: 3px">{{ t.desc }}</div>
+          <div style="font-size: 11px; color: var(--color-neutral-600); margin-top: 2px">{{ t.persona }}</div>
+        </figcaption>
+      </figure>
+    </sc-for>
+  </div>
+
+  <div style="margin-top: 60px; border-top: 1px solid var(--color-divider); padding-top: 20px; display: flex; gap: 40px; font-size: 12px; color: var(--color-neutral-700)">
+    <span>Épico 4 (papéis e auditoria) é transversal: materializa-se nas telas C e E e nas regras de permissão de todas as demais.</span>
+    <span style="margin-left: auto">Total: 10 financeiras + 6 compartilhadas</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  mount() { return { width: '1320px', height: '900px' }; }
+
+  renderVals() {
+    const m = this.mount();
+    const papel = { 'despesa-mobile': 'educador', 'dashboard': 'direcao', 'conciliacao': 'voluntario', 'usuarios': 'admin' };
+    const row = ([num, nome, screen, desc, persona, us]) => ({ num, nome, screen, desc, persona, us, mountStyle: m, papel: papel[screen] || 'coordenacao' });
+    return {
+      financeiras: [
+        ['1', 'Orçamentos e Saldo', 'orcamentos', 'Totais consolidados e, por projeto, orçado, realizado, saldo e consumo com alerta em 80% e 100%.', 'Luana · Jane — leitura ampla', 'US-01, US-02'],
+        ['2', 'Cadastro / Edição de Orçamento', 'orcamento-form', 'Vínculo a projeto existente, vigência, categorias e validações.', 'Luana — criação e edição', 'US-01'],
+        ['3', 'Lançamento de Despesa (mobile)', 'despesa-mobile', 'Formulário de toque com foto do comprovante pela câmera.', 'Marcos — só nos seus projetos', 'US-03'],
+        ['4', 'Lista de Lançamentos', 'lancamentos', 'Filtros por status, projeto e período, respeitando o escopo do papel.', 'Marcos · Luana · Lucas', 'US-03, 04, 05'],
+        ['5', 'Detalhe do Lançamento', 'lancamento-detalhe', 'Comprovante ampliável, motivo da rejeição e trilha de auditoria.', 'Marcos (autor) · Luana', 'US-03, US-04'],
+        ['6', 'Aprovação de Pendentes', 'aprovacao', 'Fila por data; aprovar debita o saldo, rejeitar exige motivo.', 'Luana — única a aprovar', 'US-04'],
+        ['7', 'Conciliação Bancária', 'conciliacao', 'Lançamentos contra o extrato; destaque para +7 dias em aberto.', 'Lucas — edição limitada', 'US-05'],
+        ['8', 'Geração de Prestação de Contas', 'gerar', 'Projeto, período e prévia dos parâmetros antes de exportar.', 'Luana — geração', 'US-06'],
+        ['9', 'Visualização do Relatório', 'relatorio', 'Cabeçalho institucional, blocos de saldo e lançamentos com anexos.', 'Luana · Jane — leitura', 'US-06'],
+        ['10', 'Dashboard Executivo', 'dashboard', 'Orçado vs. realizado em gráfico e tabela, com filtros e exportação.', 'Jane — somente leitura', 'US-07']
+      ].map(row),
+      compartilhadas: [
+        ['A', 'Login / Autenticação', 'login', 'Porta única da plataforma com RBAC e direcionamento por papel.', 'Todos os perfis', 'US-08'],
+        ['B', 'Shell / Layout (SPA)', 'shell', 'Navegação entre os módulos de Casos e Finanças e área de conteúdo.', 'Todos — itens por permissão', '—'],
+        ['C', 'Usuários e Papéis (RBAC)', 'usuarios', 'Papéis, vínculo de educador a projetos e regras de visibilidade.', 'Administrador do sistema', 'US-08'],
+        ['D', 'Cadastro de Projetos', 'projetos', 'Centros de custo que o financeiro consome nos orçamentos e filtros.', 'Coordenação · Direção', 'US-01'],
+        ['E', 'Trilha de Auditoria', 'auditoria', 'Quem, quando e o quê em toda ação sensível, com consulta filtrável.', 'Coordenação · Direção — leitura', 'US-08'],
+        ['F', 'Central de Notificações', 'notificacoes', 'Resultado de aprovações e alertas de orçamento em 80% e 100%.', 'Todos — conforme envolvimento', 'US-02, US-04']
+      ].map(row)
+    };
+  }
+}
+</script>
+</body>
+</html>
