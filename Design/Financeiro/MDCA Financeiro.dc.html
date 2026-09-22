@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/mdca-d1fade62-4a32-462f-9ea0-b4b5882bc051/styles.css">
+  <script src="_ds/mdca-d1fade62-4a32-462f-9ea0-b4b5882bc051/_ds_bundle.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; }
+    a { color: var(--color-accent); }
+    a:hover { color: var(--color-accent-700); }
+  </style>
+</helmet>
+<div style="min-height: 100vh; background: var(--color-neutral-200); font-family: var(--font-body)">
+  <sc-if value="{{ isPhone }}" hint-placeholder-val="{{ false }}">
+   <div style="display: flex; width: fit-content; margin: 0 auto; padding: 36px; flex-direction: column; align-items: center; gap: 14px">
+    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" title="Nova despesa" onBack="{{ goBack }}" bg="var(--color-bg)" accent="var(--color-accent-700)" font="var(--font-heading)" style="flex: none" hint-size="390px,844px">
+      <div style="height: 100%; overflow: auto; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); padding: 18px 18px 40px">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px">
+          <span style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Tela 3 · Épico 2</span>
+          <span style="font-size: 11px; color: var(--color-neutral-600)">Marcos · Educador</span>
+        </div>
+        <h3 style="font-size: 27px; font-weight: 400; margin: 0 0 2px">Lançar despesa</h3>
+        <p style="font-size: 12px; color: var(--color-neutral-700); margin: 0 0 14px">Entra como <em>pendente de aprovação</em>.</p>
+        <hr class="hr" style="margin: 0 0 18px">
+        <div style="display: grid; gap: 16px">
+          <div class="field">
+            <label>Projeto (apenas os seus)</label>
+            <select class="input" style="min-height: 48px; font-size: 15px">
+              <option>Semear — Contraturno Escolar</option>
+              <option>Casa de Convivência</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Categoria</label>
+            <select class="input" style="min-height: 48px; font-size: 15px">
+              <option>Alimentação</option>
+              <option>Transporte</option>
+              <option>Material didático</option>
+              <option>Serviços de terceiros</option>
+            </select>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+            <div class="field">
+              <label>Valor (R$)</label>
+              <input class="input" style="min-height: 48px; font-size: 20px; font-family: var(--font-heading); font-variant-numeric: tabular-nums" value="486,90">
+            </div>
+            <div class="field">
+              <label>Data</label>
+              <input class="input" style="min-height: 48px; font-size: 15px; font-variant-numeric: tabular-nums" value="12/09/2026">
+            </div>
+          </div>
+          <div class="field">
+            <label>Descrição</label>
+            <textarea class="input" style="min-height: 76px; font-size: 15px">Lanche da oficina de leitura — 32 crianças</textarea>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: var(--color-neutral-700); margin-bottom: 6px">Comprovante</div>
+            <div style="border: 1px dashed var(--color-accent); border-radius: var(--radius-md); padding: 18px; display: grid; gap: 10px; justify-items: center; text-align: center">
+              <div style="width: 46px; height: 46px; border: 1px solid var(--color-accent); border-radius: 50%; display: grid; place-items: center; color: var(--color-accent-700); font-size: 20px">◎</div>
+              <div style="font-size: 13px; color: var(--color-accent-700); font-family: var(--font-heading)">Fotografar comprovante</div>
+              <div style="font-size: 11px; color: var(--color-neutral-600)">ou escolher da galeria</div>
+            </div>
+          </div>
+          <div style="display: grid; gap: 10px; margin-top: 4px">
+            <button class="btn btn-primary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ goLancamentos }}">Enviar para aprovação</button>
+            <button class="btn btn-secondary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ goLancamentos }}">Ver meus lançamentos</button>
+          </div>
+        </div>
+      </div>
+    </x-import>
+    <div style="width: 390px; padding: 12px 14px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: var(--color-neutral-100)">
+      <div style="font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 7px">Simular acesso · protótipo</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 5px">
+        <sc-for list="{{ personas }}" as="p" hint-placeholder-count="5">
+          <button onClick="{{ p.onClick }}" style="{{ p.style }}">{{ p.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+   </div>
+  </sc-if>
+  <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+      <div style="min-height: 100vh; width: 100%; display: flex; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 15px">
+        <aside style="width: 246px; flex: none; border-right: 1px solid var(--color-divider); display: flex; flex-direction: column; background: var(--color-neutral-100)">
+          <a href="#" onClick="{{ goHome }}" style="display: block; padding: 20px 20px 16px; border-bottom: 1px solid var(--color-divider); text-decoration: none; color: inherit">
+            <svg width="92" height="34" viewBox="0 0 137 50" fill="none" aria-label="MDCA" style="display: block"><path d="M9.60339 0.85437C11.3169 0.854547 12.8648 1.87894 13.535 3.45593L18.5399 15.2313C19.4245 17.3118 22.3733 17.312 23.2577 15.2313L28.2626 3.45593C28.9329 1.8788 30.4806 0.85437 32.1942 0.85437H36.7401C39.0996 0.85437 41.0126 2.76739 41.0126 5.12683V33.3231C41.0124 35.6824 39.0994 37.5946 36.7401 37.5946H35.7323C33.373 37.5946 31.46 35.6824 31.4598 33.3231V29.7343C31.4598 26.481 31.5302 23.2277 31.6708 19.9745L31.6718 19.9618C31.7296 18.9555 30.3771 18.5571 29.9423 19.5848L25.9296 29.076C25.2611 30.6572 23.7106 31.6844 21.994 31.6844H19.8651C18.1532 31.6843 16.6067 30.6626 15.9354 29.0878L11.8817 19.576C11.4826 18.6396 10.0819 18.9574 10.1259 19.9745C10.2664 23.2277 10.3368 26.481 10.3368 29.7343V33.3231C10.3366 35.6823 8.42453 37.5945 6.06531 37.5946H5.12683C2.7675 37.5946 0.854549 35.6824 0.85437 33.3231V5.12683C0.85437 2.76739 2.76739 0.85437 5.12683 0.85437H9.60339Z" fill="#F02D34"/><path d="M47.7823 10.6808C49.2522 10.6809 50.7219 10.75 52.1915 10.8869L52.1925 10.8859C53.7378 10.99 55.1983 11.2329 56.5724 11.6164H56.5714C57.9867 11.9614 59.2895 12.4102 60.4786 12.9641L60.9415 13.1642C61.9995 13.6378 62.9497 14.1792 63.7902 14.7902L64.1661 15.0432C65.0281 15.6378 65.8017 16.2873 66.4855 16.9924C67.2598 17.7573 67.9188 18.5606 68.4611 19.4016C69.0628 20.2106 69.5464 21.0577 69.9103 21.9426C70.2686 22.8141 70.5381 23.7038 70.7189 24.6115C70.9584 25.4884 71.109 26.3828 71.1691 27.2941C71.2858 28.1555 71.3448 29.0172 71.3448 29.8791C71.3448 30.7844 71.2854 31.69 71.1661 32.5949C71.1051 33.4602 70.9569 34.3398 70.7228 35.2336L70.6505 35.5637C70.4725 36.3333 70.2253 37.1011 69.9103 37.8674C69.5462 38.7528 69.0626 39.6175 68.4611 40.4601L68.4601 40.4592C67.9195 41.2641 67.2635 42.0651 66.4923 42.8615L66.4855 42.8683C65.7063 43.638 64.8097 44.3685 63.799 45.0627L63.7999 45.0637C62.8397 45.7292 61.7345 46.3392 60.4874 46.8937L60.4855 46.8947C59.2949 47.4159 57.9886 47.8654 56.5685 48.2453L56.5626 48.2473C55.1951 48.5943 53.7414 48.8366 52.2023 48.9748L52.1935 48.9758V48.9748C50.7231 49.0778 49.2528 49.1301 47.7823 49.1301H36.3136V10.6808H47.7823ZM46.8947 43.3654H47.7823C48.7557 43.3654 49.7293 43.298 50.7032 43.1642C51.6645 43.0322 52.5339 42.8018 53.3136 42.4767L53.3234 42.4728C54.1748 42.1415 54.9043 41.764 55.5148 41.343L55.5216 41.3381L55.5284 41.3342C56.2035 40.9073 56.7572 40.4533 57.1945 39.9748L57.2023 39.966C57.7117 39.4374 58.1319 38.9132 58.465 38.3947L58.4728 38.382L58.4825 38.3703C58.8712 37.8517 59.1731 37.3208 59.3917 36.7785L59.3986 36.7619L59.4064 36.7463C59.6882 36.1871 59.9126 35.6298 60.0802 35.0754C60.2478 34.521 60.3586 33.9684 60.4142 33.4172L60.4171 33.3967L60.421 33.3752C60.5349 32.8101 60.6199 32.2453 60.6769 31.6808L60.715 31.2326C60.7471 30.7886 60.7628 30.3547 60.7628 29.9308C60.7628 29.3306 60.7348 28.7475 60.6779 28.1828L60.6769 28.1808C60.6198 27.5813 60.5348 26.9992 60.421 26.4348L60.4171 26.4142L60.4142 26.3928C60.3586 25.8416 60.2478 25.2888 60.0802 24.7346C59.9126 24.1802 59.6881 23.6237 59.4064 23.0646L59.3986 23.048L59.3917 23.0314C59.1731 22.4893 58.8711 21.959 58.4825 21.4406L58.4728 21.4279L58.465 21.4152C58.1341 20.9003 57.7175 20.3962 57.212 19.9045L57.1974 19.8908L57.1847 19.8762C56.749 19.3676 56.1988 18.8996 55.5284 18.4758L55.5216 18.4719L55.5148 18.467C54.9043 18.0459 54.1748 17.6684 53.3234 17.3371L53.3136 17.3332C52.5339 17.0082 51.6645 16.7777 50.7032 16.6457C49.7293 16.512 48.7557 16.4455 47.7823 16.4455H46.8947V43.3654Z" fill="#009D53"/><path d="M93.1329 45.2848C92.661 45.2848 92.2784 44.9023 92.2784 44.4304V41.6718C92.2784 39.849 92.5498 38.0262 93.0926 36.2034C93.6354 34.3807 94.2945 32.5741 95.0699 30.7839C95.8453 28.9937 96.6982 27.2034 97.6287 25.4132C98.5592 23.623 99.5284 21.8327 100.536 20.0425C101.544 18.2523 102.591 16.4783 103.677 14.7206C104.368 13.5813 105.074 12.4485 105.797 11.3223C106.571 10.1156 107.912 9.39874 109.346 9.39874H119.642C121.075 9.39874 122.417 10.1156 123.191 11.3223C123.913 12.4485 124.62 13.5813 125.31 14.7206C126.396 16.4783 127.443 18.2523 128.451 20.0425C129.459 21.8327 130.428 23.623 131.359 25.4132C132.289 27.2034 133.142 28.9937 133.917 30.7839C134.693 32.5741 135.352 34.3807 135.895 36.2034C136.437 38.0262 136.709 39.849 136.709 41.6718V44.4304C136.709 44.9023 136.326 45.2848 135.854 45.2848H124.653C124.181 45.2848 123.798 44.9023 123.798 44.4304V41.6718C123.798 40.9557 123.721 40.2396 123.566 39.5235C123.512 39.0026 123.439 38.4817 123.348 37.9607C123.278 37.5618 122.926 37.2776 122.521 37.2776H106.466C106.061 37.2776 105.711 37.562 105.629 37.9587C105.521 38.4803 105.413 39.0019 105.305 39.5235C105.228 40.2396 105.189 40.9557 105.189 41.6718V44.4304C105.189 44.9023 104.806 45.2848 104.334 45.2848H93.1329ZM107.415 31.477C107.231 32.0262 107.642 32.5904 108.222 32.5904H120.766C121.345 32.5904 121.756 32.0262 121.57 31.4776C120.716 28.9555 119.714 26.4458 118.564 23.9485C117.538 21.5506 116.431 19.1639 115.245 16.7883C114.934 16.1664 114.053 16.1661 113.74 16.7869C112.542 19.1629 111.398 21.5501 110.306 23.9485C109.225 26.4456 108.261 28.9551 107.415 31.477Z" fill="#195BAE"/><path d="M82.0254 36.7405C80.1421 36.7405 78.224 36.6427 76.271 36.447C74.3878 36.2839 72.6092 35.9904 70.9352 35.5664C69.331 35.1098 67.8662 34.539 66.541 33.8541C65.2855 33.1366 64.2741 32.3701 63.5069 31.5548C62.7397 30.7394 62.2165 29.8914 61.9375 29.0108C61.6585 28.0976 61.519 27.2007 61.519 26.3201V10.4204C61.519 9.53981 61.6585 8.65921 61.9375 7.77861C62.2165 6.8654 62.7397 6.00111 63.5069 5.18574C64.2741 4.37037 65.2855 3.62024 66.541 2.93533C67.8662 2.2178 69.331 1.64704 70.9352 1.22305C72.6092 0.766445 74.3878 0.456605 76.271 0.293532C78.224 0.0978439 80.1421 0 82.0254 0C83.8389 0 85.6175 0.0815368 87.3612 0.24461C89.1747 0.37507 90.8835 0.635987 92.4878 1.02736C94.092 1.38613 95.5219 1.87535 96.7774 2.49503C98.1026 3.08209 99.1837 3.7507 100.021 4.50083C100.858 5.21836 101.485 6.00111 101.904 6.84909C102.322 7.66446 102.532 8.49614 102.532 9.34412V9.63766H90.9184V9.49089C90.9184 8.90382 90.7441 8.31676 90.3953 7.72969C90.0466 7.14263 89.4886 6.62079 88.7213 6.16418C87.9541 5.67496 86.9427 5.3162 85.6872 5.0879C84.5015 4.82698 83.2809 4.69652 82.0254 4.69652C81.0489 4.69652 80.1073 4.76175 79.2005 4.89221C78.2938 5.02267 77.4917 5.23466 76.7942 5.5282C76.0967 5.82173 75.5038 6.16418 75.0156 6.55556C74.5273 6.94694 74.1437 7.35462 73.8647 7.77861C73.5857 8.20261 73.3764 8.64291 73.2369 9.09951C73.1672 9.5235 73.1323 9.9638 73.1323 10.4204V26.3201C73.1323 26.7767 73.1672 27.2333 73.2369 27.6899C73.3764 28.1139 73.5857 28.5379 73.8647 28.9619C74.1437 29.3859 74.5273 29.7936 75.0156 30.1849C75.5038 30.5763 76.0967 30.9188 76.7942 31.2123C77.4917 31.5058 78.2938 31.7178 79.2005 31.8483C80.1073 31.9788 81.0489 32.044 82.0254 32.044C83.2809 32.044 84.5015 31.9298 85.6872 31.7015C86.9427 31.4406 87.9541 31.0818 88.7213 30.6252C89.4886 30.136 90.0466 29.5979 90.3953 29.0108C90.7441 28.4237 90.9184 27.8367 90.9184 27.2496V27.1028H102.532V27.3964C102.532 28.2444 102.322 29.0923 101.904 29.9403C101.485 30.7557 100.858 31.5385 100.021 32.2886C99.1837 33.0061 98.1026 33.6747 96.7774 34.2944C95.5219 34.8815 94.092 35.3707 92.4878 35.7621C90.8835 36.1208 89.1747 36.3654 87.3612 36.4959C85.6175 36.659 83.8389 36.7405 82.0254 36.7405Z" fill="#FDE118"/></svg>
+            <div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-accent); margin-top: 6px">Gestão de Finanças</div>
+          </a>
+          <div style="padding: 14px 20px; border-bottom: 1px solid var(--color-divider)">
+            <div class="seg" style="width: 100%">
+              <label class="seg-opt" style="flex: 1; justify-content: center"><input type="radio" name="mod"><span>Casos</span></label>
+              <label class="seg-opt" style="flex: 1; justify-content: center"><input type="radio" name="mod" checked><span>Finanças</span></label>
+            </div>
+          </div>
+          <nav style="flex: 1; overflow: auto; padding: 8px 0 20px">
+            <sc-for list="{{ navGroups }}" as="g" hint-placeholder-count="4">
+              <div style="padding: 14px 20px 4px">
+                <div style="font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600)">{{ g.title }}</div>
+              </div>
+              <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+                <button onClick="{{ it.onClick }}" style="{{ it.style }}">{{ it.label }}</button>
+              </sc-for>
+            </sc-for>
+          </nav>
+          <div style="padding: 12px 16px 14px; border-top: 1px solid var(--color-divider); background: var(--color-neutral-200)">
+            <div style="font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 7px">Simular acesso · protótipo</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 5px">
+              <sc-for list="{{ personas }}" as="p" hint-placeholder-count="5">
+                <button onClick="{{ p.onClick }}" style="{{ p.style }}">{{ p.label }}</button>
+              </sc-for>
+            </div>
+            <div style="font-size: 10.5px; color: var(--color-neutral-700); margin-top: 8px; line-height: 1.5">{{ personaPode }}</div>
+            <div style="font-size: 11px; color: var(--color-neutral-600); margin-top: 10px">Sair · autenticação reutilizada do módulo de casos</div>
+          </div>
+        </aside>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+          <header style="display: flex; align-items: center; gap: 18px; padding: 16px 30px; border-bottom: 1px solid var(--color-divider)">
+            <div style="min-width: 0">
+              <div style="display: flex; align-items: baseline; gap: 5px; font-size: 11px; color: var(--color-neutral-600)">
+                <a href="#" onClick="{{ goHome }}">Início</a>
+                <sc-if value="{{ breadcrumbGroup }}" hint-placeholder-val="{{ true }}">
+                  <span>›</span>
+                  <span style="color: var(--color-text)">{{ breadcrumbGroup }}</span>
+                </sc-if>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 3px">
+                <div style="font-family: var(--font-heading); font-size: 22px; line-height: 1.15">{{ title }}</div>
+                <span style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); font-variant-numeric: tabular-nums; white-space: nowrap">{{ kicker }}</span>
+              </div>
+            </div>
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 14px">
+              <span class="tag tag-outline" style="font-size: 12px; padding: 7px 12px; font-variant-numeric: tabular-nums">Notificações · {{ notifCount }}</span>
+              <div style="text-align: right; line-height: 1.3">
+                <div style="font-size: 13px; font-family: var(--font-heading)">{{ userName }}</div>
+                <div style="font-size: 11px; color: var(--color-neutral-600)">{{ userRole }}</div>
+              </div>
+              <div style="width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--color-accent); display: grid; place-items: center; font-family: var(--font-heading); font-size: 14px; color: var(--color-accent-700)">{{ userInitials }}</div>
+            </div>
+          </header>
+          <main style="flex: 1; overflow: auto; padding: 26px 30px 40px">
+            <sc-if value="{{ sDenied }}" hint-placeholder-val="{{ false }}">
+              <div style="max-width: 520px; margin: 70px auto 0; text-align: center">
+                <div style="width: 54px; height: 54px; margin: 0 auto 20px; border: 1px solid var(--color-accent); border-radius: 50%; display: grid; place-items: center; color: var(--color-accent-700); font-size: 22px">⃠</div>
+                <h3 style="font-size: 27px; font-weight: 400; margin: 0 0 8px">Sem permissão para esta tela</h3>
+                <p style="font-size: 14px; color: var(--color-neutral-800); margin: 0 0 6px">{{ userRole }} não tem acesso a <em>{{ telaNegada }}</em>.</p>
+                <p style="font-size: 13px; color: var(--color-neutral-700); margin: 0 0 22px">{{ personaPode }}</p>
+                <button class="btn btn-primary" onClick="{{ goHome }}">Ir para a minha tela inicial</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sOrcamentos }}" hint-placeholder-val="{{ true }}">
+              <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); margin-bottom: 24px">
+                <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="3">
+                  <div style="{{ k.colStyle }}">
+                    <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">{{ k.label }}</div>
+                    <div style="font-family: var(--font-heading); font-size: 34px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -0.015em; margin-top: 8px">{{ k.value }}</div>
+                    <div style="font-size: 12px; color: var(--color-neutral-700); margin-top: 5px">{{ k.note }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 4px">
+                <select class="input" style="width: 250px">
+                  <option>Todos os projetos</option>
+                  <sc-for list="{{ filtroProjetos }}" as="fp" hint-placeholder-count="2">
+                    <option>{{ fp }}</option>
+                  </sc-for>
+                </select>
+                <div class="seg" style="flex: none; white-space: nowrap">
+                  <label class="seg-opt"><input type="radio" name="st" checked><span>Todos</span></label>
+                  <label class="seg-opt"><input type="radio" name="st"><span>Vigente</span></label>
+                  <label class="seg-opt"><input type="radio" name="st"><span>Em alerta</span></label>
+                  <label class="seg-opt"><input type="radio" name="st"><span>Encerrado</span></label>
+                </div>
+                <span style="margin-left: auto; text-align: right; font-size: 12px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">5 orçamentos · 2026<div style="font-size: 11px">atualizado há 2 minutos</div></span>
+                <sc-if value="{{ escreve }}" hint-placeholder-val="{{ true }}">
+                  <button class="btn btn-primary" style="white-space: nowrap" onClick="{{ goForm }}">Novo orçamento</button>
+                </sc-if>
+                <sc-if value="{{ naoEscreve }}" hint-placeholder-val="{{ false }}">
+                  <span class="tag tag-neutral" style="white-space: nowrap">Somente leitura</span>
+                </sc-if>
+              </div>
+              <table class="table" style="font-variant-numeric: tabular-nums">
+                <thead><tr><th>Projeto / centro de custo</th><th style="text-align: right">Valor total</th><th style="text-align: right">Realizado</th><th style="text-align: right">Saldo</th><th style="width: 200px">Consumo · linha em 80%</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  <sc-for list="{{ projetos }}" as="p" hint-placeholder-count="5">
+                    <tr>
+                      <td style="font-family: var(--font-heading); font-size: 15px">{{ p.nome }}<div style="font-size: 11px; color: var(--color-neutral-600); font-family: var(--font-body)">{{ p.cc }} · {{ p.vigencia }}</div></td>
+                      <td style="text-align: right; white-space: nowrap">{{ p.orcado }}</td>
+                      <td style="text-align: right; white-space: nowrap">{{ p.realizado }}</td>
+                      <td style="text-align: right; white-space: nowrap; color: {{ p.saldoColor }}">{{ p.saldo }}</td>
+                      <td>
+                        <div style="height: 10px; background: var(--color-neutral-200); border: 1px solid var(--color-divider); border-radius: 3px; position: relative; overflow: hidden">
+                          <div style="{{ p.barStyle }}"></div>
+                          <div style="position: absolute; top: -2px; bottom: -2px; left: 80%; width: 1px; background: var(--color-accent-700)"></div>
+                        </div>
+                        <div style="font-size: 11px; margin-top: 4px; color: var(--color-neutral-700)">{{ p.pctLabel }} · {{ p.alerta }}</div>
+                      </td>
+                      <td><span class="tag {{ p.tagClass }}">{{ p.status }}</span></td>
+                      <td style="text-align: right; white-space: nowrap"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ goLancamentos }}">Lançamentos</button> <sc-if value="{{ escreve }}" hint-placeholder-val="{{ true }}"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ goForm }}">Editar</button></sc-if></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </sc-if>
+            <sc-if value="{{ sForm }}" hint-placeholder-val="{{ false }}">
+              <div style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 34px; max-width: 1000px">
+                <div>
+                  <div style="display: grid; gap: 18px">
+                    <div class="field"><label>Projeto / centro de custo existente *</label>
+                      <select class="input"><option>Semear — Contraturno Escolar (CC-101)</option><option>Casa de Convivência (CC-102)</option><option>Núcleo de Arte e Cultura (CC-103)</option></select>
+                      <div style="font-size: 11px; color: var(--color-neutral-600); margin-top: 5px">Projeto/centro de custo já deve existir — cadastro fica no Módulo de Gestão de Casos.</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px">
+                      <div class="field"><label>Valor total (R$) *</label><input class="input" style="font-variant-numeric: tabular-nums" value="184.000,00"></div>
+                      <div class="field"><label>Início da vigência *</label><input class="input" style="font-variant-numeric: tabular-nums" value="01/01/2026"></div>
+                      <div class="field"><label>Fim da vigência *</label><input class="input" style="font-variant-numeric: tabular-nums" value="31/12/2026"></div>
+                    </div>
+                    <div>
+                      <div style="font-size: 12px; color: var(--color-neutral-700); margin-bottom: 8px">Categorias de despesa e limites</div>
+                      <table class="table" style="font-variant-numeric: tabular-nums">
+                        <thead><tr><th>Categoria</th><th style="text-align: right; width: 150px">Limite</th><th style="width: 40px"></th></tr></thead>
+                        <tbody>
+                          <sc-for list="{{ categorias }}" as="c" hint-placeholder-count="4">
+                            <tr><td style="font-size: 14px">{{ c.nome }}</td><td style="text-align: right; white-space: nowrap">{{ c.limite }}</td><td style="text-align: right"><button class="btn btn-ghost" style="font-size: 12px">×</button></td></tr>
+                          </sc-for>
+                        </tbody>
+                      </table>
+                      <button class="btn btn-secondary" style="margin-top: 12px; font-size: 13px">Adicionar categoria</button>
+                    </div>
+                    <div style="display: flex; gap: 12px; padding-top: 6px">
+                      <button class="btn btn-primary" onClick="{{ goOrcamentos }}">Salvar orçamento</button>
+                      <button class="btn btn-secondary" onClick="{{ goOrcamentos }}">Cancelar</button>
+                    </div>
+                  </div>
+                </div>
+                <aside style="display: grid; gap: 16px; align-content: start">
+                  <div class="card">
+                    <div class="card-kicker">Validações</div>
+                    <div style="display: grid; gap: 10px; font-size: 13px; color: var(--color-neutral-800)">
+                      <div style="display: flex; gap: 9px"><span style="color: var(--color-accent-700)">—</span><span>Valor total deve ser maior que zero.</span></div>
+                      <div style="display: flex; gap: 9px"><span style="color: var(--color-accent-700)">—</span><span>Fim da vigência posterior ao início.</span></div>
+                      <div style="display: flex; gap: 9px"><span style="color: var(--color-accent-700)">—</span><span>Projeto obrigatório e já existente.</span></div>
+                      <div style="display: flex; gap: 9px"><span style="color: var(--color-accent-700)">—</span><span>Soma das categorias ≤ valor total.</span></div>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sLancamentos }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 4px">
+                <select class="input" style="width: 170px">
+                  <option>Todos os status</option>
+                  <sc-if value="{{ mostraStatusPend }}" hint-placeholder-val="{{ true }}">
+                    <option>Pendente</option>
+                  </sc-if>
+                  <option>Aprovado</option>
+                  <sc-if value="{{ mostraStatusPend }}" hint-placeholder-val="{{ true }}">
+                    <option>Rejeitado</option>
+                  </sc-if>
+                  <option>Conciliado</option>
+                </select>
+                <select class="input" style="width: 230px">
+                  <option>Todos os projetos</option>
+                  <sc-for list="{{ filtroProjetos }}" as="fp" hint-placeholder-count="2">
+                    <option>{{ fp }}</option>
+                  </sc-for>
+                </select>
+                <input class="input" style="width: 190px; font-variant-numeric: tabular-nums" value="01/09 – 12/09/2026">
+                <span style="margin-left: auto; text-align: right; font-size: 12px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ contagemLancamentos }}<div style="font-size: 11px">{{ escopoLancamentos }}</div></span>
+              </div>
+              <table class="table" style="font-variant-numeric: tabular-nums">
+                <thead><tr><th style="width: 78px">Nº</th><th style="width: 96px">Data</th><th>Projeto</th><th>Categoria</th><th>Autor</th><th style="text-align: right">Valor</th><th style="width: 118px">Status</th><th></th></tr></thead>
+                <tbody>
+                  <sc-for list="{{ lancamentos }}" as="l" hint-placeholder-count="7">
+                    <tr>
+                      <td style="color: var(--color-neutral-700); font-size: 13px">{{ l.id }}</td>
+                      <td style="white-space: nowrap">{{ l.data }}</td>
+                      <td style="font-size: 14px">{{ l.projeto }}</td>
+                      <td style="font-size: 13px; color: var(--color-neutral-700)">{{ l.categoria }}</td>
+                      <td style="font-size: 13px; color: var(--color-neutral-700)">{{ l.autor }}</td>
+                      <td style="text-align: right; white-space: nowrap">{{ l.valor }}</td>
+                      <td><span class="tag {{ l.tagClass }}">{{ l.status }}</span></td>
+                      <td style="text-align: right"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ l.onClick }}">Detalhes</button></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </sc-if>
+            <sc-if value="{{ sAprovacao }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--color-divider); margin-bottom: 18px">
+                <span class="tag tag-outline">3 pendentes · R$ 3.607,40</span>
+                <span style="margin-left: 14px; font-size: 12px; color: var(--color-neutral-600)">Rejeição exige motivo</span>
+                <sc-if value="{{ podeConciliar }}" hint-placeholder-val="{{ true }}">
+                  <a href="#" onClick="{{ goConciliacao }}" style="margin-left: auto; font-size: 12px">Ver conciliação bancária →</a>
+                </sc-if>
+              </div>
+              <div style="display: grid; gap: 14px; max-width: 1000px">
+                <sc-for list="{{ pendentes }}" as="p" hint-placeholder-count="3">
+                  <div class="card" style="flex-direction: row; align-items: center; gap: 20px; padding: var(--space-4)">
+                    <div style="width: 74px; height: 74px; flex: none" class="plate">
+                      <div style="width: 100%; height: 100%; background: var(--color-neutral-300); display: grid; place-items: center; font-size: 9px; color: var(--color-neutral-800); text-align: center">comprovante</div>
+                    </div>
+                    <div style="min-width: 0; flex: 1">
+                      <div style="font-size: 11px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ p.id }} · {{ p.data }} · {{ p.autor }}</div>
+                      <div style="font-family: var(--font-heading); font-size: 18px; margin-top: 2px">{{ p.descricao }}</div>
+                      <div style="font-size: 12px; color: var(--color-neutral-700); margin-top: 2px">{{ p.projeto }} · {{ p.categoria }}</div>
+                    </div>
+                    <div style="text-align: right; flex: none">
+                      <div style="font-family: var(--font-heading); font-size: 22px; font-variant-numeric: tabular-nums">{{ p.valor }}</div>
+                      <div style="font-size: 11px; color: var(--color-neutral-600)">saldo após aprovar: {{ p.saldoDepois }}</div>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex: none">
+                      <button class="btn btn-secondary" style="font-size: 13px" onClick="{{ p.onDetalhe }}">Ver</button>
+                      <button class="btn btn-secondary" style="font-size: 13px" onClick="{{ p.onDetalhe }}">Rejeitar</button>
+                      <button class="btn btn-primary" style="font-size: 13px" onClick="{{ p.onDetalhe }}">Aprovar</button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sConciliacao }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--color-divider); margin-bottom: 20px">
+                <span class="tag tag-outline">2 não conciliados há mais de 7 dias</span>
+                <span style="margin-left: auto; font-size: 12px; color: var(--color-neutral-600)">Edição limitada · não aprova despesas</span>
+              </div>
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 26px">
+                <div>
+                  <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 8px">Lançamentos aprovados a conciliar</div>
+                  <table class="table" style="font-variant-numeric: tabular-nums">
+                    <thead><tr><th>Nº · data</th><th style="text-align: right">Valor</th><th style="width: 130px">Situação</th><th></th></tr></thead>
+                    <tbody>
+                      <sc-for list="{{ conciliar }}" as="c" hint-placeholder-count="4">
+                        <tr>
+                          <td><div style="font-size: 13px">{{ c.id }} · {{ c.data }}</div><div style="font-size: 11px; color: var(--color-neutral-600); font-family: var(--font-body)">{{ c.projeto }}</div></td>
+                          <td style="text-align: right; white-space: nowrap">{{ c.valor }}</td>
+                          <td><span class="tag {{ c.tagClass }}">{{ c.situacao }}</span></td>
+                          <td style="text-align: right"><button class="btn btn-ghost" style="font-size: 12px">{{ c.acao }}</button></td>
+                        </tr>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 8px">Extrato bancário — Banco 001, ag. 4412 / cc 87.331-0</div>
+                  <table class="table" style="font-variant-numeric: tabular-nums">
+                    <thead><tr><th>Data</th><th>Histórico</th><th style="text-align: right">Valor</th></tr></thead>
+                    <tbody>
+                      <sc-for list="{{ extrato }}" as="e" hint-placeholder-count="4">
+                        <tr style="{{ e.rowStyle }}">
+                          <td>{{ e.data }}</td>
+                          <td style="font-size: 13px">{{ e.historico }}</td>
+                          <td style="text-align: right; white-space: nowrap">{{ e.valor }}</td>
+                        </tr>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sPrestacao }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ prestacaoNaoGerada }}" hint-placeholder-val="{{ true }}">
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; max-width: 1020px">
+                  <div>
+                    <p style="text-align: justify; font-size: 14px; color: var(--color-neutral-800)">Sai com o cabeçalho institucional, os blocos de orçado, realizado e saldo e os lançamentos aprovados com comprovantes.</p>
+                    <hr class="hr">
+                    <div style="display: grid; gap: 18px">
+                      <div class="field"><label>Projeto *</label><select class="input"><option>Semear — Contraturno Escolar (CC-101)</option><option>Casa de Convivência (CC-102)</option><option>Todos os projetos</option></select></div>
+                      <div class="field"><label>Período de referência *</label>
+                        <div class="seg" style="width: 100%">
+                          <label class="seg-opt" style="flex: 1; justify-content: center"><input type="radio" name="per"><span>Mensal</span></label>
+                          <label class="seg-opt" style="flex: 1; justify-content: center"><input type="radio" name="per" checked><span>Semestral</span></label>
+                          <label class="seg-opt" style="flex: 1; justify-content: center"><input type="radio" name="per"><span>Anual</span></label>
+                          <label class="seg-opt" style="flex: 1; justify-content: center"><input type="radio" name="per"><span>Livre</span></label>
+                        </div>
+                      </div>
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
+                        <div class="field"><label>De</label><input class="input" style="font-variant-numeric: tabular-nums" value="01/01/2026"></div>
+                        <div class="field"><label>Até</label><input class="input" style="font-variant-numeric: tabular-nums" value="30/06/2026"></div>
+                      </div>
+                      <div style="display: grid; gap: 8px">
+                        <label class="radio"><input type="checkbox" checked><span class="dot"></span>Anexar comprovantes dos lançamentos</label>
+                        <label class="radio"><input type="checkbox" checked><span class="dot"></span>Incluir quadro por categoria de despesa</label>
+                        <label class="radio"><input type="checkbox"><span class="dot"></span>Incluir lançamentos rejeitados como anexo</label>
+                      </div>
+                    </div>
+                  </div>
+                  <aside style="display: grid; gap: 16px; align-content: start">
+                    <div class="card">
+                      <div class="card-kicker">Prévia dos parâmetros</div>
+                      <table class="table" style="font-variant-numeric: tabular-nums">
+                        <tbody>
+                          <tr><th style="width: 118px">Projeto</th><td style="font-size: 13px">Semear — Contraturno Escolar</td></tr>
+                          <tr><th>Período</th><td style="font-size: 13px">01/01 – 30/06/2026</td></tr>
+                          <tr><th>Lançamentos</th><td style="font-size: 13px">64 aprovados · 58 comprovantes</td></tr>
+                          <tr><th>Realizado</th><td style="font-size: 13px">R$ 151.900,00</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style="display: grid; gap: 10px">
+                      <button class="btn btn-primary btn-block" onClick="{{ abrirPrestacao }}">Gerar e visualizar</button>
+                      <div style="display: flex; gap: 10px">
+                        <button class="btn btn-secondary" style="flex: 1">Exportar PDF</button>
+                        <button class="btn btn-secondary" style="flex: 1">Exportar XLSX</button>
+                      </div>
+                    </div>
+                  </aside>
+                </div>
+              </sc-if>
+              <sc-if value="{{ prestacaoGerada }}" hint-placeholder-val="{{ false }}">
+                <div style="max-width: 900px; margin: 0 auto 14px">
+                  <a href="#" onClick="{{ fecharPrestacao }}" style="font-size: 12px">← Editar parâmetros</a>
+                </div>
+                <div style="max-width: 900px; margin: 0 auto; border: 1px solid var(--color-divider); background: var(--color-neutral-100); padding: 40px 46px" class="elev-sm">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--color-divider); padding-bottom: 18px">
+                    <div>
+                      <div style="font-family: var(--font-heading); font-size: 26px; line-height: 1.15">Movimento pelos Direitos da Criança e do Adolescente</div>
+                      <div style="font-size: 12px; color: var(--color-neutral-700); margin-top: 4px; font-variant-numeric: tabular-nums">CNPJ 04.512.887/0001-36 · Rua das Acácias, 210 · Porto Alegre/RS</div>
+                    </div>
+                    <div style="text-align: right; font-size: 12px; color: var(--color-neutral-700); font-variant-numeric: tabular-nums">Prestação de contas<br>01/01 – 30/06/2026<br>emitida em 12/09/2026</div>
+                  </div>
+                  <h4 style="font-size: 20px; font-weight: 400; margin: 22px 0 4px">Semear — Contraturno Escolar · CC-101</h4>
+                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); margin: 18px 0 22px">
+                    <div style="padding: 16px 0"><div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Orçado</div><div style="font-family: var(--font-heading); font-size: 30px; font-variant-numeric: tabular-nums">R$ 184.000,00</div></div>
+                    <div style="padding: 16px 0 16px 22px; border-left: 1px solid var(--color-divider)"><div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Realizado</div><div style="font-family: var(--font-heading); font-size: 30px; font-variant-numeric: tabular-nums">R$ 151.900,00</div></div>
+                    <div style="padding: 16px 0 16px 22px; border-left: 1px solid var(--color-divider)"><div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Saldo</div><div style="font-family: var(--font-heading); font-size: 30px; font-variant-numeric: tabular-nums">R$ 32.100,00</div></div>
+                  </div>
+                  <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 8px">Lançamentos aprovados no período</div>
+                  <table class="table" style="font-variant-numeric: tabular-nums">
+                    <thead><tr><th>Nº</th><th>Data</th><th>Categoria</th><th>Descrição</th><th style="text-align: right">Valor</th><th style="width: 92px">Compr.</th></tr></thead>
+                    <tbody>
+                      <sc-for list="{{ relatorioLinhas }}" as="r" hint-placeholder-count="5">
+                        <tr><td style="font-size: 13px">{{ r.id }}</td><td>{{ r.data }}</td><td style="font-size: 13px">{{ r.categoria }}</td><td style="font-size: 13px">{{ r.descricao }}</td><td style="text-align: right; white-space: nowrap">{{ r.valor }}</td><td><a href="#" style="font-size: 12px">anexo</a></td></tr>
+                      </sc-for>
+                      <tr><td colspan="4" style="text-align: right; font-family: var(--font-heading)">Total do período</td><td style="text-align: right; font-family: var(--font-heading)">R$ 151.900,00</td><td></td></tr>
+                    </tbody>
+                  </table>
+                  <div style="display: flex; gap: 10px; margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--color-divider)">
+                    <button class="btn btn-primary">Exportar PDF</button>
+                    <button class="btn btn-secondary">Exportar XLSX</button>
+                    <span style="margin-left: auto; font-size: 11px; color: var(--color-neutral-600); align-self: center">Página 1 de 9 · 58 comprovantes anexos</span>
+                  </div>
+                </div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ sDashboard }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 22px">
+                <select class="input" style="width: 200px"><option>Exercício 2026</option><option>1º semestre 2026</option></select>
+                <div class="seg" style="flex: none; white-space: nowrap">
+                  <label class="seg-opt"><input type="radio" name="ps" checked><span>Ativos</span></label>
+                  <label class="seg-opt"><input type="radio" name="ps"><span>Encerrados</span></label>
+                  <label class="seg-opt"><input type="radio" name="ps"><span>Todos</span></label>
+                </div>
+                <button class="btn btn-secondary" style="margin-left: auto; font-size: 13px">Exportar consolidado</button>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); margin-bottom: 28px">
+                <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="3">
+                  <div style="{{ k.colStyle }}">
+                    <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">{{ k.label }}</div>
+                    <div style="font-family: var(--font-heading); font-size: 36px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -0.015em; margin-top: 8px">{{ k.value }}</div>
+                    <div style="font-size: 12px; color: var(--color-neutral-700); margin-top: 5px">{{ k.note }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 14px">Orçado vs. realizado por projeto</div>
+              <div style="display: flex; align-items: flex-end; gap: 34px; height: 250px; border-bottom: 1px solid var(--color-text); padding: 0 8px 0 4px; margin-bottom: 10px">
+                <sc-for list="{{ chart }}" as="c" hint-placeholder-count="5">
+                  <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%">
+                    <div style="display: flex; align-items: flex-end; gap: 8px; height: 100%">
+                      <div style="{{ c.orcStyle }}"></div>
+                      <div style="{{ c.realStyle }}"></div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: flex; gap: 34px; padding: 0 8px 0 4px; margin-bottom: 24px">
+                <sc-for list="{{ chart }}" as="c" hint-placeholder-count="5">
+                  <div style="flex: 1; font-size: 11px; color: var(--color-neutral-700); line-height: 1.35">{{ c.nome }}<div style="font-variant-numeric: tabular-nums; color: var(--color-neutral-600)">{{ c.pctLabel }} consumido</div></div>
+                </sc-for>
+              </div>
+              <div style="display: flex; gap: 22px; font-size: 12px; color: var(--color-neutral-700); margin-bottom: 26px">
+                <span style="display: inline-flex; align-items: center; gap: 7px"><span style="width: 16px; height: 10px; border: 1px solid var(--color-neutral-600); background: var(--color-neutral-200)"></span>Orçado</span>
+                <span style="display: inline-flex; align-items: center; gap: 7px"><span style="width: 16px; height: 10px; border: 1px solid var(--color-accent-700); background: var(--color-accent-300)"></span>Realizado</span>
+              </div>
+              <table class="table" style="font-variant-numeric: tabular-nums">
+                <thead><tr><th>Projeto</th><th style="text-align: right">Orçado</th><th style="text-align: right">Realizado</th><th style="text-align: right">Saldo</th><th style="width: 90px">Consumo</th><th>Status</th></tr></thead>
+                <tbody>
+                  <sc-for list="{{ projetos }}" as="p" hint-placeholder-count="5">
+                    <tr><td style="font-size: 14px"><a href="#" onClick="{{ goOrcamentos }}" style="color: inherit">{{ p.nome }}</a></td><td style="text-align: right; white-space: nowrap">{{ p.orcado }}</td><td style="text-align: right; white-space: nowrap">{{ p.realizado }}</td><td style="text-align: right; white-space: nowrap; color: {{ p.saldoColor }}">{{ p.saldo }}</td><td>{{ p.pctLabel }}</td><td><span class="tag {{ p.tagClass }}">{{ p.status }}</span></td></tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </sc-if>
+            <sc-if value="{{ sPapeisAuditoria }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 18px">
+                <sc-if value="{{ podeGerenciarUsuarios }}" hint-placeholder-val="{{ true }}">
+                  <button class="{{ tabUsuariosBtnClass }}" style="font-size: 13px" onClick="{{ irTabUsuarios }}">Usuários e papéis</button>
+                </sc-if>
+                <button class="{{ tabAuditoriaBtnClass }}" style="font-size: 13px" onClick="{{ irTabAuditoria }}">Trilha de auditoria</button>
+                <span style="margin-left: auto; font-size: 12px; color: var(--color-neutral-600)">{{ papeisAuditoriaNota }}</span>
+              </div>
+              <sc-if value="{{ tabUsuarios }}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 14px">
+                  <button class="btn btn-primary" style="white-space: nowrap">Novo usuário</button>
+                </div>
+                <table class="table">
+                  <thead><tr><th>Usuário</th><th>E-mail</th><th style="width: 190px">Papel</th><th>Projetos vinculados</th><th style="width: 100px">Situação</th><th></th></tr></thead>
+                  <tbody>
+                    <sc-for list="{{ usuarios }}" as="u" hint-placeholder-count="5">
+                      <tr>
+                        <td style="font-family: var(--font-heading); font-size: 15px">{{ u.nome }}</td>
+                        <td style="font-size: 13px; color: var(--color-neutral-700)">{{ u.email }}</td>
+                        <td><span class="tag {{ u.tagClass }}">{{ u.papel }}</span></td>
+                        <td style="font-size: 13px; color: var(--color-neutral-700)">{{ u.projetos }}</td>
+                        <td style="font-size: 13px">{{ u.situacao }}</td>
+                        <td style="text-align: right"><button class="btn btn-ghost" style="font-size: 12px">Editar</button></td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </sc-if>
+              <sc-if value="{{ tabAuditoria }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px">
+                  <input class="input" style="width: 260px" placeholder="Buscar por usuário, nº ou projeto">
+                  <select class="input" style="width: 180px"><option>Todas as ações</option><option>Aprovação</option><option>Rejeição</option><option>Edição</option><option>Criação</option></select>
+                  <input class="input" style="width: 180px; font-variant-numeric: tabular-nums" value="01/09 – 12/09/2026">
+                </div>
+                <table class="table" style="font-variant-numeric: tabular-nums">
+                  <thead><tr><th style="width: 150px">Quando</th><th style="width: 170px">Quem</th><th style="width: 130px">Ação</th><th>Objeto</th><th>Detalhes</th></tr></thead>
+                  <tbody>
+                    <sc-for list="{{ auditoria }}" as="a" hint-placeholder-count="7">
+                      <tr>
+                        <td style="font-size: 13px; color: var(--color-neutral-700)">{{ a.quando }}</td>
+                        <td style="font-size: 13px">{{ a.quem }}</td>
+                        <td><span class="tag {{ a.tagClass }}">{{ a.acao }}</span></td>
+                        <td style="font-size: 13px">{{ a.objeto }}</td>
+                        <td style="font-size: 13px; color: var(--color-neutral-700)">{{ a.detalhe }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </sc-if>
+            </sc-if>
+          </main>
+        </div>
+        <sc-if value="{{ sDetalheDrawer }}" hint-placeholder-val="{{ false }}">
+          <div style="position: fixed; inset: 0; background: color-mix(in srgb, var(--color-text) 35%, transparent); z-index: 30" onClick="{{ fecharDetalhe }}"></div>
+          <aside style="position: fixed; top: 0; right: 0; height: 100vh; width: 460px; background: var(--color-bg); border-left: 1px solid var(--color-divider); overflow: auto; padding: 30px 32px 40px; z-index: 31; box-shadow: -12px 0 30px color-mix(in srgb, var(--color-text) 10%, transparent)">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px">
+              <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Detalhe do lançamento</div>
+              <button class="btn btn-ghost" style="font-size: 12px" onClick="{{ fecharDetalhe }}">Fechar ×</button>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px">
+              <h3 style="font-size: 22px; font-weight: 400; margin: 0">Manutenção elétrica da sede</h3>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px">
+              <span class="tag tag-danger">Rejeitado</span>
+              <span style="margin-left: auto; font-family: var(--font-heading); font-size: 21px; font-variant-numeric: tabular-nums">R$ 2.780,50</span>
+            </div>
+            <div style="border: 1px solid var(--color-accent); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 20px">
+              <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Motivo da rejeição</div>
+              <div style="font-size: 13px; margin-top: 4px; color: var(--color-neutral-900)">Nota fiscal ilegível na foto e valor acima do limite da categoria Manutenção. Refaça o lançamento com o comprovante legível.</div>
+              <div style="font-size: 11px; color: var(--color-neutral-600); margin-top: 6px">Luana Ferraz · 10/09/2026 às 17:42</div>
+            </div>
+            <table class="table">
+              <tbody>
+                <tr><th style="width: 150px">Nº do lançamento</th><td style="font-variant-numeric: tabular-nums">L-1039</td></tr>
+                <tr><th>Projeto</th><td>Semear — Contraturno Escolar (CC-101)</td></tr>
+                <tr><th>Categoria</th><td>Manutenção</td></tr>
+                <tr><th>Data do gasto</th><td style="font-variant-numeric: tabular-nums">10/09/2026</td></tr>
+                <tr><th>Autor</th><td>Marcos Vieira · Educador</td></tr>
+                <tr><th>Descrição</th><td>Troca do quadro de disjuntores da sala de oficinas.</td></tr>
+              </tbody>
+            </table>
+            <div style="margin: 18px 0">
+              <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 8px">Comprovante</div>
+              <div class="plate" style="background: var(--color-neutral-300); height: 140px; display: grid; place-items: center; text-align: center">
+                <div style="font-size: 11px; color: var(--color-neutral-800); padding: 12px; line-height: 1.6">Foto do comprovante<br>IMG_2039.jpg · 1,8 MB</div>
+              </div>
+            </div>
+            <hr class="hr">
+            <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600); margin: 14px 0 10px">Trilha de auditoria</div>
+            <div style="display: grid; gap: 0">
+              <sc-for list="{{ historico }}" as="h" hint-placeholder-count="3">
+                <div style="display: grid; grid-template-columns: 100px 1fr; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--color-divider); font-size: 12.5px">
+                  <div style="color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ h.quando }}</div>
+                  <div><strong style="font-weight: 500">{{ h.quem }}</strong> — {{ h.oque }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px">
+              <sc-if value="{{ podeRefazer }}" hint-placeholder-val="{{ true }}">
+                <button class="btn btn-primary" style="font-size: 13px" onClick="{{ goDespesa }}">Refazer lançamento</button>
+              </sc-if>
+              <sc-if value="{{ podeVerValores }}" hint-placeholder-val="{{ true }}">
+                <button class="btn btn-ghost" style="font-size: 13px" onClick="{{ goOrcamentos }}">Ver orçamento</button>
+              </sc-if>
+            </div>
+          </aside>
+        </sc-if>
+      </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;orcamentos&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;lancamentos&quot;,&quot;aprovacao&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;dashboard&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;,&quot;admin&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, t07tab: null };
+
+  cur() { return this.state.screen || this.props.screen || 'orcamentos'; }
+  per() { return this.state.persona || this.props.persona || 'coordenacao'; }
+
+  personasDef() {
+    return {
+      coordenacao: {
+        label: 'Coordenação', nome: 'Luana Ferraz', papel: 'Coordenação Adm.-Financeira', iniciais: 'LF', notif: 3,
+        home: 'orcamentos', escreve: true, editaOrcamento: true,
+        telas: ['orcamentos', 'orcamento-form', 'despesa-mobile', 'lancamentos', 'aprovacao', 'conciliacao', 'prestacao', 'dashboard', 'papeis-auditoria'],
+        pode: 'Perfil completo: cria orçamentos, aprova despesas e emite prestações de contas.'
+      },
+      educador: {
+        label: 'Educador', nome: 'Marcos Vieira', papel: 'Educador — Semear, Casa de Convivência', iniciais: 'MV', notif: 1,
+        home: 'despesa-mobile',
+        projetos: ['Semear — Contraturno Escolar', 'Casa de Convivência'],
+        statusVisiveis: null, escreve: false, tituloLancamentos: 'Meus lançamentos',
+        telas: ['despesa-mobile', 'lancamentos'],
+        pode: 'Lança despesas e acompanha só os lançamentos dos projetos a que está vinculado.'
+      },
+      direcao: {
+        label: 'Direção', nome: 'Jane Almeida', papel: 'Diretoria / Presidência', iniciais: 'JA', notif: 2,
+        home: 'dashboard', escreve: false,
+        telas: ['dashboard', 'orcamentos', 'prestacao', 'lancamentos', 'papeis-auditoria'],
+        pode: 'Somente leitura: visão consolidada, relatórios e trilha de auditoria.'
+      },
+      voluntario: {
+        label: 'Voluntário', nome: 'Lucas Prado', papel: 'Voluntário Financeiro (remoto)', iniciais: 'LP', notif: 1,
+        home: 'conciliacao',
+        statusVisiveis: ['Aprovado', 'Conciliado'], escreve: false, tituloLancamentos: 'Lançamentos aprovados',
+        telas: ['conciliacao', 'lancamentos'],
+        pode: 'Edição limitada à conciliação bancária — não aprova despesas nem vê orçamentos.'
+      },
+      admin: {
+        label: 'Administrador', nome: 'Ana Ribeiro', papel: 'Administradora do sistema', iniciais: 'AR', notif: 0,
+        home: 'papeis-auditoria', escreve: true,
+        telas: ['papeis-auditoria'],
+        pode: 'Gerencia usuários, papéis e vínculos — sem acesso aos valores financeiros.'
+      }
+    };
+  }
+  brl(n) { return (n < 0 ? '-R$ ' : 'R$ ') + Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  k(n) { return 'R$ ' + n.toLocaleString('pt-BR', { maximumFractionDigits: 0 }); }
+
+  meta() {
+    return {
+      'orcamentos': ['Tela 1 · Épico 1 · US-01, US-02', 'Orçamentos e saldo por projeto', 'mdca.org.br/financas/orcamentos', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
+      'orcamento-form': ['Tela 2 · Épico 1 · US-01', 'Cadastro / edição de orçamento', 'mdca.org.br/financas/orcamentos/novo', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
+      'despesa-mobile': ['Tela 3 · Épico 2 · US-03', 'Lançamento de despesa', 'mdca.org.br/financas/despesas/nova', 'Marcos Vieira', 'Educador', 'MV'],
+      'lancamentos': ['Tela 4 · Épico 2 · US-03, 04, 05', 'Lançamentos', 'mdca.org.br/financas/lancamentos', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
+      'aprovacao': ['Tela 5 · Épico 2 · US-04', 'Aprovação de lançamentos pendentes', 'mdca.org.br/financas/aprovacoes', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
+      'conciliacao': ['Tela 6 · Épico 2 · US-05', 'Conciliação bancária', 'mdca.org.br/financas/conciliacao', 'Lucas Prado', 'Voluntário Financeiro (remoto)', 'LP'],
+      'prestacao': ['Tela 7 · Épico 3 · US-06', 'Prestação de contas', 'mdca.org.br/financas/prestacao', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
+      'dashboard': ['Tela 8 · Épico 3 · US-07', 'Dashboard executivo consolidado', 'mdca.org.br/financas/dashboard', 'Jane Almeida', 'Diretoria / Presidência', 'JA'],
+      'papeis-auditoria': ['Tela 9 · Compartilhada · US-08', 'Papéis, acessos e auditoria', 'mdca.org.br/admin/papeis-auditoria', 'Ana Ribeiro', 'Administradora do sistema', 'AR']
+    };
+  }
+
+  navDef() {
+    return [
+      ['Orçamento', [['Orçamentos e saldo', 'orcamentos'], ['Novo orçamento', 'orcamento-form']]],
+      ['Lançamentos', [['Lançar despesa', 'despesa-mobile'], ['Todos os lançamentos', 'lancamentos'], ['Aprovações pendentes', 'aprovacao'], ['Conciliação bancária', 'conciliacao']]],
+      ['Prestação de contas', [['Prestação de contas', 'prestacao'], ['Dashboard executivo', 'dashboard']]],
+      ['Plataforma', [['Papéis e auditoria', 'papeis-auditoria']]]
+    ];
+  }
+
+  projetosDef() {
+    return [
+      ['Semear — Contraturno Escolar', 'CC-101 · Educação', 184000, 151900, 'Vigente'],
+      ['Casa de Convivência', 'CC-102 · Acolhimento', 96000, 42300, 'Vigente'],
+      ['Núcleo de Arte e Cultura', 'CC-103 · Cultura', 72500, 74100, 'Vigente'],
+      ['Plantão Jurídico — Defesa de Direitos', 'CC-104 · Direitos', 58000, 21450, 'Vigente'],
+      ['Formação de Conselheiros', 'CC-105 · Formação', 34000, 9800, 'Encerrado']
+    ];
+  }
+
+  lancamentosDef() {
+    return [
+      ['L-1042', '12/09/2026', 'Semear — Contraturno Escolar', 'Alimentação', 486.90, 'Pendente', 'Marcos Vieira'],
+      ['L-1041', '11/09/2026', 'Núcleo de Arte e Cultura', 'Material didático', 1240.00, 'Aprovado', 'Marcos Vieira'],
+      ['L-1040', '11/09/2026', 'Casa de Convivência', 'Transporte', 320.00, 'Conciliado', 'Rita Souza'],
+      ['L-1039', '10/09/2026', 'Semear — Contraturno Escolar', 'Manutenção', 2780.50, 'Rejeitado', 'Marcos Vieira'],
+      ['L-1038', '09/09/2026', 'Plantão Jurídico — Defesa de Direitos', 'Serviços de terceiros', 1500.00, 'Aprovado', 'Rita Souza'],
+      ['L-1037', '08/09/2026', 'Semear — Contraturno Escolar', 'Alimentação', 742.15, 'Conciliado', 'Marcos Vieira'],
+      ['L-1036', '05/09/2026', 'Formação de Conselheiros', 'Locação de espaço', 900.00, 'Aprovado', 'Rita Souza']
+    ];
+  }
+
+  tagFor(status) {
+    if (status === 'Aprovado') return 'tag-accent';
+    if (status === 'Conciliado') return 'tag-info';
+    if (status === 'Pendente') return 'tag-warning';
+    if (status === 'Rejeitado') return 'tag-danger';
+    if (status === 'Encerrado') return 'tag-neutral';
+    return 'tag-outline';
+  }
+
+  notificacoesDef(persona) {
+    const todas = [
+      { para: ['coordenacao', 'direcao'], novo: true },
+      { para: ['coordenacao', 'educador'], novo: true },
+      { para: ['coordenacao', 'educador', 'voluntario'], novo: false },
+      { para: ['coordenacao', 'direcao'], novo: false },
+      { para: ['coordenacao'], novo: true },
+      { para: ['voluntario'], novo: true },
+      { para: ['educador'], novo: false },
+      { para: ['admin'], novo: false }
+    ];
+    return todas.filter((n) => n.para.indexOf(persona) >= 0);
+  }
+
+  renderVals() {
+    const s = this.cur();
+    const M = this.meta()[s] || [];
+    const P = this.personasDef()[this.per()];
+    const ok = P.telas.indexOf(s) >= 0;
+    const on = (k) => ok && s === k;
+    const go = (key) => () => {
+      if (key === this.cur()) return;
+      this.setState({ screen: key, history: [...(this.state.history || []), this.cur()], detalheOpen: false, relatorioGerado: false });
+    };
+    const goBack = () => {
+      const hist = [...(this.state.history || [])];
+      let target = null;
+      while (hist.length) {
+        const candidate = hist.pop();
+        if (P.telas.indexOf(candidate) >= 0) { target = candidate; break; }
+      }
+      this.setState({ screen: target || P.home, history: hist, detalheOpen: false, relatorioGerado: false });
+    };
+    const grupoDe = (key) => {
+      const found = this.navDef().find(([, items]) => items.some(([, k]) => k === key));
+      return found ? found[0] : '';
+    };
+    const setPersona = (key) => () => {
+      const np = this.personasDef()[key];
+      this.setState({
+        persona: key,
+        screen: np.telas.indexOf(this.cur()) >= 0 ? this.cur() : np.home,
+        detalheOpen: false, relatorioGerado: false, t07tab: null
+      });
+    };
+    const abrirDetalhe = () => this.setState({ detalheOpen: true });
+    const fecharDetalhe = () => this.setState({ detalheOpen: false });
+    const abrirPrestacao = () => this.setState({ relatorioGerado: true });
+    const fecharPrestacao = () => this.setState({ relatorioGerado: false });
+    const irTabUsuarios = () => this.setState({ t07tab: 'usuarios' });
+    const irTabAuditoria = () => this.setState({ t07tab: 'auditoria' });
+
+    const papelAtual = this.per();
+    const podeGerenciarUsuarios = papelAtual === 'admin';
+    const t07tab = this.state.t07tab || (podeGerenciarUsuarios ? 'usuarios' : 'auditoria');
+    const tabUsuarios = podeGerenciarUsuarios && t07tab === 'usuarios';
+    const tabAuditoria = !tabUsuarios;
+
+    const projetos = this.projetosDef().map(([nome, cc, orcado, realizado, status]) => {
+      const pct = realizado / orcado;
+      const over = pct > 1;
+      const warn = pct > 0.8;
+      return {
+        nome, cc, status,
+        vigencia: status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026',
+        orcado: this.brl(orcado), realizado: this.brl(realizado), saldo: this.brl(orcado - realizado),
+        saldoColor: over ? 'var(--color-accent-700)' : 'var(--color-text)',
+        pctLabel: Math.round(pct * 100) + '%',
+        tagClass: this.tagFor(status),
+        alerta: over ? 'Estourado · acima de 100%' : warn ? 'Atenção · acima de 80%' : 'Dentro do orçado',
+        alertClass: warn ? 'tag-outline' : 'tag-neutral',
+        barStyle: {
+          height: '100%',
+          width: Math.min(100, pct * 100) + '%',
+          background: warn ? 'var(--color-accent-300)' : 'var(--color-neutral-300)',
+          borderRight: warn ? '2px solid var(--color-accent-700)' : '2px solid var(--color-neutral-600)'
+        }
+      };
+    });
+
+    const totOrc = this.projetosDef().reduce((a, p) => a + p[2], 0);
+    const totReal = this.projetosDef().reduce((a, p) => a + p[3], 0);
+
+    const visiveis = this.lancamentosDef().filter(([, , projeto, , , status]) =>
+      (!P.projetos || P.projetos.indexOf(projeto) >= 0) &&
+      (!P.statusVisiveis || P.statusVisiveis.indexOf(status) >= 0));
+
+    const lancamentos = visiveis.map(([id, data, projeto, categoria, valor, status, autor]) => ({
+      id, data, projeto, categoria, autor, status,
+      valor: this.brl(valor),
+      tagClass: this.tagFor(status),
+      onClick: abrirDetalhe
+    }));
+
+    return {
+      isPhone: s === 'despesa-mobile',
+      isDesktop: s !== 'despesa-mobile',
+      w: 1240, h: 780,
+      url: ok ? (M[2] || 'mdca.org.br/financas') : 'mdca.org.br/acesso-restrito',
+      tabs: [{ title: 'MDCA · Plataforma' }, { title: 'Extrato — Banco' }],
+      kicker: ok ? (M[0] || '') : 'Acesso restrito',
+      title: ok ? (M[1] || '') : 'Sem permissão',
+      breadcrumbGroup: grupoDe(s),
+      podeConciliar: P.telas.indexOf('conciliacao') >= 0,
+      escreve: P.editaOrcamento === true,
+      podeVerValores: P.telas.indexOf('orcamentos') >= 0,
+      podeRefazer: this.per() === 'educador' || this.per() === 'coordenacao',
+      naoEscreve: P.editaOrcamento !== true,
+      tituloLancamentos: P.tituloLancamentos || 'Todos os lançamentos',
+      escopoLancamentos: P.projetos ? 'Somente os projetos aos quais você está vinculado'
+        : P.statusVisiveis ? 'Somente lançamentos aprovados, para conciliação'
+        : 'Todos os projetos',
+      contagemLancamentos: lancamentos.length + (lancamentos.length === 1 ? ' lançamento' : ' lançamentos'),
+      filtroProjetos: P.projetos || ['Semear — Contraturno Escolar', 'Casa de Convivência', 'Núcleo de Arte e Cultura', 'Plantão Jurídico — Defesa de Direitos', 'Formação de Conselheiros'],
+      mostraStatusPend: !P.statusVisiveis,
+      userName: P.nome, userRole: P.papel, userInitials: P.iniciais,
+      notifCount: String(this.notificacoesDef(this.per()).filter((n) => n.novo).length), personaPode: P.pode, personaHome: P.home,
+      goHome: go(P.home), goBack, telaNegada: M[1] || '',
+      personas: Object.keys(this.personasDef()).map((k) => {
+        const p = this.personasDef()[k];
+        const at = k === this.per();
+        return {
+          key: k, label: p.label, onClick: setPersona(k),
+          style: {
+            flex: 'none', cursor: 'pointer', font: 'inherit', fontSize: 11.5,
+            fontFamily: at ? 'var(--font-heading)' : 'var(--font-body)',
+            padding: '4px 9px', borderRadius: 'var(--radius-sm, 3px)',
+            border: '1px solid ' + (at ? 'var(--color-accent)' : 'var(--color-divider)'),
+            background: at ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'transparent',
+            color: at ? 'var(--color-accent-700)' : 'var(--color-neutral-700)'
+          }
+        };
+      }),
+      sDenied: !ok,
+      sOrcamentos: on('orcamentos'),
+      sForm: on('orcamento-form'),
+      sLancamentos: on('lancamentos'),
+      sAprovacao: on('aprovacao'),
+      sConciliacao: on('conciliacao'),
+      sPrestacao: on('prestacao'),
+      sDashboard: on('dashboard'),
+      sPapeisAuditoria: on('papeis-auditoria'),
+      prestacaoGerada: this.state.relatorioGerado === true,
+      prestacaoNaoGerada: this.state.relatorioGerado !== true,
+      sDetalheDrawer: this.state.detalheOpen === true,
+      podeGerenciarUsuarios, tabUsuarios, tabAuditoria,
+      tabUsuariosBtnClass: tabUsuarios ? 'btn btn-primary' : 'btn btn-secondary',
+      tabAuditoriaBtnClass: tabAuditoria ? 'btn btn-primary' : 'btn btn-secondary',
+      papeisAuditoriaNota: tabUsuarios
+        ? 'Educador vê só os seus projetos · consolidado restrito a Coordenação e Direção'
+        : 'Registro transversal · leitura de Coordenação e Direção',
+      irTabUsuarios, irTabAuditoria,
+      projetos, lancamentos,
+      goDespesa: go('despesa-mobile'),
+      abrirDetalhe, fecharDetalhe, abrirPrestacao, fecharPrestacao,
+      historico: [
+        { quando: '10/09 · 09:14', quem: 'Marcos Vieira', oque: 'criou o lançamento com foto de comprovante (status pendente).' },
+        { quando: '10/09 · 14:02', quem: 'Luana Ferraz', oque: 'abriu o lançamento para análise.' },
+        { quando: '10/09 · 17:42', quem: 'Luana Ferraz', oque: 'rejeitou com motivo registrado; notificação enviada ao autor.' },
+        { quando: '11/09 · 08:30', quem: 'Marcos Vieira', oque: 'visualizou o motivo da rejeição.' }
+      ],
+      pendentes: [
+        { id: 'L-1042', data: '12/09/2026', autor: 'Marcos Vieira', descricao: 'Lanche da oficina de leitura', projeto: 'Semear — Contraturno Escolar', categoria: 'Alimentação', valor: this.brl(486.90), saldoDepois: this.brl(31613.10), onDetalhe: abrirDetalhe },
+        { id: 'L-1043', data: '12/09/2026', autor: 'Rita Souza', descricao: 'Tintas e pincéis para o ateliê', projeto: 'Núcleo de Arte e Cultura', categoria: 'Material didático', valor: this.brl(1320.50), saldoDepois: this.brl(-2921.00), onDetalhe: abrirDetalhe },
+        { id: 'L-1044', data: '11/09/2026', autor: 'Marcos Vieira', descricao: 'Transporte para visita ao museu', projeto: 'Casa de Convivência', categoria: 'Transporte', valor: this.brl(1800.00), saldoDepois: this.brl(51900.00), onDetalhe: abrirDetalhe }
+      ],
+      conciliar: [
+        { id: 'L-1041', data: '11/09', projeto: 'Núcleo de Arte e Cultura', valor: this.brl(1240.00), situacao: 'A conciliar', tagClass: 'tag-outline', acao: 'Conciliar' },
+        { id: 'L-1038', data: '09/09', projeto: 'Plantão Jurídico', valor: this.brl(1500.00), situacao: 'A conciliar', tagClass: 'tag-outline', acao: 'Conciliar' },
+        { id: 'L-1036', data: '05/09', projeto: 'Formação de Conselheiros', valor: this.brl(900.00), situacao: '+7 dias', tagClass: 'tag-warning', acao: 'Conciliar' },
+        { id: 'L-1031', data: '02/09', projeto: 'Casa de Convivência', valor: this.brl(615.40), situacao: '+7 dias', tagClass: 'tag-warning', acao: 'Conciliar' },
+        { id: 'L-1037', data: '08/09', projeto: 'Semear', valor: this.brl(742.15), situacao: 'Conciliado', tagClass: 'tag-info', acao: 'Desfazer' }
+      ],
+      extrato: [
+        { data: '11/09', historico: 'DÉB CARTÃO — PAPELARIA CENTRAL', valor: this.brl(1240.00), rowStyle: { outline: '1px solid var(--color-accent)', outlineOffset: '-1px' } },
+        { data: '09/09', historico: 'TED — J. M. ADVOCACIA ASSOC.', valor: this.brl(1500.00), rowStyle: {} },
+        { data: '08/09', historico: 'DÉB CARTÃO — MERCADO SÃO JOÃO', valor: this.brl(742.15), rowStyle: {} },
+        { data: '05/09', historico: 'PIX — CENTRO COMUNITÁRIO VILA', valor: this.brl(900.00), rowStyle: {} },
+        { data: '03/09', historico: 'TARIFA — PACOTE DE SERVIÇOS', valor: this.brl(78.00), rowStyle: {} }
+      ],
+      relatorioLinhas: [
+        { id: 'L-0912', data: '28/06/2026', categoria: 'Alimentação', descricao: 'Gêneros alimentícios — junho', valor: this.brl(6480.00) },
+        { id: 'L-0898', data: '20/06/2026', categoria: 'Material didático', descricao: 'Kits de leitura (120 un.)', valor: this.brl(9240.00) },
+        { id: 'L-0871', data: '12/06/2026', categoria: 'Serviços de terceiros', descricao: 'Oficina de contação de histórias', valor: this.brl(3200.00) },
+        { id: 'L-0844', data: '05/06/2026', categoria: 'Transporte', descricao: 'Fretamento — saída pedagógica', valor: this.brl(2150.00) },
+        { id: 'L-0820', data: '31/05/2026', categoria: 'Recursos humanos', descricao: 'Equipe de educadores — maio', valor: this.brl(28400.00) }
+      ],
+      chart: this.projetosDef().map(([nome, cc, orcado, realizado]) => {
+        const max = 200000;
+        return {
+          nome,
+          pctLabel: Math.round(realizado / orcado * 100) + '%',
+          orcStyle: { flex: 1, height: (orcado / max * 100) + '%', background: 'var(--color-neutral-200)', border: '1px solid var(--color-neutral-600)', borderBottom: 0 },
+          realStyle: { flex: 1, height: (realizado / max * 100) + '%', background: 'var(--color-accent-300)', border: '1px solid var(--color-accent-700)', borderBottom: 0 }
+        };
+      }),
+      usuarios: [
+        { nome: 'Luana Ferraz', email: 'luana.ferraz@mdca.org.br', papel: 'Coordenação', tagClass: 'tag-accent', projetos: 'Todos (consolidado)', situacao: 'Ativo' },
+        { nome: 'Jane Almeida', email: 'jane.almeida@mdca.org.br', papel: 'Direção', tagClass: 'tag-accent', projetos: 'Todos (leitura)', situacao: 'Ativo' },
+        { nome: 'Marcos Vieira', email: 'marcos.vieira@mdca.org.br', papel: 'Educador', tagClass: 'tag-outline', projetos: 'Semear · Casa de Convivência', situacao: 'Ativo' },
+        { nome: 'Rita Souza', email: 'rita.souza@mdca.org.br', papel: 'Educadora', tagClass: 'tag-outline', projetos: 'Arte e Cultura · Plantão Jurídico', situacao: 'Ativo' },
+        { nome: 'Lucas Prado', email: 'lucas.prado@voluntario.org', papel: 'Voluntário Financeiro', tagClass: 'tag-neutral', projetos: 'Conciliação — todos', situacao: 'Ativo' },
+        { nome: 'Ana Ribeiro', email: 'ana.ribeiro@mdca.org.br', papel: 'Administradora', tagClass: 'tag-neutral', projetos: '—', situacao: 'Ativo' }
+      ],
+      auditoria: [
+        { quando: '12/09 · 08:12', quem: 'Marcos Vieira', acao: 'Criação', tagClass: 'tag-neutral', objeto: 'Lançamento L-1042', detalhe: 'R$ 486,90 · Semear · pendente' },
+        { quando: '11/09 · 18:40', quem: 'Luana Ferraz', acao: 'Aprovação', tagClass: 'tag-accent', objeto: 'Lançamento L-1041', detalhe: 'debitado do saldo de CC-103' },
+        { quando: '11/09 · 16:05', quem: 'Lucas Prado', acao: 'Conciliação', tagClass: 'tag-info', objeto: 'Lançamento L-1040', detalhe: 'vinculado ao extrato de 11/09' },
+        { quando: '10/09 · 17:42', quem: 'Luana Ferraz', acao: 'Rejeição', tagClass: 'tag-danger', objeto: 'Lançamento L-1039', detalhe: 'motivo: nota fiscal ilegível' },
+        { quando: '10/09 · 11:20', quem: 'Luana Ferraz', acao: 'Edição', tagClass: 'tag-neutral', objeto: 'Orçamento CC-103', detalhe: 'valor total 68.000 → 72.500' },
+        { quando: '09/09 · 09:58', quem: 'Ana Ribeiro', acao: 'Permissão', tagClass: 'tag-neutral', objeto: 'Usuário Rita Souza', detalhe: 'vínculo ao projeto CC-104' },
+        { quando: '08/09 · 07:31', quem: 'Jane Almeida', acao: 'Leitura', tagClass: 'tag-neutral', objeto: 'Dashboard executivo', detalhe: 'exportou consolidado 2026' }
+      ],
+      categorias: [
+        { nome: 'Alimentação', limite: this.brl(48000) },
+        { nome: 'Transporte', limite: this.brl(26000) },
+        { nome: 'Material didático', limite: this.brl(38000) },
+        { nome: 'Serviços de terceiros', limite: this.brl(72000) }
+      ],
+      kpis: [
+        { label: 'Orçado — todos os projetos', value: this.k(totOrc), note: '5 centros de custo · exercício 2026', colStyle: { padding: '18px 24px 18px 0' } },
+        { label: 'Realizado (aprovado)', value: this.k(totReal), note: Math.round(totReal / totOrc * 100) + '% do orçado consumido', colStyle: { padding: '18px 24px', borderLeft: '1px solid var(--color-divider)' } },
+        { label: 'Saldo disponível', value: this.k(totOrc - totReal), note: '1 projeto acima de 100%', colStyle: { padding: '18px 0 18px 24px', borderLeft: '1px solid var(--color-divider)' } }
+      ],
+      goOrcamentos: go('orcamentos'), goForm: go('orcamento-form'), goLancamentos: go('lancamentos'),
+      goConciliacao: go('conciliacao'),
+      navGroups: this.navDef().map(([title, items]) => ({
+        title,
+        items: items.filter(([, key]) => P.telas.indexOf(key) >= 0).map(([label, key]) => ({
+          label: key === 'lancamentos' ? (P.tituloLancamentos || label) : label,
+          onClick: go(key),
+          style: {
+            display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+            background: key === s ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'transparent',
+            border: 0, borderLeft: key === s ? '2px solid var(--color-accent)' : '2px solid transparent',
+            padding: '7px 20px', font: 'inherit', fontSize: 13.5,
+            fontFamily: key === s ? 'var(--font-heading)' : 'var(--font-body)',
+            color: key === s ? 'var(--color-accent-700)' : 'color-mix(in srgb, var(--color-text) 78%, transparent)'
+          }
+        }))
+      })).filter((g) => g.items.length > 0)
+    };
+  }
+}
+</script>
+</body>
+</html>
