@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prática em ES - Deploy</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>Prática em ES - Deploy</h1>
+    <p>Frontend estático preparado para Cloudflare Pages.</p>
+
+    <section class="card">
+      <h2>Status do backend</h2>
+      <p id="api-status">Verificando API...</p>
+      <button id="btn-testar-api">Testar API</button>
+    </section>
+
+    <section class="card">
+      <h2>Status do banco</h2>
+      <p id="db-status">Verificando banco...</p>
+      <button id="btn-testar-db">Testar banco</button>
+    </section>
+
+    <section class="card">
+      <h2>Upload no R2</h2>
+      <p id="storage-status">Verificando R2...</p>
+      <button id="btn-testar-storage" type="button">Testar R2</button>
+      <form id="form-upload">
+        <label>
+          Arquivo
+          <input type="file" id="arquivo" required>
+        </label>
+        <button type="submit">Enviar arquivo</button>
+      </form>
+      <p id="upload-status">Selecione um arquivo para testar o Cloudflare R2.</p>
+      <p id="upload-link"></p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
