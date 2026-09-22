@@ -100,8 +100,8 @@ function IOSGlassPill({ children, dark = false, style = {}, onClick, ariaLabel }
 // ─────────────────────────────────────────────────────────────
 // Navigation bar — glass pills + large title
 // ─────────────────────────────────────────────────────────────
-function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true, onBack }) {
-  const muted = dark ? 'rgba(255,255,255,0.6)' : '#404040';
+function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true, onBack, accent, font }) {
+  const muted = accent || (dark ? 'rgba(255,255,255,0.6)' : '#404040');
   const text = dark ? '#fff' : '#000';
   const pillIcon = (content, onClick, ariaLabel) => (
     <IOSGlassPill dark={dark} onClick={onClick} ariaLabel={ariaLabel}>
@@ -139,9 +139,9 @@ function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true, onBack 
       {/* large title */}
       <div style={{
         padding: '0 16px',
-        fontFamily: '-apple-system, system-ui',
-        fontSize: 34, fontWeight: 700, lineHeight: '41px',
-        color: text, letterSpacing: 0.4,
+        fontFamily: font || '-apple-system, system-ui',
+        fontSize: 32, fontWeight: 700, lineHeight: '39px',
+        color: text, letterSpacing: font ? 0 : 0.4,
       }}>{title}</div>
     </div>
   );
@@ -210,14 +210,14 @@ function IOSList({ header, children, dark = false }) {
 // ─────────────────────────────────────────────────────────────
 function IOSDevice({
   children, width = 402, height = 874, dark = false,
-  title, keyboard = false, onBack,
+  title, keyboard = false, onBack, bg, accent, font,
 }) {
   return (
     // data-om-starter: inert presence marker — Claude Design's starter-usage
     // probe reads it; it renders nothing. Keep it on this root element.
     <div data-om-starter="ios-frame" style={{
       width, height, borderRadius: 48, overflow: 'hidden',
-      position: 'relative', background: dark ? '#000' : '#F2F2F7',
+      position: 'relative', background: bg || (dark ? '#000' : '#F2F2F7'),
       boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
       fontFamily: '-apple-system, system-ui, sans-serif',
       WebkitFontSmoothing: 'antialiased',
@@ -233,7 +233,7 @@ function IOSDevice({
       </div>
       {/* nav + content */}
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {title !== undefined && <IOSNavBar title={title} dark={dark} onBack={onBack} />}
+        {title !== undefined && <IOSNavBar title={title} dark={dark} onBack={onBack} accent={accent} font={font} />}
         <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
         {keyboard && <IOSKeyboard dark={dark} />}
       </div>
