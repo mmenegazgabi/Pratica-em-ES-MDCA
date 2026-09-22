@@ -62,13 +62,4 @@ O workflow em [.github/workflows/ci.yml](.github/workflows/ci.yml) roda os
 testes de `backend/financeiro` e `backend/gestao` em jobs independentes, para
 que uma alteração em um módulo não quebre o build do outro.
 
-## Donos das pastas
 
-| Pasta                | Dono              |
-| --------------------- | ----------------- |
-| `backend/financeiro`  | Time Financeiro   |
-| `frontend/financeiro` | Time Financeiro   |
-| `backend/gestao`      | Time de Gestão    |
-| `frontend/gestao`     | Time de Gestão    |
-| `backend/shared`      | Compartilhado     |
-| `frontend/shared`     | Compartilhado     |
