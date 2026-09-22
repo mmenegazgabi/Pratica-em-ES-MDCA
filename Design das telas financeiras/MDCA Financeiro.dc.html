@@ -22,7 +22,7 @@
 <div style="min-height: 100vh; background: var(--color-neutral-200); font-family: var(--font-body)">
   <sc-if value="{{ isPhone }}" hint-placeholder-val="{{ false }}">
    <div style="display: flex; width: fit-content; margin: 0 auto; padding: 36px; flex-direction: column; align-items: center; gap: 14px">
-    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" title="Nova despesa" onBack="{{ goHome }}" style="flex: none" hint-size="390px,844px">
+    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" title="Nova despesa" onBack="{{ goBack }}" style="flex: none" hint-size="390px,844px">
       <div style="height: 100%; overflow: auto; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); padding: 18px 18px 40px">
         <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px">
           <span style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Tela 3 · Épico 2</span>
@@ -730,7 +730,11 @@ class Component extends DCLogic {
     const ok = P.telas.indexOf(s) >= 0;
     const on = (k) => ok && s === k;
     const go = (key) => () => this.setState({ screen: key, previousScreen: this.cur(), detalheOpen: false, relatorioGerado: false });
-    const goBack = () => this.setState({ screen: this.state.previousScreen || P.home, detalheOpen: false, relatorioGerado: false });
+    const goBack = () => {
+      const prev = this.state.previousScreen;
+      const target = prev && P.telas.indexOf(prev) >= 0 ? prev : P.home;
+      this.setState({ screen: target, detalheOpen: false, relatorioGerado: false });
+    };
     const grupoDe = (key) => {
       const found = this.navDef().find(([, items]) => items.some(([, k]) => k === key));
       return found ? found[0] : '';
