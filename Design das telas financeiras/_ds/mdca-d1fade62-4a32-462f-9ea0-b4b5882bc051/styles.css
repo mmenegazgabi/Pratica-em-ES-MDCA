@@ -1,0 +1,322 @@
+/* MDCA — design-system tokens and component classes, verified against the live
+   mdca.org.br markup (computed styles + the site's own logo.svg), not just
+   screenshots. Same token/class API as the design system this replaces, so
+   screens keep working unmodified — only the values change. See readme.md. */
+@import url('https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap');
+
+:root {
+  /* — Raw palette — */
+  --green-950: #111111; /* hero gradient start, confirmed */
+  --green-900: #2d4c2e; /* hero gradient midpoint, confirmed exact */
+  --green-800: #355433;
+  --green-700: #436d43; /* hero gradient end, confirmed */
+  --green-600: #457048;
+  --green-500: #64b05a;
+  --green-400: #6aba60; /* PRIMARY: sampled straight off the "Quero ser voluntário" button */
+  --green-300: #9aca93;
+  --green-200: #c9e5c4;
+  --green-100: #e6f3e3;
+
+  --cream-50: #fffdf1;  /* page background, confirmed exact (rgb 255,253,241) */
+  --cream-100: #fdf9e6;
+  --beige-200: #f3e5cb; /* card fill, confirmed exact (rgb 243,229,203) */
+
+  /* True neutral grays — the site's text is plain black/gray, not green-tinted */
+  --gray-900: #000000; /* headings, confirmed exact */
+  --gray-800: #1e1e1e; /* body copy, confirmed exact */
+  --gray-500: #7a7a7a; /* muted/meta copy, confirmed exact */
+
+  /* The four letter-colors of the MDCA wordmark, read straight from the site's
+     own logo.svg. The logo is the one place the site itself leaves green for
+     red/blue/yellow — used here for status color and the brand mark. */
+  --logo-red: #f02d34;
+  --logo-green: #009d53;
+  --logo-blue: #195bae;
+  --logo-yellow: #fde118;
+
+  /* — Token API expected by the screens (color-bg, color-accent, tonal ramps…) — */
+  --color-bg: var(--cream-50);
+  --color-surface: #ffffff;
+  --color-text: var(--gray-900);
+  --color-accent: var(--green-400);
+  --color-accent-2: var(--green-600);
+  --color-divider: rgba(0, 0, 0, 0.12);
+
+  /* Neutral ramp — warm cream surfaces at the light end (confirmed), true gray
+     text at the dark end (confirmed); the site mixes both, not one warm ramp. */
+  --color-neutral-100: #fdf9e6;
+  --color-neutral-200: #f6efd7;
+  --color-neutral-300: #f3e5cb;
+  --color-neutral-400: #b8b2a4;
+  --color-neutral-500: #7a7a7a;
+  --color-neutral-600: #5c5c5c;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #1e1e1e;
+  --color-neutral-900: #000000;
+
+  /* Accent ramp — the site's green, one role, ten steps */
+  --color-accent-100: #e6f3e3;
+  --color-accent-200: #c9e5c4;
+  --color-accent-300: #9aca93;
+  --color-accent-400: #6aba60;
+  --color-accent-500: #64b05a;
+  --color-accent-600: #457048;
+  --color-accent-700: #436d43;
+  --color-accent-800: #355433;
+  --color-accent-900: #2d4c2e;
+
+  /* Mono scheme on the green side: no second accent on the site — kept as an
+     alias of the green ramp so both variable sets resolve; treat as one role. */
+  --color-accent-2-100: #e6f3e3;
+  --color-accent-2-200: #c9e5c4;
+  --color-accent-2-300: #9aca93;
+  --color-accent-2-400: #6aba60;
+  --color-accent-2-500: #457048;
+  --color-accent-2-600: #436d43;
+  --color-accent-2-700: #355433;
+  --color-accent-2-800: #2d4c2e;
+  --color-accent-2-900: #111111;
+
+  /* Status colors — the logo's other three letters, put to work as the
+     financial module's status system (the marketing site has no status colors
+     of its own to draw on, so this is the one deliberate extension). */
+  --status-approved: var(--green-400);
+  --status-pending: var(--logo-yellow);
+  --status-rejected: var(--logo-red);
+  --status-reconciled: var(--logo-blue);
+  --status-closed: var(--color-neutral-600);
+
+  --font-heading: "Bitter", Georgia, "Times New Roman", serif; /* confirmed: site headings and buttons */
+  --font-heading-weight: 700; /* the site's H1 sets bold; --btn overrides to 500,
+     its own signature pairing of a serif label over a sans-serif body */
+  /* Body font is confirmed "Neue Montreal" on the live site — a paid Pangram
+     Pangram face with no legitimate CDN source. General Sans (Fontshare, free)
+     is the closest free substitute: same grotesque proportions, same foundry
+     lineage. Swap the family below if MDCA licenses the real font later. */
+  --font-body: "General Sans", "Neue Montreal", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 56px;
+
+  /* Radii — pills for actions/badges, soft radii for surfaces, as on the site */
+  --radius-pill: 999px;
+  --radius-sm: var(--radius-pill); /* small chips/toggles read as pills, like the site's badges */
+  --radius-md: 16px; /* tiles, fields, inline photos */
+  --radius-lg: 24px; /* cards, photos */
+
+  /* Shadows — soft, always downward, tinted green (never gray) */
+  --shadow-sm: 0 2px 14px rgba(15, 40, 15, 0.06);
+  --shadow-md: 0 10px 30px rgba(15, 40, 15, 0.1);
+  --shadow-lg: 0 18px 40px rgba(15, 40, 15, 0.18);
+  --shadow-button: 0 6px 18px rgba(60, 114, 54, 0.28);
+
+  --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-heading-weight); }
+
+.plate {
+  box-sizing: border-box;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Components — built with the tokens above. Plain CSS on plain HTML.
+   ══════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-size: 15px; line-height: 1.55; font-weight: 400; }
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 var(--space-2);
+}
+h1 { font-size: 42px; }
+h2 { font-size: 32px; }
+h3 { font-size: 25px; }
+h4 { font-size: 20px; }
+h5 { font-size: 16px; }
+h6 { font-size: 13px; }
+h6 { letter-spacing: 0.08em; text-transform: uppercase; }
+p { margin: 0 0 var(--space-3); }
+a { color: var(--color-accent-700); text-underline-offset: 3px; }
+img { display: block; max-width: 100%; }
+figure { margin: 0; }
+figcaption {
+  font-size: 11px; margin-top: var(--space-1);
+  color: var(--color-neutral-600);
+}
+.text-muted { color: var(--color-neutral-600); }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+
+/* — rules — */
+.hr {
+  height: 1px; border: 0; margin: var(--space-4) 0;
+  background: var(--color-divider);
+}
+
+/* — buttons — pill-shaped, the site's signature: a serif label over a sans-serif body */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; text-decoration: none;
+  font-family: var(--font-heading); font-weight: 500; /* matches the site's sampled button-label weight */
+  font-size: 14px; line-height: 1.2; color: var(--color-text);
+  background: transparent; border: 1.5px solid transparent;
+  padding: var(--space-2) calc(var(--space-3) * 1.3);
+  border-radius: var(--radius-pill);
+  transition: background-color var(--dur-base, 220ms) var(--ease-standard),
+    color var(--dur-base, 220ms) var(--ease-standard),
+    box-shadow var(--dur-base, 220ms) var(--ease-standard);
+}
+.btn svg { display: block; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary {
+  color: #ffffff; background: var(--color-accent); box-shadow: var(--shadow-button);
+}
+.btn-primary:hover { background: var(--color-accent-500); }
+.btn-primary:active { background: var(--color-accent-600); }
+.btn-secondary { border-color: var(--color-accent-600); color: var(--color-accent-700); }
+.btn-secondary:hover { background: var(--color-accent-100); }
+.btn-secondary:active { background: var(--color-accent-200); }
+.btn-ghost { color: var(--color-accent-700); padding-inline: var(--space-2); }
+.btn-ghost:hover { background: var(--color-accent-100); }
+.btn-ghost:active { background: var(--color-accent-200); }
+.btn-icon { width: 36px; height: 36px; padding: 0; }
+.btn-block { width: 100%; margin-top: var(--space-2); }
+
+/* — forms — */
+.field > label {
+  display: block; font-size: 13px; margin-bottom: 6px; font-weight: 500;
+  color: var(--color-neutral-700);
+}
+.input {
+  width: 100%; min-height: 36px; padding: 6px 12px; font: inherit;
+  font-size: 14px; color: var(--color-text); caret-color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+}
+.input:hover { border-color: var(--color-neutral-500); }
+.input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+textarea.input { min-height: 90px; resize: vertical; }
+.radio { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.radio input, .seg-opt input {
+  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+}
+.radio .dot {
+  width: 16px; height: 16px; flex: none; border-radius: 50%;
+  border: 1.5px solid var(--color-divider);
+}
+.radio:hover .dot { border-color: var(--color-accent); }
+.radio input:checked + .dot {
+  border-color: var(--color-accent); background: var(--color-accent);
+  box-shadow: inset 0 0 0 4px var(--color-bg);
+}
+.radio input:focus-visible + .dot { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.seg {
+  display: inline-flex; overflow: hidden;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-pill);
+}
+.seg-opt {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; font-size: 13px; cursor: pointer;
+}
+.seg-opt + .seg-opt { border-left: 1px solid var(--color-divider); }
+.seg-opt:has(input:checked) { color: #ffffff; background: var(--color-accent); }
+.seg-opt:not(:has(input:checked)):hover { background: var(--color-accent-100); }
+.seg-opt:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+/* — cards — */
+.card {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-4); border-radius: var(--radius-lg);
+  background: var(--color-surface); border: 0; box-shadow: var(--shadow-sm);
+}
+.card-kicker { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); }
+.card-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 18px; line-height: 1.25;
+}
+.card-body { margin: 0; font-size: 14px; opacity: 0.85; flex: 1; }
+.card-meta {
+  display: flex; align-items: center; gap: 6px; font-size: 11px;
+  color: var(--color-neutral-600);
+}
+.elev-sm { box-shadow: var(--shadow-sm); }
+.elev-md { box-shadow: var(--shadow-md); }
+.elev-lg { box-shadow: var(--shadow-lg); }
+
+/* — tags — status pills: tinted fill, always paired with text */
+.tag {
+  display: inline-flex; align-items: center; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.02em; padding: 4px 12px;
+  border-radius: var(--radius-pill);
+}
+.tag-accent { background: var(--color-accent-100); color: var(--color-accent-800); }
+.tag-accent-2 { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
+.tag-neutral { background: var(--color-neutral-200); color: var(--color-neutral-700); }
+.tag-outline { border: 1.5px solid var(--color-accent-600); color: var(--color-accent-700); }
+/* Status colors — the logo's red/blue/yellow, reserved for badges only (never
+   buttons, links or chrome), so a lançamento's status reads at a glance. */
+.tag-warning { background: color-mix(in srgb, var(--status-pending) 18%, white); color: color-mix(in srgb, var(--status-pending) 65%, black); }
+.tag-danger { background: color-mix(in srgb, var(--status-rejected) 12%, white); color: var(--status-rejected); }
+.tag-info { background: color-mix(in srgb, var(--status-reconciled) 12%, white); color: var(--status-reconciled); }
+
+/* — navigation — */
+.nav {
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-divider);
+  background: var(--color-surface);
+}
+.nav-brand {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 18px; margin-right: auto;
+}
+.nav a { color: inherit; text-decoration: none; font-size: 14px; }
+.nav a:hover, .nav a[aria-current='page'] { color: var(--color-accent-700); }
+
+/* — tables — */
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th {
+  text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  font-weight: 600; color: var(--color-neutral-600);
+  padding: var(--space-2); border-bottom: 1px solid var(--color-divider);
+}
+.table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-divider);
+}
+.table tbody tr:hover { background: var(--color-accent-100); }
+
+/* — dialog — */
+.dialog-backdrop {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent);
+}
+.dialog {
+  width: min(440px, 100%); display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-5); border-radius: var(--radius-lg);
+  background: var(--color-surface); box-shadow: var(--shadow-lg); border: 0;
+}
+.dialog-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 20px;
+}
+.dialog-body { font-size: 14px; opacity: 0.85; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
