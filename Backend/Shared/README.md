@@ -1,4 +1,4 @@
-# backend/shared
+# Backend/Shared
 
 Código de backend comum aos dois módulos (Financeiro e Gestão): utilitários,
 modelos/clientes de dados compartilhados, autenticação, etc.

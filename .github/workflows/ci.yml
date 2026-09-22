@@ -14,8 +14,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r backend/financeiro/requirements.txt
-      - run: pytest backend/financeiro
+      - run: pip install -r Backend/Financeiro/requirements.txt
+      - run: pytest Backend/Financeiro
 
   backend-gestao:
     name: Backend · Gestão
@@ -25,5 +25,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r backend/gestao/requirements.txt
-      - run: pytest backend/gestao
+      - run: pip install -r Backend/Gestao/requirements.txt
+      - run: pytest Backend/Gestao

@@ -1,4 +1,4 @@
-# frontend/gestao
+# Frontend/Gestao
 
 Frontend do Módulo de Gestão.
 

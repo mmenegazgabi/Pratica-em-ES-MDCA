@@ -1,4 +1,4 @@
-# frontend/shared
+# Frontend/Shared
 
 Código de frontend comum aos dois módulos (Financeiro e Gestão): componentes
 de UI, estilos/tema base, helpers de navegação, etc.
