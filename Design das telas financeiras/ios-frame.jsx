@@ -57,13 +57,19 @@ function IOSStatusBar({ dark = false, time = '9:41' }) {
 // ─────────────────────────────────────────────────────────────
 // Liquid glass pill — blur + tint + shine
 // ─────────────────────────────────────────────────────────────
-function IOSGlassPill({ children, dark = false, style = {}, onClick }) {
+function IOSGlassPill({ children, dark = false, style = {}, onClick, ariaLabel }) {
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div onClick={onClick} style={{
+    <Tag
+      type={onClick ? 'button' : undefined}
+      aria-label={onClick ? ariaLabel : undefined}
+      onClick={onClick}
+      style={{
       height: 44, minWidth: 44, borderRadius: 9999,
       position: 'relative', overflow: 'hidden',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       cursor: onClick ? 'pointer' : undefined,
+      border: 'none', padding: 0, background: 'transparent', font: 'inherit',
       boxShadow: dark
         ? '0 2px 6px rgba(0,0,0,0.35), 0 6px 16px rgba(0,0,0,0.2)'
         : '0 1px 3px rgba(0,0,0,0.07), 0 3px 10px rgba(0,0,0,0.06)',
@@ -87,7 +93,7 @@ function IOSGlassPill({ children, dark = false, style = {}, onClick }) {
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', padding: '0 4px' }}>
         {children}
       </div>
-    </div>
+    </Tag>
   );
 }
 
@@ -97,8 +103,8 @@ function IOSGlassPill({ children, dark = false, style = {}, onClick }) {
 function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true, onBack }) {
   const muted = dark ? 'rgba(255,255,255,0.6)' : '#404040';
   const text = dark ? '#fff' : '#000';
-  const pillIcon = (content, onClick) => (
-    <IOSGlassPill dark={dark} onClick={onClick}>
+  const pillIcon = (content, onClick, ariaLabel) => (
+    <IOSGlassPill dark={dark} onClick={onClick} ariaLabel={ariaLabel}>
       <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {content}
       </div>
@@ -118,7 +124,8 @@ function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true, onBack 
           <svg width="12" height="20" viewBox="0 0 12 20" fill="none" style={{ marginLeft: -1 }}>
             <path d="M10 2L2 10l8 8" stroke={muted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>,
-          onBack
+          onBack,
+          'Voltar'
         )}
         {/* trailing ellipsis */}
         {trailingIcon && pillIcon(
