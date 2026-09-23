@@ -4,10 +4,322 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema MDCA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* — cores — */
+      --color-bg: #ffffff;
+      --color-neutral-100: #f5f4f2;
+      --color-neutral-200: #efeeeb;
+      --color-neutral-300: #e2e0dc;
+      --color-neutral-600: #6b6864;
+      --color-neutral-700: #524f4b;
+      --color-neutral-800: #3a3835;
+      --color-neutral-900: #201f1d;
+      --color-text: var(--color-neutral-900);
+      --color-divider: #e4e2de;
+
+      --color-accent: #f02d34;
+      --color-accent-100: #fdeaea;
+      --color-accent-600: #d2262c;
+      --color-accent-700: #b31f24;
+      --color-accent-800: #8c171b;
+
+      /* — tipografia — */
+      --font-heading: "Bitter", Georgia, "Times New Roman", serif;
+      --font-body: "Archivo", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+      /* — espaçamento — */
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+      --space-7: 40px;
+
+      /* — bordas e raios — */
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+
+      --sidebar-width: 246px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    a { color: var(--color-accent-700); }
+    a:hover { color: var(--color-accent-800); }
+
+    :focus { outline: none; }
+    :focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    /* — sidebar — */
+    .sidebar {
+      width: var(--sidebar-width);
+      flex: none;
+      background: var(--color-neutral-100);
+      border-right: 1px solid var(--color-divider);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-logo {
+      display: block;
+      padding: 22px 20px 18px;
+      border-bottom: 1px solid var(--color-divider);
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .sidebar-logo svg { display: block; }
+
+    .sidebar-logo-caption {
+      display: block;
+      margin-top: 8px;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--color-accent-700);
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 8px 0 20px;
+    }
+
+    .nav-group-title {
+      padding: 16px 20px 6px;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--color-neutral-600);
+    }
+
+    .nav-item {
+      display: block;
+      padding: 10px 20px;
+      margin: 2px 10px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text);
+      text-decoration: none;
+    }
+
+    .nav-item:hover {
+      background: var(--color-accent-100);
+      color: var(--color-accent-800);
+    }
+
+    /* — botão de menu mobile — */
+    .mobile-nav-toggle {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px 20px;
+      background: var(--color-neutral-100);
+      border: none;
+      border-bottom: 1px solid var(--color-divider);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text);
+      cursor: pointer;
+      text-align: left;
+    }
+
+    /* — área principal — */
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-header {
+      padding: 22px 30px;
+      border-bottom: 1px solid var(--color-divider);
+    }
+
+    .breadcrumb {
+      font-size: 11px;
+      color: var(--color-neutral-600);
+    }
+
+    .page-title {
+      margin: 4px 0 0;
+      font-family: var(--font-heading);
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.2;
+      color: var(--color-text);
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 34px 30px 48px;
+      max-width: 760px;
+    }
+
+    .lede {
+      margin: 0 0 24px;
+      font-size: 14px;
+      color: var(--color-neutral-700);
+    }
+
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .module-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 22px 20px;
+      background: var(--color-bg);
+      border: 1px solid var(--color-divider);
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      color: var(--color-text);
+    }
+
+    .module-card:hover {
+      border-color: var(--color-accent);
+    }
+
+    .module-card:focus-visible {
+      border-color: var(--color-accent);
+    }
+
+    .module-card-label {
+      font-family: var(--font-heading);
+      font-weight: 500;
+      font-size: 18px;
+      color: var(--color-text);
+    }
+
+    .module-card-arrow {
+      flex: none;
+      font-size: 16px;
+      color: var(--color-accent-700);
+    }
+
+    /* — mobile — */
+    @media (max-width: 780px) {
+      .app {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--color-divider);
+        display: none;
+      }
+
+      .sidebar.is-open {
+        display: flex;
+      }
+
+      .mobile-nav-toggle {
+        display: flex;
+      }
+
+      .main-header {
+        padding: 18px 20px;
+      }
+
+      .main-content {
+        padding: 24px 20px 40px;
+        max-width: 100%;
+      }
+
+      .module-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Sistema MDCA</h1>
-  <p><a href="Gestao/">Gestão de Casos</a></p>
-  <p><a href="Financeiro/">Financeiro</a></p>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <a href="#" class="sidebar-logo" aria-label="MDCA — Movimento pelos Direitos da Criança e do Adolescente">
+        <svg width="92" height="34" viewBox="0 0 137 50" fill="none" aria-hidden="true">
+          <path d="M9.60339 0.85437C11.3169 0.854547 12.8648 1.87894 13.535 3.45593L18.5399 15.2313C19.4245 17.3118 22.3733 17.312 23.2577 15.2313L28.2626 3.45593C28.9329 1.8788 30.4806 0.85437 32.1942 0.85437H36.7401C39.0996 0.85437 41.0126 2.76739 41.0126 5.12683V33.3231C41.0124 35.6824 39.0994 37.5946 36.7401 37.5946H35.7323C33.373 37.5946 31.46 35.6824 31.4598 33.3231V29.7343C31.4598 26.481 31.5302 23.2277 31.6708 19.9745L31.6718 19.9618C31.7296 18.9555 30.3771 18.5571 29.9423 19.5848L25.9296 29.076C25.2611 30.6572 23.7106 31.6844 21.994 31.6844H19.8651C18.1532 31.6843 16.6067 30.6626 15.9354 29.0878L11.8817 19.576C11.4826 18.6396 10.0819 18.9574 10.1259 19.9745C10.2664 23.2277 10.3368 26.481 10.3368 29.7343V33.3231C10.3366 35.6823 8.42453 37.5945 6.06531 37.5946H5.12683C2.7675 37.5946 0.854549 35.6824 0.85437 33.3231V5.12683C0.85437 2.76739 2.76739 0.85437 5.12683 0.85437H9.60339Z" fill="#F02D34"/>
+          <path d="M47.7823 10.6808C49.2522 10.6809 50.7219 10.75 52.1915 10.8869L52.1925 10.8859C53.7378 10.99 55.1983 11.2329 56.5724 11.6164H56.5714C57.9867 11.9614 59.2895 12.4102 60.4786 12.9641L60.9415 13.1642C61.9995 13.6378 62.9497 14.1792 63.7902 14.7902L64.1661 15.0432C65.0281 15.6378 65.8017 16.2873 66.4855 16.9924C67.2598 17.7573 67.9188 18.5606 68.4611 19.4016C69.0628 20.2106 69.5464 21.0577 69.9103 21.9426C70.2686 22.8141 70.5381 23.7038 70.7189 24.6115C70.9584 25.4884 71.109 26.3828 71.1691 27.2941C71.2858 28.1555 71.3448 29.0172 71.3448 29.8791C71.3448 30.7844 71.2854 31.69 71.1661 32.5949C71.1051 33.4602 70.9569 34.3398 70.7228 35.2336L70.6505 35.5637C70.4725 36.3333 70.2253 37.1011 69.9103 37.8674C69.5462 38.7528 69.0626 39.6175 68.4611 40.4601L68.4601 40.4592C67.9195 41.2641 67.2635 42.0651 66.4923 42.8615L66.4855 42.8683C65.7063 43.638 64.8097 44.3685 63.799 45.0627L63.7999 45.0637C62.8397 45.7292 61.7345 46.3392 60.4874 46.8937L60.4855 46.8947C59.2949 47.4159 57.9886 47.8654 56.5685 48.2453L56.5626 48.2473C55.1951 48.5943 53.7414 48.8366 52.2023 48.9748L52.1935 48.9758V48.9748C50.7231 49.0778 49.2528 49.1301 47.7823 49.1301H36.3136V10.6808H47.7823ZM46.8947 43.3654H47.7823C48.7557 43.3654 49.7293 43.298 50.7032 43.1642C51.6645 43.0322 52.5339 42.8018 53.3136 42.4767L53.3234 42.4728C54.1748 42.1415 54.9043 41.764 55.5148 41.343L55.5216 41.3381L55.5284 41.3342C56.2035 40.9073 56.7572 40.4533 57.1945 39.9748L57.2023 39.966C57.7117 39.4374 58.1319 38.9132 58.465 38.3947L58.4728 38.382L58.4825 38.3703C58.8712 37.8517 59.1731 37.3208 59.3917 36.7785L59.3986 36.7619L59.4064 36.7463C59.6882 36.1871 59.9126 35.6298 60.0802 35.0754C60.2478 34.521 60.3586 33.9684 60.4142 33.4172L60.4171 33.3967L60.421 33.3752C60.5349 32.8101 60.6199 32.2453 60.6769 31.6808L60.715 31.2326C60.7471 30.7886 60.7628 30.3547 60.7628 29.9308C60.7628 29.3306 60.7348 28.7475 60.6779 28.1828L60.6769 28.1808C60.6198 27.5813 60.5348 26.9992 60.421 26.4348L60.4171 26.4142L60.4142 26.3928C60.3586 25.8416 60.2478 25.2888 60.0802 24.7346C59.9126 24.1802 59.6881 23.6237 59.4064 23.0646L59.3986 23.048L59.3917 23.0314C59.1731 22.4893 58.8711 21.959 58.4825 21.4406L58.4728 21.4279L58.465 21.4152C58.1341 20.9003 57.7175 20.3962 57.212 19.9045L57.1974 19.8908L57.1847 19.8762C56.749 19.3676 56.1988 18.8996 55.5284 18.4758L55.5216 18.4719L55.5148 18.467C54.9043 18.0459 54.1748 17.6684 53.3234 17.3371L53.3136 17.3332C52.5339 17.0082 51.6645 16.7777 50.7032 16.6457C49.7293 16.512 48.7557 16.4455 47.7823 16.4455H46.8947V43.3654Z" fill="#009D53"/>
+          <path d="M93.1329 45.2848C92.661 45.2848 92.2784 44.9023 92.2784 44.4304V41.6718C92.2784 39.849 92.5498 38.0262 93.0926 36.2034C93.6354 34.3807 94.2945 32.5741 95.0699 30.7839C95.8453 28.9937 96.6982 27.2034 97.6287 25.4132C98.5592 23.623 99.5284 21.8327 100.536 20.0425C101.544 18.2523 102.591 16.4783 103.677 14.7206C104.368 13.5813 105.074 12.4485 105.797 11.3223C106.571 10.1156 107.912 9.39874 109.346 9.39874H119.642C121.075 9.39874 122.417 10.1156 123.191 11.3223C123.913 12.4485 124.62 13.5813 125.31 14.7206C126.396 16.4783 127.443 18.2523 128.451 20.0425C129.459 21.8327 130.428 23.623 131.359 25.4132C132.289 27.2034 133.142 28.9937 133.917 30.7839C134.693 32.5741 135.352 34.3807 135.895 36.2034C136.437 38.0262 136.709 39.849 136.709 41.6718V44.4304C136.709 44.9023 136.326 45.2848 135.854 45.2848H124.653C124.181 45.2848 123.798 44.9023 123.798 44.4304V41.6718C123.798 40.9557 123.721 40.2396 123.566 39.5235C123.512 39.0026 123.439 38.4817 123.348 37.9607C123.278 37.5618 122.926 37.2776 122.521 37.2776H106.466C106.061 37.2776 105.711 37.562 105.629 37.9587C105.521 38.4803 105.413 39.0019 105.305 39.5235C105.228 40.2396 105.189 40.9557 105.189 41.6718V44.4304C105.189 44.9023 104.806 45.2848 104.334 45.2848H93.1329ZM107.415 31.477C107.231 32.0262 107.642 32.5904 108.222 32.5904H120.766C121.345 32.5904 121.756 32.0262 121.57 31.4776C120.716 28.9555 119.714 26.4458 118.564 23.9485C117.538 21.5506 116.431 19.1639 115.245 16.7883C114.934 16.1664 114.053 16.1661 113.74 16.7869C112.542 19.1629 111.398 21.5501 110.306 23.9485C109.225 26.4456 108.261 28.9551 107.415 31.477Z" fill="#195BAE"/>
+          <path d="M82.0254 36.7405C80.1421 36.7405 78.224 36.6427 76.271 36.447C74.3878 36.2839 72.6092 35.9904 70.9352 35.5664C69.331 35.1098 67.8662 34.539 66.541 33.8541C65.2855 33.1366 64.2741 32.3701 63.5069 31.5548C62.7397 30.7394 62.2165 29.8914 61.9375 29.0108C61.6585 28.0976 61.519 27.2007 61.519 26.3201V10.4204C61.519 9.53981 61.6585 8.65921 61.9375 7.77861C62.2165 6.8654 62.7397 6.00111 63.5069 5.18574C64.2741 4.37037 65.2855 3.62024 66.541 2.93533C67.8662 2.2178 69.331 1.64704 70.9352 1.22305C72.6092 0.766445 74.3878 0.456605 76.271 0.293532C78.224 0.0978439 80.1421 0 82.0254 0C83.8389 0 85.6175 0.0815368 87.3612 0.24461C89.1747 0.37507 90.8835 0.635987 92.4878 1.02736C94.092 1.38613 95.5219 1.87535 96.7774 2.49503C98.1026 3.08209 99.1837 3.7507 100.021 4.50083C100.858 5.21836 101.485 6.00111 101.904 6.84909C102.322 7.66446 102.532 8.49614 102.532 9.34412V9.63766H90.9184V9.49089C90.9184 8.90382 90.7441 8.31676 90.3953 7.72969C90.0466 7.14263 89.4886 6.62079 88.7213 6.16418C87.9541 5.67496 86.9427 5.3162 85.6872 5.0879C84.5015 4.82698 83.2809 4.69652 82.0254 4.69652C81.0489 4.69652 80.1073 4.76175 79.2005 4.89221C78.2938 5.02267 77.4917 5.23466 76.7942 5.5282C76.0967 5.82173 75.5038 6.16418 75.0156 6.55556C74.5273 6.94694 74.1437 7.35462 73.8647 7.77861C73.5857 8.20261 73.3764 8.64291 73.2369 9.09951C73.1672 9.5235 73.1323 9.9638 73.1323 10.4204V26.3201C73.1323 26.7767 73.1672 27.2333 73.2369 27.6899C73.3764 28.1139 73.5857 28.5379 73.8647 28.9619C74.1437 29.3859 74.5273 29.7936 75.0156 30.1849C75.5038 30.5763 76.0967 30.9188 76.7942 31.2123C77.4917 31.5058 78.2938 31.7178 79.2005 31.8483C80.1073 31.9788 81.0489 32.044 82.0254 32.044C83.2809 32.044 84.5015 31.9298 85.6872 31.7015C86.9427 31.4406 87.9541 31.0818 88.7213 30.6252C89.4886 30.136 90.0466 29.5979 90.3953 29.0108C90.7441 28.4237 90.9184 27.8367 90.9184 27.2496V27.1028H102.532V27.3964C102.532 28.2444 102.322 29.0923 101.904 29.9403C101.485 30.7557 100.858 31.5385 100.021 32.2886C99.1837 33.0061 98.1026 33.6747 96.7774 34.2944C95.5219 34.8815 94.092 35.3707 92.4878 35.7621C90.8835 36.1208 89.1747 36.3654 87.3612 36.4959C85.6175 36.659 83.8389 36.7405 82.0254 36.7405Z" fill="#FDE118"/>
+        </svg>
+        <span class="sidebar-logo-caption">Sistema MDCA</span>
+      </a>
+      <nav class="sidebar-nav" aria-label="Navegação principal">
+        <div class="nav-group-title">Módulos</div>
+        <a class="nav-item" href="Gestao/">Gestão de Casos</a>
+        <a class="nav-item" href="Financeiro/">Financeiro</a>
+      </nav>
+    </aside>
+
+    <button type="button" class="mobile-nav-toggle" id="navToggle" aria-expanded="false" aria-controls="sidebar">
+      <span aria-hidden="true">☰</span>
+      <span>Módulos</span>
+    </button>
+
+    <div class="main">
+      <header class="main-header">
+        <div class="breadcrumb">Início</div>
+        <h1 class="page-title">Sistema MDCA</h1>
+      </header>
+      <main class="main-content">
+        <p class="lede">Selecione um módulo para continuar.</p>
+        <div class="module-grid">
+          <a class="module-card" href="Gestao/">
+            <span class="module-card-label">Gestão de Casos</span>
+            <span class="module-card-arrow" aria-hidden="true">→</span>
+          </a>
+          <a class="module-card" href="Financeiro/">
+            <span class="module-card-label">Financeiro</span>
+            <span class="module-card-arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var toggle = document.getElementById('navToggle');
+      var sidebar = document.getElementById('sidebar');
+      toggle.addEventListener('click', function () {
+        var isOpen = sidebar.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', String(isOpen));
+      });
+    })();
+  </script>
 </body>
 </html>
