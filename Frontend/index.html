@@ -128,9 +128,32 @@
       text-decoration: none;
     }
 
-    .nav-item:hover {
+    .nav-item:not(.is-disabled):hover {
       background: var(--color-accent-100);
       color: var(--color-accent-800);
+    }
+
+    .nav-item.is-disabled {
+      color: var(--color-neutral-600);
+      cursor: default;
+    }
+
+    .nav-item-badge,
+    .module-card-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--color-neutral-200);
+      color: var(--color-neutral-600);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .nav-item-badge {
+      margin-left: 8px;
+      vertical-align: middle;
     }
 
     /* — botão de menu mobile — */
@@ -209,12 +232,16 @@
       color: var(--color-text);
     }
 
-    .module-card:hover {
+    .module-card:not(.is-disabled):hover {
       border-color: var(--color-accent);
     }
 
-    .module-card:focus-visible {
+    .module-card:not(.is-disabled):focus-visible {
       border-color: var(--color-accent);
+    }
+
+    .module-card.is-disabled {
+      cursor: default;
     }
 
     .module-card-label {
@@ -224,10 +251,18 @@
       color: var(--color-text);
     }
 
+    .module-card.is-disabled .module-card-label {
+      color: var(--color-neutral-600);
+    }
+
     .module-card-arrow {
       flex: none;
       font-size: 16px;
       color: var(--color-accent-700);
+    }
+
+    .module-card-badge {
+      flex: none;
     }
 
     /* — mobile — */
@@ -268,8 +303,13 @@
 </head>
 <body>
   <div class="app">
+    <button type="button" class="mobile-nav-toggle" id="navToggle" aria-expanded="false" aria-controls="sidebar">
+      <span aria-hidden="true">☰</span>
+      <span>Módulos</span>
+    </button>
+
     <aside class="sidebar" id="sidebar">
-      <a href="#" class="sidebar-logo" aria-label="MDCA — Movimento pelos Direitos da Criança e do Adolescente">
+      <a href="./" class="sidebar-logo" aria-label="MDCA — Movimento pelos Direitos da Criança e do Adolescente">
         <svg width="92" height="34" viewBox="0 0 137 50" fill="none" aria-hidden="true">
           <path d="M9.60339 0.85437C11.3169 0.854547 12.8648 1.87894 13.535 3.45593L18.5399 15.2313C19.4245 17.3118 22.3733 17.312 23.2577 15.2313L28.2626 3.45593C28.9329 1.8788 30.4806 0.85437 32.1942 0.85437H36.7401C39.0996 0.85437 41.0126 2.76739 41.0126 5.12683V33.3231C41.0124 35.6824 39.0994 37.5946 36.7401 37.5946H35.7323C33.373 37.5946 31.46 35.6824 31.4598 33.3231V29.7343C31.4598 26.481 31.5302 23.2277 31.6708 19.9745L31.6718 19.9618C31.7296 18.9555 30.3771 18.5571 29.9423 19.5848L25.9296 29.076C25.2611 30.6572 23.7106 31.6844 21.994 31.6844H19.8651C18.1532 31.6843 16.6067 30.6626 15.9354 29.0878L11.8817 19.576C11.4826 18.6396 10.0819 18.9574 10.1259 19.9745C10.2664 23.2277 10.3368 26.481 10.3368 29.7343V33.3231C10.3366 35.6823 8.42453 37.5945 6.06531 37.5946H5.12683C2.7675 37.5946 0.854549 35.6824 0.85437 33.3231V5.12683C0.85437 2.76739 2.76739 0.85437 5.12683 0.85437H9.60339Z" fill="#F02D34"/>
           <path d="M47.7823 10.6808C49.2522 10.6809 50.7219 10.75 52.1915 10.8869L52.1925 10.8859C53.7378 10.99 55.1983 11.2329 56.5724 11.6164H56.5714C57.9867 11.9614 59.2895 12.4102 60.4786 12.9641L60.9415 13.1642C61.9995 13.6378 62.9497 14.1792 63.7902 14.7902L64.1661 15.0432C65.0281 15.6378 65.8017 16.2873 66.4855 16.9924C67.2598 17.7573 67.9188 18.5606 68.4611 19.4016C69.0628 20.2106 69.5464 21.0577 69.9103 21.9426C70.2686 22.8141 70.5381 23.7038 70.7189 24.6115C70.9584 25.4884 71.109 26.3828 71.1691 27.2941C71.2858 28.1555 71.3448 29.0172 71.3448 29.8791C71.3448 30.7844 71.2854 31.69 71.1661 32.5949C71.1051 33.4602 70.9569 34.3398 70.7228 35.2336L70.6505 35.5637C70.4725 36.3333 70.2253 37.1011 69.9103 37.8674C69.5462 38.7528 69.0626 39.6175 68.4611 40.4601L68.4601 40.4592C67.9195 41.2641 67.2635 42.0651 66.4923 42.8615L66.4855 42.8683C65.7063 43.638 64.8097 44.3685 63.799 45.0627L63.7999 45.0637C62.8397 45.7292 61.7345 46.3392 60.4874 46.8937L60.4855 46.8947C59.2949 47.4159 57.9886 47.8654 56.5685 48.2453L56.5626 48.2473C55.1951 48.5943 53.7414 48.8366 52.2023 48.9748L52.1935 48.9758V48.9748C50.7231 49.0778 49.2528 49.1301 47.7823 49.1301H36.3136V10.6808H47.7823ZM46.8947 43.3654H47.7823C48.7557 43.3654 49.7293 43.298 50.7032 43.1642C51.6645 43.0322 52.5339 42.8018 53.3136 42.4767L53.3234 42.4728C54.1748 42.1415 54.9043 41.764 55.5148 41.343L55.5216 41.3381L55.5284 41.3342C56.2035 40.9073 56.7572 40.4533 57.1945 39.9748L57.2023 39.966C57.7117 39.4374 58.1319 38.9132 58.465 38.3947L58.4728 38.382L58.4825 38.3703C58.8712 37.8517 59.1731 37.3208 59.3917 36.7785L59.3986 36.7619L59.4064 36.7463C59.6882 36.1871 59.9126 35.6298 60.0802 35.0754C60.2478 34.521 60.3586 33.9684 60.4142 33.4172L60.4171 33.3967L60.421 33.3752C60.5349 32.8101 60.6199 32.2453 60.6769 31.6808L60.715 31.2326C60.7471 30.7886 60.7628 30.3547 60.7628 29.9308C60.7628 29.3306 60.7348 28.7475 60.6779 28.1828L60.6769 28.1808C60.6198 27.5813 60.5348 26.9992 60.421 26.4348L60.4171 26.4142L60.4142 26.3928C60.3586 25.8416 60.2478 25.2888 60.0802 24.7346C59.9126 24.1802 59.6881 23.6237 59.4064 23.0646L59.3986 23.048L59.3917 23.0314C59.1731 22.4893 58.8711 21.959 58.4825 21.4406L58.4728 21.4279L58.465 21.4152C58.1341 20.9003 57.7175 20.3962 57.212 19.9045L57.1974 19.8908L57.1847 19.8762C56.749 19.3676 56.1988 18.8996 55.5284 18.4758L55.5216 18.4719L55.5148 18.467C54.9043 18.0459 54.1748 17.6684 53.3234 17.3371L53.3136 17.3332C52.5339 17.0082 51.6645 16.7777 50.7032 16.6457C49.7293 16.512 48.7557 16.4455 47.7823 16.4455H46.8947V43.3654Z" fill="#009D53"/>
@@ -280,15 +320,12 @@
       </a>
       <nav class="sidebar-nav" aria-label="Navegação principal">
         <div class="nav-group-title">Módulos</div>
-        <a class="nav-item" href="Gestao/">Gestão de Casos</a>
-        <a class="nav-item" href="Financeiro/">Financeiro</a>
+        <!-- Gestao/ ainda não tem um index.html funcional (só README.md). Quando a pasta tiver uma página de entrada, troque o <span> abaixo por: <a class="nav-item" href="Gestao/">Gestão de Casos</a> -->
+        <span class="nav-item is-disabled" aria-disabled="true">Gestão de Casos<span class="nav-item-badge">Em breve</span></span>
+        <!-- Financeiro/index.html está praticamente vazio. Quando a página estiver funcional, troque o <span> abaixo por: <a class="nav-item" href="Financeiro/">Financeiro</a> -->
+        <span class="nav-item is-disabled" aria-disabled="true">Financeiro<span class="nav-item-badge">Em breve</span></span>
       </nav>
     </aside>
-
-    <button type="button" class="mobile-nav-toggle" id="navToggle" aria-expanded="false" aria-controls="sidebar">
-      <span aria-hidden="true">☰</span>
-      <span>Módulos</span>
-    </button>
 
     <div class="main">
       <header class="main-header">
@@ -298,14 +335,16 @@
       <main class="main-content">
         <p class="lede">Selecione um módulo para continuar.</p>
         <div class="module-grid">
-          <a class="module-card" href="Gestao/">
+          <!-- Gestao/ ainda não tem um index.html funcional (só README.md). Quando a pasta tiver uma página de entrada, troque a <div> abaixo por: <a class="module-card" href="Gestao/"> ... </a> -->
+          <div class="module-card is-disabled" aria-disabled="true">
             <span class="module-card-label">Gestão de Casos</span>
-            <span class="module-card-arrow" aria-hidden="true">→</span>
-          </a>
-          <a class="module-card" href="Financeiro/">
+            <span class="module-card-badge">Em breve</span>
+          </div>
+          <!-- Financeiro/index.html está praticamente vazio. Quando a página estiver funcional, troque a <div> abaixo por: <a class="module-card" href="Financeiro/"> ... </a> -->
+          <div class="module-card is-disabled" aria-disabled="true">
             <span class="module-card-label">Financeiro</span>
-            <span class="module-card-arrow" aria-hidden="true">→</span>
-          </a>
+            <span class="module-card-badge">Em breve</span>
+          </div>
         </div>
       </main>
     </div>
