@@ -43,7 +43,7 @@ Em **Project → ⋯ → Workflows**, deixar ativos:
 - **Auto-add to project** — repositório `Pratica-em-ES-MDCA`, filtro `is:issue,pr is:open`
   → Status **Backlog**. Toda issue nova entra no board sozinha.
 - **Item reopened** → Status **Em andamento**
-- **Pull request opened** → Status **Em revisão** (aplica-se ao card do PR; para mover a issue vinculada, use uma Action/API ou atualize-a manualmente)
+- **Pull request opened** — não há workflow nativo para esse evento; para mover o PR e a issue vinculada para **Em revisão**, use uma Action/API ou atualize-os manualmente.
 - **Item closed** → Status **Concluído**
 - **Pull request merged** → Status **Concluído**
 
