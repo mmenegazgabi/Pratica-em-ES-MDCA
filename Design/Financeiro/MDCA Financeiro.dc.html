@@ -122,7 +122,9 @@
                 </sc-if>
               </div>
               <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 3px">
-                <div style="font-family: var(--font-heading); font-size: 22px; line-height: 1.15">{{ title }}</div>
+                <sc-if value="{{ title }}" hint-placeholder-val="{{ true }}">
+                  <div style="font-family: var(--font-heading); font-size: 22px; line-height: 1.15">{{ title }}</div>
+                </sc-if>
                 <span style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); font-variant-numeric: tabular-nums; white-space: nowrap">{{ kicker }}</span>
               </div>
             </div>
@@ -160,6 +162,51 @@
                 <p style="font-size: 13px; color: var(--color-neutral-700); margin: 0 0 22px">{{ personaPode }}</p>
                 <button class="btn btn-primary" onClick="{{ goHome }}">Ir para a minha tela inicial</button>
               </div>
+            </sc-if>
+            <sc-if value="{{ sProjetos }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ escreve }}" hint-placeholder-val="{{ true }}">
+                <div style="border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 16px 20px 18px; background: var(--color-neutral-100); margin-bottom: 24px">
+                  <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px">
+                    <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Novo projeto</div>
+                    <div style="font-size: 12px; color: var(--color-neutral-700)">Será criado como <strong style="font-variant-numeric: tabular-nums">{{ proximoCC }}</strong> e fica disponível para receber orçamento.</div>
+                  </div>
+                  <div style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) 160px 160px auto; gap: 12px; align-items: end">
+                    <div class="field"><label>Nome do projeto *</label><input class="input" style="width: 100%; box-sizing: border-box" aria-label="Nome do projeto" value="{{ npNome }}" onChange="{{ onNpNome }}" placeholder="Ex.: Oficina de Música"></div>
+                    <div class="field"><label>Área *</label><input class="input" style="width: 100%; box-sizing: border-box" aria-label="Área" value="{{ npArea }}" onChange="{{ onNpArea }}" placeholder="Ex.: Cultura"></div>
+                    <div class="field"><label>Início da vigência *</label><input type="date" class="input" style="width: 100%; box-sizing: border-box" aria-label="Início da vigência" value="{{ npInicio }}" onChange="{{ onNpInicio }}"></div>
+                    <div class="field"><label>Fim da vigência *</label><input type="date" class="input" style="width: 100%; box-sizing: border-box" aria-label="Fim da vigência" value="{{ npFim }}" min="{{ npInicio }}" onChange="{{ onNpFim }}"></div>
+                    <button class="btn btn-primary" style="white-space: nowrap" onClick="{{ criarProjeto }}">Criar projeto</button>
+                  </div>
+                  <sc-if value="{{ npErro }}" hint-placeholder-val="{{ false }}">
+                    <div role="alert" style="font-size: 12px; color: var(--color-danger, #b3261e); margin-top: 10px">{{ npErro }}</div>
+                  </sc-if>
+                  <sc-if value="{{ npOk }}" hint-placeholder-val="{{ false }}">
+                    <div role="status" style="font-size: 12px; color: var(--color-accent-700); margin-top: 10px">{{ npOk }}</div>
+                  </sc-if>
+                </div>
+              </sc-if>
+                <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 4px">
+                  <input type="search" class="input" style="width: 260px" placeholder="Buscar projeto, centro de custo ou área" aria-label="Buscar projeto" value="{{ buscaProjeto }}" onChange="{{ onBuscaProjeto }}">
+                  <span style="margin-left: auto; font-size: 12px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ contagemProjetos }}</span>
+                </div>
+                <table class="table" style="font-variant-numeric: tabular-nums">
+                  <thead><tr><th>Projeto</th><th style="width: 120px; white-space: nowrap">Centro de custo</th><th>Área</th><th style="width: 170px">Vigência</th><th style="text-align: right">Orçamento</th><th style="width: 110px">Status</th></tr></thead>
+                  <tbody>
+                    <sc-if value="{{ semListaProjetos }}" hint-placeholder-val="{{ false }}">
+                      <tr><td colspan="6" style="padding: 28px 8px; text-align: center; color: var(--color-neutral-700)">Nenhum projeto encontrado.</td></tr>
+                    </sc-if>
+                    <sc-for list="{{ listaProjetos }}" as="lp" hint-placeholder-count="5">
+                      <tr>
+                        <td style="font-family: var(--font-heading); font-size: 15px">{{ lp.nome }}</td>
+                        <td style="font-size: 13px">{{ lp.codigo }}</td>
+                        <td style="font-size: 13px; color: var(--color-neutral-700)">{{ lp.area }}</td>
+                        <td style="font-size: 13px; color: var(--color-neutral-700); white-space: nowrap">{{ lp.vigencia }}</td>
+                        <td style="{{ lp.orcStyle }}">{{ lp.orcamento }}</td>
+                        <td><span class="tag {{ lp.tagClass }}">{{ lp.status }}</span></td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
             </sc-if>
             <sc-if value="{{ sOrcamentos }}" hint-placeholder-val="{{ true }}">
               <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); margin-bottom: 24px">
@@ -207,7 +254,7 @@
                         <div style="font-size: 11px; margin-top: 4px; color: var(--color-neutral-700)">{{ p.pctLabel }} · {{ p.alerta }}</div>
                       </td>
                       <td><span class="tag {{ p.tagClass }}">{{ p.status }}</span></td>
-                      <td style="text-align: right; white-space: nowrap"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ goLancamentos }}">Lançamentos</button> <sc-if value="{{ escreve }}" hint-placeholder-val="{{ true }}"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ goForm }}">Editar</button></sc-if></td>
+                      <td style="text-align: right; white-space: nowrap"><sc-if value="{{ escreve }}" hint-placeholder-val="{{ true }}"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ p.onEditar }}">Editar</button></sc-if></td>
                     </tr>
                   </sc-for>
                 </tbody>
@@ -217,14 +264,26 @@
               <div style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 34px; max-width: 1000px">
                 <div>
                   <div style="display: grid; gap: 18px">
-                    <div class="field"><label>Projeto / centro de custo existente *</label>
-                      <select class="input"><option>Semear — Contraturno Escolar (CC-101)</option><option>Casa de Convivência (CC-102)</option><option>Núcleo de Arte e Cultura (CC-103)</option></select>
-                      <div style="font-size: 11px; color: var(--color-neutral-600); margin-top: 5px">Projeto/centro de custo já deve existir — cadastro fica no Módulo de Gestão de Casos.</div>
-                    </div>
+                    <sc-if value="{{ editandoProjeto }}" hint-placeholder-val="{{ false }}">
+                      <div class="field"><label>Projeto / centro de custo</label>
+                        <div style="font-family: var(--font-heading); font-size: 18px; line-height: 1.3">{{ formProjeto }}</div>
+                        <div style="font-size: 11px; color: var(--color-neutral-600); margin-top: 5px">O projeto não pode ser alterado na edição do orçamento.</div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ novoOrcamento }}" hint-placeholder-val="{{ true }}">
+                      <div class="field"><label>Projeto / centro de custo existente *</label>
+                        <select class="input">
+                          <sc-for list="{{ opcoesProjeto }}" as="op" hint-placeholder-count="5">
+                            <option>{{ op }}</option>
+                          </sc-for>
+                        </select>
+                        <div style="font-size: 11px; color: var(--color-neutral-600); margin-top: 5px">Não encontrou o projeto? <a href="#" onClick="{{ goProjetos }}">Cadastre na aba Projetos</a>.</div>
+                      </div>
+                    </sc-if>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px">
-                      <div class="field"><label>Valor total (R$) *</label><input class="input" style="font-variant-numeric: tabular-nums" value="184.000,00"></div>
-                      <div class="field"><label>Início da vigência *</label><input class="input" style="font-variant-numeric: tabular-nums" value="01/01/2026"></div>
-                      <div class="field"><label>Fim da vigência *</label><input class="input" style="font-variant-numeric: tabular-nums" value="31/12/2026"></div>
+                      <div class="field"><label>Valor total (R$) *</label><input class="input" style="font-variant-numeric: tabular-nums" value="{{ formValor }}"></div>
+                      <div class="field"><label>Início da vigência *</label><input class="input" style="font-variant-numeric: tabular-nums" value="{{ formInicio }}"></div>
+                      <div class="field"><label>Fim da vigência *</label><input class="input" style="font-variant-numeric: tabular-nums" value="{{ formFim }}"></div>
                     </div>
                     <div>
                       <div style="font-size: 12px; color: var(--color-neutral-700); margin-bottom: 8px">Categorias de despesa e limites</div>
@@ -455,54 +514,6 @@
                 </div>
               </sc-if>
             </sc-if>
-            <sc-if value="{{ sDashboard }}" hint-placeholder-val="{{ false }}">
-              <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 22px">
-                <select class="input" style="width: 200px"><option>Exercício 2026</option><option>1º semestre 2026</option></select>
-                <div class="seg" style="flex: none; white-space: nowrap">
-                  <label class="seg-opt"><input type="radio" name="ps" checked><span>Ativos</span></label>
-                  <label class="seg-opt"><input type="radio" name="ps"><span>Encerrados</span></label>
-                  <label class="seg-opt"><input type="radio" name="ps"><span>Todos</span></label>
-                </div>
-                <button class="btn btn-secondary" style="margin-left: auto; font-size: 13px">Exportar consolidado</button>
-              </div>
-              <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); margin-bottom: 28px">
-                <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="3">
-                  <div style="{{ k.colStyle }}">
-                    <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">{{ k.label }}</div>
-                    <div style="font-family: var(--font-heading); font-size: 36px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -0.015em; margin-top: 8px">{{ k.value }}</div>
-                    <div style="font-size: 12px; color: var(--color-neutral-700); margin-top: 5px">{{ k.note }}</div>
-                  </div>
-                </sc-for>
-              </div>
-              <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 14px">Orçado vs. realizado por projeto</div>
-              <div style="display: flex; align-items: flex-end; gap: 34px; height: 250px; border-bottom: 1px solid var(--color-text); padding: 0 8px 0 4px; margin-bottom: 10px">
-                <sc-for list="{{ chart }}" as="c" hint-placeholder-count="5">
-                  <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%">
-                    <div style="display: flex; align-items: flex-end; gap: 8px; height: 100%">
-                      <div style="{{ c.orcStyle }}"></div>
-                      <div style="{{ c.realStyle }}"></div>
-                    </div>
-                  </div>
-                </sc-for>
-              </div>
-              <div style="display: flex; gap: 34px; padding: 0 8px 0 4px; margin-bottom: 24px">
-                <sc-for list="{{ chart }}" as="c" hint-placeholder-count="5">
-                  <div style="flex: 1; font-size: 11px; color: var(--color-neutral-700); line-height: 1.35">{{ c.nome }}<div style="font-variant-numeric: tabular-nums; color: var(--color-neutral-600)">{{ c.pctLabel }} consumido</div></div>
-                </sc-for>
-              </div>
-              <div style="display: flex; gap: 22px; font-size: 12px; color: var(--color-neutral-700); margin-bottom: 26px">
-                <span style="display: inline-flex; align-items: center; gap: 7px"><span style="width: 16px; height: 10px; border: 1px solid var(--color-neutral-600); background: var(--color-neutral-200)"></span>Orçado</span>
-                <span style="display: inline-flex; align-items: center; gap: 7px"><span style="width: 16px; height: 10px; border: 1px solid var(--color-accent-700); background: var(--color-accent-300)"></span>Realizado</span>
-              </div>
-              <table class="table" style="font-variant-numeric: tabular-nums">
-                <thead><tr><th>Projeto</th><th style="text-align: right">Orçado</th><th style="text-align: right">Realizado</th><th style="text-align: right">Saldo</th><th style="width: 90px">Consumo</th><th>Status</th></tr></thead>
-                <tbody>
-                  <sc-for list="{{ projetos }}" as="p" hint-placeholder-count="5">
-                    <tr><td style="font-size: 14px"><a href="#" onClick="{{ goOrcamentos }}" style="color: inherit">{{ p.nome }}</a></td><td style="text-align: right; white-space: nowrap">{{ p.orcado }}</td><td style="text-align: right; white-space: nowrap">{{ p.realizado }}</td><td style="text-align: right; white-space: nowrap; color: {{ p.saldoColor }}">{{ p.saldo }}</td><td>{{ p.pctLabel }}</td><td><span class="tag {{ p.tagClass }}">{{ p.status }}</span></td></tr>
-                  </sc-for>
-                </tbody>
-              </table>
-            </sc-if>
             <sc-if value="{{ sPapeisAuditoria }}" hint-placeholder-val="{{ false }}">
               <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 18px">
                 <sc-if value="{{ podeGerenciarUsuarios }}" hint-placeholder-val="{{ true }}">
@@ -630,9 +641,9 @@
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;orcamentos&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;lancamentos&quot;,&quot;aprovacao&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;dashboard&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;,&quot;admin&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;projetos&quot;,&quot;orcamentos&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;lancamentos&quot;,&quot;aprovacao&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;,&quot;admin&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
-  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12' };
+  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', editando: null, novosProjetos: [], npNome: '', npArea: '', npInicio: '2026-01-01', npFim: '2026-12-31', npErro: '', npOk: '' };
 
   cur() { return this.state.screen || this.props.screen || 'orcamentos'; }
   per() { return this.state.persona || this.props.persona || 'coordenacao'; }
@@ -642,7 +653,7 @@ class Component extends DCLogic {
       coordenacao: {
         label: 'Coordenação', nome: 'Luana Ferraz', papel: 'Coordenação Adm.-Financeira', iniciais: 'LF', notif: 3,
         home: 'orcamentos', escreve: true, editaOrcamento: true,
-        telas: ['orcamentos', 'orcamento-form', 'despesa-mobile', 'lancamentos', 'aprovacao', 'conciliacao', 'prestacao', 'dashboard', 'papeis-auditoria'],
+        telas: ['projetos', 'orcamentos', 'orcamento-form', 'despesa-mobile', 'lancamentos', 'aprovacao', 'conciliacao', 'prestacao', 'papeis-auditoria'],
         pode: 'Perfil completo: cria orçamentos, aprova despesas e emite prestações de contas.'
       },
       educador: {
@@ -655,8 +666,8 @@ class Component extends DCLogic {
       },
       direcao: {
         label: 'Direção', nome: 'Jane Almeida', papel: 'Diretoria / Presidência', iniciais: 'JA', notif: 2,
-        home: 'dashboard', escreve: false,
-        telas: ['dashboard', 'orcamentos', 'prestacao', 'lancamentos', 'papeis-auditoria'],
+        home: 'orcamentos', escreve: false,
+        telas: ['orcamentos', 'projetos', 'prestacao', 'lancamentos', 'papeis-auditoria'],
         pode: 'Somente leitura: visão consolidada, relatórios e trilha de auditoria.'
       },
       voluntario: {
@@ -679,6 +690,7 @@ class Component extends DCLogic {
 
   meta() {
     return {
+      'projetos': ['Tela 10 · Épico 1', 'Projetos', 'mdca.org.br/financas/projetos', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'orcamentos': ['Tela 1 · Épico 1 · US-01, US-02', 'Orçamentos e saldo por projeto', 'mdca.org.br/financas/orcamentos', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'orcamento-form': ['Tela 2 · Épico 1 · US-01', 'Cadastro / edição de orçamento', 'mdca.org.br/financas/orcamentos/novo', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'despesa-mobile': ['Tela 3 · Épico 2 · US-03', 'Lançamento de despesa', 'mdca.org.br/financas/despesas/nova', 'Marcos Vieira', 'Educador', 'MV'],
@@ -686,16 +698,15 @@ class Component extends DCLogic {
       'aprovacao': ['Tela 5 · Épico 2 · US-04', 'Aprovação de lançamentos pendentes', 'mdca.org.br/financas/aprovacoes', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'conciliacao': ['Tela 6 · Épico 2 · US-05', 'Conciliação bancária', 'mdca.org.br/financas/conciliacao', 'Lucas Prado', 'Voluntário Financeiro (remoto)', 'LP'],
       'prestacao': ['Tela 7 · Épico 3 · US-06', 'Prestação de contas', 'mdca.org.br/financas/prestacao', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
-      'dashboard': ['Tela 8 · Épico 3 · US-07', 'Dashboard executivo consolidado', 'mdca.org.br/financas/dashboard', 'Jane Almeida', 'Diretoria / Presidência', 'JA'],
       'papeis-auditoria': ['Tela 9 · Compartilhada · US-08', 'Papéis, acessos e auditoria', 'mdca.org.br/admin/papeis-auditoria', 'Ana Ribeiro', 'Administradora do sistema', 'AR']
     };
   }
 
   navDef() {
     return [
-      ['Orçamento', [['Orçamentos e saldo', 'orcamentos']]],
+      ['Orçamento', [['Projetos', 'projetos'], ['Orçamentos e saldo', 'orcamentos']]],
       ['Lançamentos', [['Lançar despesa', 'despesa-mobile'], ['Todos os lançamentos', 'lancamentos'], ['Aprovações pendentes', 'aprovacao'], ['Conciliação bancária', 'conciliacao']]],
-      ['Prestação de contas', [['Prestação de contas', 'prestacao'], ['Dashboard executivo', 'dashboard']]],
+      ['Prestação de contas', [['Prestação de contas', 'prestacao']]],
       ['Plataforma', [['Papéis e auditoria', 'papeis-auditoria']]]
     ];
   }
@@ -753,7 +764,7 @@ class Component extends DCLogic {
     const on = (k) => ok && s === k;
     const go = (key) => () => {
       if (key === this.cur()) return;
-      this.setState({ screen: key, history: [...(this.state.history || []), this.cur()], detalheOpen: false, relatorioGerado: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12' });
+      this.setState({ screen: key, history: [...(this.state.history || []), this.cur()], detalheOpen: false, relatorioGerado: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', npErro: '', npOk: '' });
     };
     const goBack = () => {
       const hist = [...(this.state.history || [])];
@@ -796,6 +807,7 @@ class Component extends DCLogic {
       const warn = pct > 0.8;
       return {
         nome, cc, status, warn,
+        onEditar: () => { go('orcamento-form')(); this.setState({ editando: nome }); },
         vigencia: status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026',
         orcado: this.brl(orcado), realizado: this.brl(realizado), saldo: this.brl(orcado - realizado),
         saldoColor: over ? 'var(--color-accent-700)' : 'var(--color-text)',
@@ -822,6 +834,37 @@ class Component extends DCLogic {
       || (filtroStatus === 'vigente' && p.status === 'Vigente')
       || (filtroStatus === 'alerta' && p.warn)
       || (filtroStatus === 'encerrado' && p.status === 'Encerrado');
+    const br = (iso) => iso.split('-').reverse().join('/');
+    const novos = this.state.novosProjetos || [];
+    const proximoCC = 'CC-' + (106 + novos.length);
+    const npCampo = (k) => (e) => this.setState({ [k]: e.target.value, npErro: '', npOk: '' });
+    const criarProjeto = () => {
+      const nome = (this.state.npNome || '').trim();
+      const area = (this.state.npArea || '').trim();
+      const ini = this.state.npInicio, fim = this.state.npFim;
+      const existentes = [...this.projetosDef().map((p) => p[0]), ...novos.map((p) => p.nome)];
+      let erro = '';
+      if (!nome || !area || !ini || !fim) erro = 'Preencha nome, área e vigência.';
+      else if (existentes.some((n) => norm(n) === norm(nome))) erro = 'Já existe um projeto com esse nome.';
+      else if (fim <= ini) erro = 'O fim da vigência deve ser posterior ao início.';
+      if (erro) return this.setState({ npErro: erro, npOk: '' });
+      this.setState({
+        novosProjetos: [...novos, { nome, area, cc: proximoCC, inicio: ini, fim }],
+        npNome: '', npArea: '', npErro: '', npOk: 'Projeto “' + nome + '” criado como ' + proximoCC + '.'
+      });
+    };
+    const todosProjetos = [
+      ...this.projetosDef().map(([nome, cc, orcado, realizado, status]) => {
+        const [codigo, area] = cc.split(' · ');
+        return { nome, codigo, area, status, orcamento: this.brl(orcado), orcamentoCor: 'var(--color-text)',
+          vigencia: status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026' };
+      }),
+      ...novos.map((p) => ({ nome: p.nome, codigo: p.cc, area: p.area, status: 'Vigente', orcamento: 'Sem orçamento',
+        orcamentoCor: 'var(--color-neutral-600)', vigencia: br(p.inicio).slice(0, 5) + ' – ' + br(p.fim) }))
+    ].map((p) => ({ ...p, tagClass: this.tagFor(p.status), orcStyle: { textAlign: 'right', whiteSpace: 'nowrap', fontSize: 14, color: p.orcamentoCor } }));
+    const listaProjetos = todosProjetos.filter((p) => bate(p.nome, p.codigo, p.area));
+
+    const editado = this.projetosDef().find(([nome]) => nome === this.state.editando);
     const projetosFiltrados = projetos.filter((p) => bate(p.nome, p.cc) && passaStatus(p));
 
     const totOrc = this.projetosDef().reduce((a, p) => a + p[2], 0);
@@ -846,7 +889,7 @@ class Component extends DCLogic {
       { quando: '10/09 · 17:42', quem: 'Luana Ferraz', acao: 'Rejeição', tagClass: 'tag-danger', objeto: 'Lançamento L-1039', detalhe: 'motivo: nota fiscal ilegível' },
       { quando: '10/09 · 11:20', quem: 'Luana Ferraz', acao: 'Edição', tagClass: 'tag-neutral', objeto: 'Orçamento CC-103', detalhe: 'valor total 68.000 → 72.500' },
       { quando: '09/09 · 09:58', quem: 'Ana Ribeiro', acao: 'Permissão', tagClass: 'tag-neutral', objeto: 'Usuário Rita Souza', detalhe: 'vínculo ao projeto CC-104' },
-      { quando: '08/09 · 07:31', quem: 'Jane Almeida', acao: 'Leitura', tagClass: 'tag-neutral', objeto: 'Dashboard executivo', detalhe: 'exportou consolidado 2026' }
+      { quando: '08/09 · 07:31', quem: 'Jane Almeida', acao: 'Leitura', tagClass: 'tag-neutral', objeto: 'Prestação de contas', detalhe: 'exportou relatório consolidado 2026' }
     ];
     const audBusca = this.state.audBusca || '';
     const audAcao = this.state.audAcao || 'todas';
@@ -874,7 +917,7 @@ class Component extends DCLogic {
       url: ok ? (M[2] || 'mdca.org.br/financas') : 'mdca.org.br/acesso-restrito',
       tabs: [{ title: 'MDCA · Plataforma' }, { title: 'Extrato — Banco' }],
       kicker: ok ? (M[0] || '') : 'Acesso restrito',
-      title: ok ? (M[1] || '') : 'Sem permissão',
+      title: ok ? (s === 'orcamento-form' ? '' : M[1] || '') : 'Sem permissão',
       breadcrumbGroup: s === 'orcamento-form' ? 'Orçamento' : grupoDe(s),
       podeConciliar: P.telas.indexOf('conciliacao') >= 0,
       escreve: P.editaOrcamento === true,
@@ -891,6 +934,18 @@ class Component extends DCLogic {
       notifCount: String(this.notificacoesDef(this.per()).filter((n) => n.novo).length), personaPode: P.pode, personaHome: P.home,
       goHome: go(P.home), goBack, telaNegada: M[1] || '',
       userMenuOpen: !!this.state.userMenuOpen, toggleUserMenu,
+      editandoProjeto: !!editado, novoOrcamento: !editado,
+      listaProjetos, semListaProjetos: listaProjetos.length === 0,
+      contagemProjetos: listaProjetos.length + (listaProjetos.length === 1 ? ' projeto' : ' projetos'),
+      opcoesProjeto: todosProjetos.map((p) => p.nome + ' (' + p.codigo + ')'),
+      proximoCC, criarProjeto, goProjetos: go('projetos'),
+      npNome: this.state.npNome || '', npArea: this.state.npArea || '', npInicio: this.state.npInicio || '', npFim: this.state.npFim || '',
+      npErro: this.state.npErro || '', npOk: this.state.npOk || '',
+      onNpNome: npCampo('npNome'), onNpArea: npCampo('npArea'), onNpInicio: npCampo('npInicio'), onNpFim: npCampo('npFim'),
+      formProjeto: editado ? editado[0] + ' (' + editado[1].split(' · ')[0] + ')' : '',
+      formValor: editado ? this.brl(editado[2]).replace('R$', '').trim() : '184.000,00',
+      formInicio: '01/01/2026',
+      formFim: editado && editado[4] === 'Encerrado' ? '30/06/2026' : '31/12/2026',
       buscaProjeto: busca, onBuscaProjeto, projetosFiltrados, filtroStatus, onFiltroStatus, filtroStatusLanc, onFiltroStatusLanc, dataDe, dataAte, onDataDe, onDataAte,
       audBusca, audAcao, audDe, audAte, semAuditoria: auditoria.length === 0,
       onAudBusca: campo('audBusca'), onAudAcao: campo('audAcao'), onAudDe: campo('audDe'), onAudAte: campo('audAte'),
@@ -912,13 +967,13 @@ class Component extends DCLogic {
         };
       }),
       sDenied: !ok,
+      sProjetos: on('projetos'),
       sOrcamentos: on('orcamentos'),
       sForm: on('orcamento-form'),
       sLancamentos: on('lancamentos'),
       sAprovacao: on('aprovacao'),
       sConciliacao: on('conciliacao'),
       sPrestacao: on('prestacao'),
-      sDashboard: on('dashboard'),
       sPapeisAuditoria: on('papeis-auditoria'),
       prestacaoGerada: this.state.relatorioGerado === true,
       prestacaoNaoGerada: this.state.relatorioGerado !== true,
@@ -965,15 +1020,6 @@ class Component extends DCLogic {
         { id: 'L-0844', data: '05/06/2026', categoria: 'Transporte', descricao: 'Fretamento — saída pedagógica', valor: this.brl(2150.00) },
         { id: 'L-0820', data: '31/05/2026', categoria: 'Recursos humanos', descricao: 'Equipe de educadores — maio', valor: this.brl(28400.00) }
       ],
-      chart: this.projetosDef().map(([nome, cc, orcado, realizado]) => {
-        const max = 200000;
-        return {
-          nome,
-          pctLabel: Math.round(realizado / orcado * 100) + '%',
-          orcStyle: { flex: 1, height: (orcado / max * 100) + '%', background: 'var(--color-neutral-200)', border: '1px solid var(--color-neutral-600)', borderBottom: 0 },
-          realStyle: { flex: 1, height: (realizado / max * 100) + '%', background: 'var(--color-accent-300)', border: '1px solid var(--color-accent-700)', borderBottom: 0 }
-        };
-      }),
       usuarios: [
         { nome: 'Luana Ferraz', email: 'luana.ferraz@mdca.org.br', papel: 'Coordenação', tagClass: 'tag-accent', projetos: 'Todos (consolidado)', situacao: 'Ativo' },
         { nome: 'Jane Almeida', email: 'jane.almeida@mdca.org.br', papel: 'Direção', tagClass: 'tag-accent', projetos: 'Todos (leitura)', situacao: 'Ativo' },
@@ -994,7 +1040,7 @@ class Component extends DCLogic {
         { label: 'Realizado (aprovado)', value: this.k(totReal), note: Math.round(totReal / totOrc * 100) + '% do orçado consumido', colStyle: { padding: '18px 24px', borderLeft: '1px solid var(--color-divider)' } },
         { label: 'Saldo disponível', value: this.k(totOrc - totReal), note: '1 projeto acima de 100%', colStyle: { padding: '18px 0 18px 24px', borderLeft: '1px solid var(--color-divider)' } }
       ],
-      goOrcamentos: go('orcamentos'), goForm: go('orcamento-form'), goLancamentos: go('lancamentos'),
+      goOrcamentos: go('orcamentos'), goForm: () => { go('orcamento-form')(); this.setState({ editando: null }); }, goLancamentos: go('lancamentos'),
       goConciliacao: go('conciliacao'),
       navGroups: this.navDef().map(([title, items]) => ({
         title,
