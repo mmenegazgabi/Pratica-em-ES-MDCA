@@ -172,19 +172,14 @@
                 </sc-for>
               </div>
               <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 4px">
-                <select class="input" style="width: 250px">
-                  <option>Todos os projetos</option>
-                  <sc-for list="{{ filtroProjetos }}" as="fp" hint-placeholder-count="2">
-                    <option>{{ fp }}</option>
-                  </sc-for>
+                <input type="search" class="input" style="width: 250px" placeholder="Buscar projeto ou centro de custo" aria-label="Buscar projeto" value="{{ buscaProjeto }}" onChange="{{ onBuscaProjeto }}">
+                <select class="input" style="width: 170px" aria-label="Filtrar por status" value="{{ filtroStatus }}" onChange="{{ onFiltroStatus }}">
+                  <option value="todos">Todos os status</option>
+                  <option value="vigente">Vigente</option>
+                  <option value="alerta">Em alerta</option>
+                  <option value="encerrado">Encerrado</option>
                 </select>
-                <div class="seg" style="flex: none; white-space: nowrap">
-                  <label class="seg-opt"><input type="radio" name="st" checked><span>Todos</span></label>
-                  <label class="seg-opt"><input type="radio" name="st"><span>Vigente</span></label>
-                  <label class="seg-opt"><input type="radio" name="st"><span>Em alerta</span></label>
-                  <label class="seg-opt"><input type="radio" name="st"><span>Encerrado</span></label>
-                </div>
-                <span style="margin-left: auto; text-align: right; font-size: 12px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">5 orçamentos · 2026<div style="font-size: 11px">atualizado há 2 minutos</div></span>
+                <span style="margin-left: auto; text-align: right; font-size: 12px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ contagemOrcamentos }}<div style="font-size: 11px">atualizado há 2 minutos</div></span>
                 <sc-if value="{{ escreve }}" hint-placeholder-val="{{ true }}">
                   <button class="btn btn-primary" style="white-space: nowrap" onClick="{{ goForm }}">Novo orçamento</button>
                 </sc-if>
@@ -195,7 +190,10 @@
               <table class="table" style="font-variant-numeric: tabular-nums">
                 <thead><tr><th>Projeto / centro de custo</th><th style="text-align: right">Valor total</th><th style="text-align: right">Realizado</th><th style="text-align: right">Saldo</th><th style="width: 200px">Consumo · linha em 80%</th><th>Status</th><th></th></tr></thead>
                 <tbody>
-                  <sc-for list="{{ projetos }}" as="p" hint-placeholder-count="5">
+                  <sc-if value="{{ semProjetos }}" hint-placeholder-val="{{ false }}">
+                    <tr><td colspan="7" style="padding: 28px 8px; text-align: center; color: var(--color-neutral-700)">Nenhum projeto encontrado com esses filtros.</td></tr>
+                  </sc-if>
+                  <sc-for list="{{ projetosFiltrados }}" as="p" hint-placeholder-count="5">
                     <tr>
                       <td style="font-family: var(--font-heading); font-size: 15px">{{ p.nome }}<div style="font-size: 11px; color: var(--color-neutral-600); font-family: var(--font-body)">{{ p.cc }} · {{ p.vigencia }}</div></td>
                       <td style="text-align: right; white-space: nowrap">{{ p.orcado }}</td>
@@ -261,29 +259,31 @@
             </sc-if>
             <sc-if value="{{ sLancamentos }}" hint-placeholder-val="{{ false }}">
               <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 4px">
-                <select class="input" style="width: 170px">
-                  <option>Todos os status</option>
+                <select class="input" style="width: 170px" aria-label="Filtrar lançamentos por status" value="{{ filtroStatusLanc }}" onChange="{{ onFiltroStatusLanc }}">
+                  <option value="todos">Todos os status</option>
                   <sc-if value="{{ mostraStatusPend }}" hint-placeholder-val="{{ true }}">
-                    <option>Pendente</option>
+                    <option value="Pendente">Pendente</option>
                   </sc-if>
-                  <option>Aprovado</option>
+                  <option value="Aprovado">Aprovado</option>
                   <sc-if value="{{ mostraStatusPend }}" hint-placeholder-val="{{ true }}">
-                    <option>Rejeitado</option>
+                    <option value="Rejeitado">Rejeitado</option>
                   </sc-if>
-                  <option>Conciliado</option>
+                  <option value="Conciliado">Conciliado</option>
                 </select>
-                <select class="input" style="width: 230px">
-                  <option>Todos os projetos</option>
-                  <sc-for list="{{ filtroProjetos }}" as="fp" hint-placeholder-count="2">
-                    <option>{{ fp }}</option>
-                  </sc-for>
-                </select>
-                <input class="input" style="width: 190px; font-variant-numeric: tabular-nums" value="01/09 – 12/09/2026">
+                <input type="search" class="input" style="width: 230px" placeholder="Buscar projeto" aria-label="Buscar projeto" value="{{ buscaProjeto }}" onChange="{{ onBuscaProjeto }}">
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-700)">
+                  <input type="date" class="input" style="width: 150px; font-variant-numeric: tabular-nums" aria-label="Data inicial" value="{{ dataDe }}" max="{{ dataAte }}" onChange="{{ onDataDe }}">
+                  <span>até</span>
+                  <input type="date" class="input" style="width: 150px; font-variant-numeric: tabular-nums" aria-label="Data final" value="{{ dataAte }}" min="{{ dataDe }}" onChange="{{ onDataAte }}">
+                </div>
                 <span style="margin-left: auto; text-align: right; font-size: 12px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ contagemLancamentos }}<div style="font-size: 11px">{{ escopoLancamentos }}</div></span>
               </div>
               <table class="table" style="font-variant-numeric: tabular-nums">
                 <thead><tr><th style="width: 78px">Nº</th><th style="width: 96px">Data</th><th>Projeto</th><th>Categoria</th><th>Autor</th><th style="text-align: right">Valor</th><th style="width: 118px">Status</th><th></th></tr></thead>
                 <tbody>
+                  <sc-if value="{{ semLancamentos }}" hint-placeholder-val="{{ false }}">
+                    <tr><td colspan="8" style="padding: 28px 8px; text-align: center; color: var(--color-neutral-700)">Nenhum lançamento encontrado com esses filtros.</td></tr>
+                  </sc-if>
                   <sc-for list="{{ lancamentos }}" as="l" hint-placeholder-count="7">
                     <tr>
                       <td style="color: var(--color-neutral-700); font-size: 13px">{{ l.id }}</td>
@@ -533,13 +533,29 @@
               </sc-if>
               <sc-if value="{{ tabAuditoria }}" hint-placeholder-val="{{ false }}">
                 <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px">
-                  <input class="input" style="width: 260px" placeholder="Buscar por usuário, nº ou projeto">
-                  <select class="input" style="width: 180px"><option>Todas as ações</option><option>Aprovação</option><option>Rejeição</option><option>Edição</option><option>Criação</option></select>
-                  <input class="input" style="width: 180px; font-variant-numeric: tabular-nums" value="01/09 – 12/09/2026">
+                  <input type="search" class="input" style="width: 260px" placeholder="Buscar por usuário, nº ou projeto" aria-label="Buscar na auditoria" value="{{ audBusca }}" onChange="{{ onAudBusca }}">
+                  <select class="input" style="width: 180px" aria-label="Filtrar por ação" value="{{ audAcao }}" onChange="{{ onAudAcao }}">
+                    <option value="todas">Todas as ações</option>
+                    <option value="Criação">Criação</option>
+                    <option value="Edição">Edição</option>
+                    <option value="Aprovação">Aprovação</option>
+                    <option value="Rejeição">Rejeição</option>
+                    <option value="Conciliação">Conciliação</option>
+                    <option value="Permissão">Permissão</option>
+                    <option value="Leitura">Leitura</option>
+                  </select>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-700)">
+                    <input type="date" class="input" style="width: 150px; font-variant-numeric: tabular-nums" aria-label="Auditoria: data inicial" value="{{ audDe }}" max="{{ audAte }}" onChange="{{ onAudDe }}">
+                    <span>até</span>
+                    <input type="date" class="input" style="width: 150px; font-variant-numeric: tabular-nums" aria-label="Auditoria: data final" value="{{ audAte }}" min="{{ audDe }}" onChange="{{ onAudAte }}">
+                  </div>
                 </div>
                 <table class="table" style="font-variant-numeric: tabular-nums">
                   <thead><tr><th style="width: 150px">Quando</th><th style="width: 170px">Quem</th><th style="width: 130px">Ação</th><th>Objeto</th><th>Detalhes</th></tr></thead>
                   <tbody>
+                    <sc-if value="{{ semAuditoria }}" hint-placeholder-val="{{ false }}">
+                      <tr><td colspan="5" style="padding: 28px 8px; text-align: center; color: var(--color-neutral-700)">Nenhum registro encontrado com esses filtros.</td></tr>
+                    </sc-if>
                     <sc-for list="{{ auditoria }}" as="a" hint-placeholder-count="7">
                       <tr>
                         <td style="font-size: 13px; color: var(--color-neutral-700)">{{ a.quando }}</td>
@@ -616,7 +632,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;orcamentos&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;lancamentos&quot;,&quot;aprovacao&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;dashboard&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;,&quot;admin&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
-  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false };
+  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12' };
 
   cur() { return this.state.screen || this.props.screen || 'orcamentos'; }
   per() { return this.state.persona || this.props.persona || 'coordenacao'; }
@@ -737,7 +753,7 @@ class Component extends DCLogic {
     const on = (k) => ok && s === k;
     const go = (key) => () => {
       if (key === this.cur()) return;
-      this.setState({ screen: key, history: [...(this.state.history || []), this.cur()], detalheOpen: false, relatorioGerado: false });
+      this.setState({ screen: key, history: [...(this.state.history || []), this.cur()], detalheOpen: false, relatorioGerado: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12' });
     };
     const goBack = () => {
       const hist = [...(this.state.history || [])];
@@ -779,7 +795,7 @@ class Component extends DCLogic {
       const over = pct > 1;
       const warn = pct > 0.8;
       return {
-        nome, cc, status,
+        nome, cc, status, warn,
         vigencia: status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026',
         orcado: this.brl(orcado), realizado: this.brl(realizado), saldo: this.brl(orcado - realizado),
         saldoColor: over ? 'var(--color-accent-700)' : 'var(--color-text)',
@@ -796,6 +812,18 @@ class Component extends DCLogic {
       };
     });
 
+    const busca = this.state.buscaProjeto || '';
+    const norm = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const bate = (...campos) => !busca.trim() || campos.some((c) => norm(c).indexOf(norm(busca.trim())) >= 0);
+    const onBuscaProjeto = (e) => this.setState({ buscaProjeto: e.target.value });
+    const filtroStatus = this.state.filtroStatus || 'todos';
+    const onFiltroStatus = (e) => this.setState({ filtroStatus: e.target.value });
+    const passaStatus = (p) => filtroStatus === 'todos'
+      || (filtroStatus === 'vigente' && p.status === 'Vigente')
+      || (filtroStatus === 'alerta' && p.warn)
+      || (filtroStatus === 'encerrado' && p.status === 'Encerrado');
+    const projetosFiltrados = projetos.filter((p) => bate(p.nome, p.cc) && passaStatus(p));
+
     const totOrc = this.projetosDef().reduce((a, p) => a + p[2], 0);
     const totReal = this.projetosDef().reduce((a, p) => a + p[3], 0);
 
@@ -803,7 +831,36 @@ class Component extends DCLogic {
       (!P.projetos || P.projetos.indexOf(projeto) >= 0) &&
       (!P.statusVisiveis || P.statusVisiveis.indexOf(status) >= 0));
 
-    const lancamentos = visiveis.map(([id, data, projeto, categoria, valor, status, autor]) => ({
+    const filtroStatusLanc = this.state.filtroStatusLanc || 'todos';
+    const onFiltroStatusLanc = (e) => this.setState({ filtroStatusLanc: e.target.value });
+    const dataDe = this.state.dataDe ?? '2026-09-01';
+    const dataAte = this.state.dataAte ?? '2026-09-12';
+    const onDataDe = (e) => this.setState({ dataDe: e.target.value });
+    const onDataAte = (e) => this.setState({ dataAte: e.target.value });
+    const iso = (d) => d.split('/').reverse().join('-');
+    const noPeriodo = (d) => (!dataDe || iso(d) >= dataDe) && (!dataAte || iso(d) <= dataAte);
+    const auditoriaBase = [
+      { quando: '12/09 · 08:12', quem: 'Marcos Vieira', acao: 'Criação', tagClass: 'tag-neutral', objeto: 'Lançamento L-1042', detalhe: 'R$ 486,90 · Semear · pendente' },
+      { quando: '11/09 · 18:40', quem: 'Luana Ferraz', acao: 'Aprovação', tagClass: 'tag-accent', objeto: 'Lançamento L-1041', detalhe: 'debitado do saldo de CC-103' },
+      { quando: '11/09 · 16:05', quem: 'Lucas Prado', acao: 'Conciliação', tagClass: 'tag-info', objeto: 'Lançamento L-1040', detalhe: 'vinculado ao extrato de 11/09' },
+      { quando: '10/09 · 17:42', quem: 'Luana Ferraz', acao: 'Rejeição', tagClass: 'tag-danger', objeto: 'Lançamento L-1039', detalhe: 'motivo: nota fiscal ilegível' },
+      { quando: '10/09 · 11:20', quem: 'Luana Ferraz', acao: 'Edição', tagClass: 'tag-neutral', objeto: 'Orçamento CC-103', detalhe: 'valor total 68.000 → 72.500' },
+      { quando: '09/09 · 09:58', quem: 'Ana Ribeiro', acao: 'Permissão', tagClass: 'tag-neutral', objeto: 'Usuário Rita Souza', detalhe: 'vínculo ao projeto CC-104' },
+      { quando: '08/09 · 07:31', quem: 'Jane Almeida', acao: 'Leitura', tagClass: 'tag-neutral', objeto: 'Dashboard executivo', detalhe: 'exportou consolidado 2026' }
+    ];
+    const audBusca = this.state.audBusca || '';
+    const audAcao = this.state.audAcao || 'todas';
+    const audDe = this.state.audDe ?? '2026-09-01';
+    const audAte = this.state.audAte ?? '2026-09-12';
+    const campo = (k) => (e) => this.setState({ [k]: e.target.value });
+    const isoAud = (q) => '2026-' + q.slice(3, 5) + '-' + q.slice(0, 2);
+    const auditoria = auditoriaBase.filter((a) =>
+      (!audBusca.trim() || [a.quem, a.objeto, a.detalhe].some((c) => norm(c).indexOf(norm(audBusca.trim())) >= 0))
+      && (audAcao === 'todas' || a.acao === audAcao)
+      && (!audDe || isoAud(a.quando) >= audDe) && (!audAte || isoAud(a.quando) <= audAte));
+
+    const lancamentos = visiveis.filter(([, data, projeto, , , status]) =>
+      bate(projeto) && (filtroStatusLanc === 'todos' || status === filtroStatusLanc) && noPeriodo(data)).map(([id, data, projeto, categoria, valor, status, autor]) => ({
       id, data, projeto, categoria, autor, status,
       valor: this.brl(valor),
       tagClass: this.tagFor(status),
@@ -829,12 +886,16 @@ class Component extends DCLogic {
         : P.statusVisiveis ? 'Somente lançamentos aprovados, para conciliação'
         : 'Todos os projetos',
       contagemLancamentos: lancamentos.length + (lancamentos.length === 1 ? ' lançamento' : ' lançamentos'),
-      filtroProjetos: P.projetos || ['Semear — Contraturno Escolar', 'Casa de Convivência', 'Núcleo de Arte e Cultura', 'Plantão Jurídico — Defesa de Direitos', 'Formação de Conselheiros'],
       mostraStatusPend: !P.statusVisiveis,
       userName: P.nome, userRole: P.papel, userInitials: P.iniciais,
       notifCount: String(this.notificacoesDef(this.per()).filter((n) => n.novo).length), personaPode: P.pode, personaHome: P.home,
       goHome: go(P.home), goBack, telaNegada: M[1] || '',
       userMenuOpen: !!this.state.userMenuOpen, toggleUserMenu,
+      buscaProjeto: busca, onBuscaProjeto, projetosFiltrados, filtroStatus, onFiltroStatus, filtroStatusLanc, onFiltroStatusLanc, dataDe, dataAte, onDataDe, onDataAte,
+      audBusca, audAcao, audDe, audAte, semAuditoria: auditoria.length === 0,
+      onAudBusca: campo('audBusca'), onAudAcao: campo('audAcao'), onAudDe: campo('audDe'), onAudAte: campo('audAte'),
+      semProjetos: projetosFiltrados.length === 0, semLancamentos: lancamentos.length === 0,
+      contagemOrcamentos: projetosFiltrados.length + (projetosFiltrados.length === 1 ? ' orçamento' : ' orçamentos') + ' · 2026',
       personas: Object.keys(this.personasDef()).map((k) => {
         const p = this.personasDef()[k];
         const at = k === this.per();
@@ -921,15 +982,7 @@ class Component extends DCLogic {
         { nome: 'Lucas Prado', email: 'lucas.prado@voluntario.org', papel: 'Voluntário Financeiro', tagClass: 'tag-neutral', projetos: 'Conciliação — todos', situacao: 'Ativo' },
         { nome: 'Ana Ribeiro', email: 'ana.ribeiro@mdca.org.br', papel: 'Administradora', tagClass: 'tag-neutral', projetos: '—', situacao: 'Ativo' }
       ],
-      auditoria: [
-        { quando: '12/09 · 08:12', quem: 'Marcos Vieira', acao: 'Criação', tagClass: 'tag-neutral', objeto: 'Lançamento L-1042', detalhe: 'R$ 486,90 · Semear · pendente' },
-        { quando: '11/09 · 18:40', quem: 'Luana Ferraz', acao: 'Aprovação', tagClass: 'tag-accent', objeto: 'Lançamento L-1041', detalhe: 'debitado do saldo de CC-103' },
-        { quando: '11/09 · 16:05', quem: 'Lucas Prado', acao: 'Conciliação', tagClass: 'tag-info', objeto: 'Lançamento L-1040', detalhe: 'vinculado ao extrato de 11/09' },
-        { quando: '10/09 · 17:42', quem: 'Luana Ferraz', acao: 'Rejeição', tagClass: 'tag-danger', objeto: 'Lançamento L-1039', detalhe: 'motivo: nota fiscal ilegível' },
-        { quando: '10/09 · 11:20', quem: 'Luana Ferraz', acao: 'Edição', tagClass: 'tag-neutral', objeto: 'Orçamento CC-103', detalhe: 'valor total 68.000 → 72.500' },
-        { quando: '09/09 · 09:58', quem: 'Ana Ribeiro', acao: 'Permissão', tagClass: 'tag-neutral', objeto: 'Usuário Rita Souza', detalhe: 'vínculo ao projeto CC-104' },
-        { quando: '08/09 · 07:31', quem: 'Jane Almeida', acao: 'Leitura', tagClass: 'tag-neutral', objeto: 'Dashboard executivo', detalhe: 'exportou consolidado 2026' }
-      ],
+      auditoria,
       categorias: [
         { nome: 'Alimentação', limite: this.brl(48000) },
         { nome: 'Transporte', limite: this.brl(26000) },
