@@ -5,9 +5,11 @@ from typing import List
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from orcamento import Orcamento
+
 app = FastAPI(title="MDCA — Financeiro")
 
-_orcamentos: List[dict] = []
+_orcamentos: List[Orcamento] = []
 
 
 class OrcamentoCreate(BaseModel):
@@ -16,10 +18,6 @@ class OrcamentoCreate(BaseModel):
     data_inicio: date
     data_fim: date
     categorias_despesa: List[str] = Field(min_length=1)
-
-
-class Orcamento(OrcamentoCreate):
-    id: str
 
 
 @app.post("/orcamentos", response_model=Orcamento, status_code=201)
@@ -36,7 +34,7 @@ def criar_orcamento(payload: OrcamentoCreate) -> Orcamento:
         )
 
     orcamento = Orcamento(id=str(uuid.uuid4()), **payload.model_dump())
-    _orcamentos.append(orcamento.model_dump())
+    _orcamentos.append(orcamento)
     return orcamento
 
 

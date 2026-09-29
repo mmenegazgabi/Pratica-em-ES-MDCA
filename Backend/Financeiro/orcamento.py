@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import date
 from enum import Enum
 
 
@@ -16,7 +17,12 @@ class Lancamento:
 
 @dataclass
 class Orcamento:
+    id: str
+    projeto_id: str
     valor_total: float
+    data_inicio: date
+    data_fim: date
+    categorias_despesa: list[str]
     lancamentos: list[Lancamento] = field(default_factory=list)
 
     @property
