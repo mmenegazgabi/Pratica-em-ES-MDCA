@@ -677,7 +677,7 @@ class Component extends DCLogic {
 
   navDef() {
     return [
-      ['Orçamento', [['Orçamentos e saldo', 'orcamentos'], ['Novo orçamento', 'orcamento-form']]],
+      ['Orçamento', [['Orçamentos e saldo', 'orcamentos']]],
       ['Lançamentos', [['Lançar despesa', 'despesa-mobile'], ['Todos os lançamentos', 'lancamentos'], ['Aprovações pendentes', 'aprovacao'], ['Conciliação bancária', 'conciliacao']]],
       ['Prestação de contas', [['Prestação de contas', 'prestacao'], ['Dashboard executivo', 'dashboard']]],
       ['Plataforma', [['Papéis e auditoria', 'papeis-auditoria']]]
@@ -818,7 +818,7 @@ class Component extends DCLogic {
       tabs: [{ title: 'MDCA · Plataforma' }, { title: 'Extrato — Banco' }],
       kicker: ok ? (M[0] || '') : 'Acesso restrito',
       title: ok ? (M[1] || '') : 'Sem permissão',
-      breadcrumbGroup: grupoDe(s),
+      breadcrumbGroup: s === 'orcamento-form' ? 'Orçamento' : grupoDe(s),
       podeConciliar: P.telas.indexOf('conciliacao') >= 0,
       escreve: P.editaOrcamento === true,
       podeVerValores: P.telas.indexOf('orcamentos') >= 0,
