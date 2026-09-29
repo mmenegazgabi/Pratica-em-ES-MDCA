@@ -378,12 +378,20 @@
                       </div>
                     </sc-if>
                     <sc-if value="{{ novoOrcamento }}" hint-placeholder-val="{{ true }}">
-                      <div class="field"><label>Projeto / centro de custo existente *</label>
-                        <select class="input">
-                          <sc-for list="{{ opcoesProjeto }}" as="op" hint-placeholder-count="5">
-                            <option>{{ op }}</option>
-                          </sc-for>
-                        </select>
+                      <div class="field"><label for="busca-projeto-orc">Projeto / centro de custo existente *</label>
+                        <div style="position: relative">
+                        <input id="busca-projeto-orc" style="width: 100%; box-sizing: border-box" type="search" class="input" role="combobox" aria-autocomplete="list" aria-controls="lista-projetos-orc" aria-expanded="{{ selAberto }}" autocomplete="off" placeholder="Digite o nome ou o centro de custo" value="{{ selBusca }}" onChange="{{ onSelBusca }}" onFocus="{{ abrirSel }}" onBlur="{{ fecharSel }}" onKeyDown="{{ onSelTecla }}">
+                        <sc-if value="{{ selAberto }}" hint-placeholder-val="{{ false }}">
+                          <div id="lista-projetos-orc" role="listbox" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 20; margin-top: 4px; max-height: 240px; overflow: auto; background: var(--color-neutral-100); border: 1px solid var(--color-divider); border-radius: var(--radius-md); box-shadow: var(--shadow-sm)">
+                            <sc-for list="{{ selOpcoes }}" as="op" hint-placeholder-count="5">
+                              <button type="button" role="option" aria-selected="{{ op.selecionado }}" onMouseDown="{{ op.onEscolher }}" style="{{ op.style }}"><span>{{ op.nome }}</span><span style="font-size: 11px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ op.codigo }}</span></button>
+                            </sc-for>
+                            <sc-if value="{{ selVazio }}" hint-placeholder-val="{{ false }}">
+                              <div style="padding: 10px 14px; font-size: 13px; color: var(--color-neutral-700)">Nenhum projeto encontrado.</div>
+                            </sc-if>
+                          </div>
+                        </sc-if>
+                        </div>
                         <div style="font-size: 11px; color: var(--color-neutral-600); margin-top: 5px">Não encontrou o projeto? <a href="#" onClick="{{ goProjetos }}">Cadastre na aba Projetos</a>.</div>
                       </div>
                     </sc-if>
@@ -444,6 +452,9 @@
                 </div>
                 <span style="margin-left: auto; text-align: right; font-size: 12px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ contagemLancamentos }}<div style="font-size: 11px">{{ escopoLancamentos }}</div></span>
               </div>
+              <sc-if value="{{ avisoDecisao }}" hint-placeholder-val="{{ false }}">
+                <div role="status" style="font-size: 13px; color: var(--color-accent-800); background: var(--color-accent-100); border-radius: var(--radius-sm); padding: 10px 14px; margin: 10px 0">{{ avisoDecisao }}</div>
+              </sc-if>
               <table class="table" style="font-variant-numeric: tabular-nums">
                 <thead><tr><th style="width: 78px">Nº</th><th style="width: 96px">Data</th><th>Projeto</th><th>Categoria</th><th>Autor</th><th style="text-align: right">Valor</th><th style="width: 118px">Status</th><th></th></tr></thead>
                 <tbody>
@@ -459,43 +470,47 @@
                       <td style="font-size: 13px; color: var(--color-neutral-700)">{{ l.autor }}</td>
                       <td style="text-align: right; white-space: nowrap">{{ l.valor }}</td>
                       <td><span class="tag {{ l.tagClass }}">{{ l.status }}</span></td>
-                      <td style="text-align: right"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ l.onClick }}">Detalhes</button></td>
+                      <td style="text-align: right; white-space: nowrap"><sc-if value="{{ l.pendente }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost" style="font-size: 12px" aria-expanded="{{ l.aberto }}" onClick="{{ l.onAnalisar }}">{{ l.rotuloAnalisar }}</button> </sc-if><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ l.onClick }}">Detalhes</button></td>
                     </tr>
+                    <sc-if value="{{ l.aberto }}" hint-placeholder-val="{{ false }}">
+                      <tr><td colspan="8" style="background: var(--color-neutral-100); padding: 16px 18px">
+                        <div style="font-size: 13px; margin-bottom: 12px"><span style="font-family: var(--font-heading); font-size: 15px">{{ l.descricao }}</span> <span style="color: var(--color-neutral-700)">· {{ l.valor }} em {{ l.categoria }} · {{ l.projeto }}</span></div>
+                        <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 8px">Orçamento da categoria {{ l.categoria }}</div>
+                        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px">
+                          <div><div style="font-size: 11px; color: var(--color-neutral-700)">Orçado</div><div style="font-size: 16px">{{ l.catOrcado }}</div></div>
+                          <div><div style="font-size: 11px; color: var(--color-neutral-700)">Realizado</div><div style="font-size: 16px">{{ l.catRealizado }}</div></div>
+                          <div><div style="font-size: 11px; color: var(--color-neutral-700)">Saldo atual</div><div style="font-size: 16px">{{ l.catSaldo }}</div></div>
+                          <div><div style="font-size: 11px; color: var(--color-neutral-700)">Saldo se aprovar</div><div style="{{ l.depoisStyle }}">{{ l.catDepois }}</div></div>
+                        </div>
+                        <sc-if value="{{ l.alerta }}" hint-placeholder-val="{{ false }}">
+                          <div style="font-size: 12px; color: var(--status-rejected); margin-bottom: 12px">{{ l.alerta }}</div>
+                        </sc-if>
+                        <sc-if value="{{ podeAprovar }}" hint-placeholder-val="{{ true }}">
+                          <sc-if value="{{ naoRejeitando }}" hint-placeholder-val="{{ true }}">
+                            <div style="display: flex; gap: 10px">
+                              <button class="btn btn-primary" style="font-size: 13px" onClick="{{ l.onAprovar }}">Aprovar</button>
+                              <button class="btn btn-secondary" style="font-size: 13px" onClick="{{ iniciarRejeicao }}">Rejeitar</button>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ rejeitando }}" hint-placeholder-val="{{ false }}">
+                            <div class="field" style="margin-bottom: 10px"><label>Motivo da rejeição *</label><textarea class="input" style="min-height: 64px" aria-label="Motivo da rejeição" value="{{ motivoRej }}" onChange="{{ onMotivoRej }}" placeholder="Explique ao autor o que precisa ser corrigido"></textarea></div>
+                            <sc-if value="{{ erroMotivo }}" hint-placeholder-val="{{ false }}">
+                              <div role="alert" style="font-size: 12px; color: var(--status-rejected); margin-bottom: 10px">{{ erroMotivo }}</div>
+                            </sc-if>
+                            <div style="display: flex; gap: 10px">
+                              <button class="btn btn-primary" style="font-size: 13px" onClick="{{ l.onConfirmarRejeicao }}">Confirmar rejeição</button>
+                              <button class="btn btn-secondary" style="font-size: 13px" onClick="{{ cancelarRejeicao }}">Cancelar</button>
+                            </div>
+                          </sc-if>
+                        </sc-if>
+                        <sc-if value="{{ naoPodeAprovar }}" hint-placeholder-val="{{ false }}">
+                          <div style="font-size: 12px; color: var(--color-neutral-700)">Somente a Coordenação pode aprovar ou rejeitar lançamentos.</div>
+                        </sc-if>
+                      </td></tr>
+                    </sc-if>
                   </sc-for>
                 </tbody>
               </table>
-            </sc-if>
-            <sc-if value="{{ sAprovacao }}" hint-placeholder-val="{{ false }}">
-              <div style="display: flex; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--color-divider); margin-bottom: 18px">
-                <span class="tag tag-outline">{{ resumoPendentes }}</span>
-                <span style="margin-left: 14px; font-size: 12px; color: var(--color-neutral-600)">Rejeição exige motivo</span>
-                <sc-if value="{{ podeConciliar }}" hint-placeholder-val="{{ true }}">
-                  <a href="#" onClick="{{ goConciliacao }}" style="margin-left: auto; font-size: 12px">Ver conciliação bancária →</a>
-                </sc-if>
-              </div>
-              <div style="display: grid; gap: 14px; max-width: 1000px">
-                <sc-for list="{{ pendentes }}" as="p" hint-placeholder-count="3">
-                  <div class="card" style="flex-direction: row; align-items: center; gap: 20px; padding: var(--space-4)">
-                    <div style="width: 74px; height: 74px; flex: none" class="plate">
-                      <div style="width: 100%; height: 100%; background: var(--color-neutral-300); display: grid; place-items: center; font-size: 9px; color: var(--color-neutral-800); text-align: center">comprovante</div>
-                    </div>
-                    <div style="min-width: 0; flex: 1">
-                      <div style="font-size: 11px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ p.id }} · {{ p.data }} · {{ p.autor }}</div>
-                      <div style="font-family: var(--font-heading); font-size: 18px; margin-top: 2px">{{ p.descricao }}</div>
-                      <div style="font-size: 12px; color: var(--color-neutral-700); margin-top: 2px">{{ p.projeto }} · {{ p.categoria }}</div>
-                    </div>
-                    <div style="text-align: right; flex: none">
-                      <div style="font-family: var(--font-heading); font-size: 22px; font-variant-numeric: tabular-nums">{{ p.valor }}</div>
-                      <div style="font-size: 11px; color: var(--color-neutral-600)">saldo após aprovar: {{ p.saldoDepois }}</div>
-                    </div>
-                    <div style="display: flex; gap: 8px; flex: none">
-                      <button class="btn btn-secondary" style="font-size: 13px" onClick="{{ p.onDetalhe }}">Ver</button>
-                      <button class="btn btn-secondary" style="font-size: 13px" onClick="{{ p.onDetalhe }}">Rejeitar</button>
-                      <button class="btn btn-primary" style="font-size: 13px" onClick="{{ p.onDetalhe }}">Aprovar</button>
-                    </div>
-                  </div>
-                </sc-for>
-              </div>
             </sc-if>
             <sc-if value="{{ sConciliacao }}" hint-placeholder-val="{{ false }}">
               <div style="display: flex; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--color-divider); margin-bottom: 20px">
@@ -748,9 +763,9 @@
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;projetos&quot;,&quot;orcamentos&quot;,&quot;projeto-detalhe&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;lancamentos&quot;,&quot;aprovacao&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;,&quot;admin&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;projetos&quot;,&quot;orcamentos&quot;,&quot;projeto-detalhe&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;lancamentos&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;,&quot;admin&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
-  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', editando: null, detalhe: null, decisoes: {}, analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '', novosProjetos: [], npNome: '', npArea: '', npInicio: '2026-01-01', npFim: '2026-12-31', npErro: '', npOk: '' };
+  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', editando: null, detalhe: null, decisoes: {}, selBusca: '', selProjeto: null, selAberto: false, analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '', novosProjetos: [], npNome: '', npArea: '', npInicio: '2026-01-01', npFim: '2026-12-31', npErro: '', npOk: '' };
 
   cur() { return this.state.screen || this.props.screen || 'orcamentos'; }
   per() { return this.state.persona || this.props.persona || 'coordenacao'; }
@@ -759,8 +774,8 @@ class Component extends DCLogic {
     return {
       coordenacao: {
         label: 'Coordenação', nome: 'Luana Ferraz', papel: 'Coordenação Adm.-Financeira', iniciais: 'LF', notif: 3,
-        home: 'orcamentos', escreve: true, editaOrcamento: true,
-        telas: ['projetos', 'orcamentos', 'projeto-detalhe', 'orcamento-form', 'despesa-mobile', 'lancamentos', 'aprovacao', 'conciliacao', 'prestacao', 'papeis-auditoria'],
+        home: 'orcamentos', escreve: true, editaOrcamento: true, aprova: true,
+        telas: ['projetos', 'orcamentos', 'projeto-detalhe', 'orcamento-form', 'despesa-mobile', 'lancamentos', 'conciliacao', 'prestacao', 'papeis-auditoria'],
         pode: 'Perfil completo: cria orçamentos, aprova despesas e emite prestações de contas.'
       },
       educador: {
@@ -803,7 +818,6 @@ class Component extends DCLogic {
       'orcamento-form': ['Tela 2 · Épico 1 · US-01', 'Cadastro / edição de orçamento', 'mdca.org.br/financas/orcamentos/novo', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'despesa-mobile': ['Tela 3 · Épico 2 · US-03', 'Lançamento de despesa', 'mdca.org.br/financas/despesas/nova', 'Marcos Vieira', 'Educador', 'MV'],
       'lancamentos': ['Tela 4 · Épico 2 · US-03, 04, 05', 'Lançamentos', 'mdca.org.br/financas/lancamentos', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
-      'aprovacao': ['Tela 5 · Épico 2 · US-04', 'Aprovação de lançamentos pendentes', 'mdca.org.br/financas/aprovacoes', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'conciliacao': ['Tela 6 · Épico 2 · US-05', 'Conciliação bancária', 'mdca.org.br/financas/conciliacao', 'Lucas Prado', 'Voluntário Financeiro (remoto)', 'LP'],
       'prestacao': ['Tela 7 · Épico 3 · US-06', 'Prestação de contas', 'mdca.org.br/financas/prestacao', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'papeis-auditoria': ['Tela 9 · Compartilhada · US-08', 'Papéis, acessos e auditoria', 'mdca.org.br/admin/papeis-auditoria', 'Ana Ribeiro', 'Administradora do sistema', 'AR']
@@ -813,7 +827,7 @@ class Component extends DCLogic {
   navDef() {
     return [
       ['Orçamento', [['Projetos', 'projetos'], ['Orçamentos e saldo', 'orcamentos']]],
-      ['Lançamentos', [['Lançar despesa', 'despesa-mobile'], ['Todos os lançamentos', 'lancamentos'], ['Aprovações pendentes', 'aprovacao'], ['Conciliação bancária', 'conciliacao']]],
+      ['Lançamentos', [['Lançar despesa', 'despesa-mobile'], ['Todos os lançamentos', 'lancamentos'], ['Conciliação bancária', 'conciliacao']]],
       ['Prestação de contas', [['Prestação de contas', 'prestacao']]],
       ['Plataforma', [['Papéis e auditoria', 'papeis-auditoria']]]
     ];
@@ -886,12 +900,12 @@ class Component extends DCLogic {
       .filter((l) => (decisoes[l[0]] || {}).status === 'Aprovado' && l[2] === projeto && (!categoria || l[3] === categoria))
       .reduce((a, l) => a + l[4], 0);
     const projDef = this.projetosDef().map(([nome, cc, orcado, realizado, status]) => [nome, cc, orcado, realizado + aprovadoAgora(nome), status]);
-    const podeAprovar = P.telas.indexOf('aprovacao') >= 0;
+    const podeAprovar = !!P.aprova;
     const ok = P.telas.indexOf(s) >= 0;
     const on = (k) => ok && s === k;
     const go = (key) => () => {
       if (key === this.cur()) return;
-      this.setState({ screen: key, history: [...(this.state.history || []), this.cur()], detalheOpen: false, relatorioGerado: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', npErro: '', npOk: '', analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '' });
+      this.setState({ screen: key, history: [...(this.state.history || []), this.cur()], detalheOpen: false, relatorioGerado: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', npErro: '', npOk: '', analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '', selBusca: '', selProjeto: null, selAberto: false });
     };
     const goBack = () => {
       const hist = [...(this.state.history || [])];
@@ -1036,19 +1050,44 @@ class Component extends DCLogic {
       && (audAcao === 'todas' || a.acao === audAcao)
       && (!audDe || isoAud(a.quando) >= audDe) && (!audAte || isoAud(a.quando) <= audAte));
 
+    const catsDe = (nome) => (this.categoriasDef()[nome] || []).map(([c, o, r]) => [c, o, r + aprovadoAgora(nome, c)]);
+    const decidir = (id, status, motivo, texto) => this.setState({
+      decisoes: { ...decisoes, [id]: { status, motivo } },
+      analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: texto
+    });
+    const analisarLanc = ([id, data, projeto, categoria, valor, st, autor, descricao]) => {
+      const cat = catsDe(projeto).find(([c]) => c === categoria) || [categoria, 0, 0];
+      const saldoCat = cat[1] - cat[2];
+      const depois = saldoCat - valor;
+      const aberto = this.state.analisando === id;
+      return {
+        id, data, categoria, autor, status: st, valor: this.brl(valor), tagClass: this.tagFor(st),
+        descricao: descricao || 'Lançamento ' + id,
+        pendente: st === 'Pendente' && P.telas.indexOf('orcamentos') >= 0, aberto,
+        rotuloAnalisar: aberto ? 'Fechar' : 'Analisar',
+        onAnalisar: () => this.setState({ analisando: aberto ? null : id, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '' }),
+        catOrcado: this.brl(cat[1]), catRealizado: this.brl(cat[2]), catSaldo: this.brl(saldoCat), catDepois: this.brl(depois),
+        depoisStyle: { fontSize: 16, color: depois < 0 ? 'var(--status-rejected)' : 'var(--color-text)' },
+        alerta: depois < 0 ? '⚠ Aprovar deixa a categoria ' + this.brl(-depois) + ' acima do orçado.' : '',
+        onAprovar: () => decidir(id, 'Aprovado', '', id + ' aprovado — ' + this.brl(valor) + ' debitado do saldo de ' + categoria + '.'),
+        onConfirmarRejeicao: () => {
+          const motivo = (this.state.motivoRej || '').trim();
+          if (!motivo) return this.setState({ erroMotivo: 'Informe o motivo da rejeição.' });
+          decidir(id, 'Rejeitado', motivo, id + ' rejeitado. O motivo foi registrado para o autor.');
+        }
+      };
+    };
+
     const lancamentos = visiveis.filter(([, data, projeto, , , status]) =>
-      bate(projeto) && (filtroStatusLanc === 'todos' || status === filtroStatusLanc) && noPeriodo(data)).map(([id, data, projeto, categoria, valor, status, autor]) => ({
-      id, data, projeto, categoria, autor, status,
-      valor: this.brl(valor),
-      tagClass: this.tagFor(status),
-      onClick: abrirDetalhe
+      bate(projeto) && (filtroStatusLanc === 'todos' || status === filtroStatusLanc) && noPeriodo(data)).map((l) => ({
+      ...analisarLanc(l), projeto: l[2], onClick: abrirDetalhe
     }));
 
     const dpDef = projDef.find(([nome]) => nome === this.state.detalhe) || projDef[0];
     const dp = (() => {
       const [nome, cc, orcado, realizado, status] = dpDef;
       const [codigo, area] = cc.split(' · ');
-      const cats = (this.categoriasDef()[nome] || []).map(([c, o, r]) => [c, o, r + aprovadoAgora(nome, c)]);
+      const cats = catsDe(nome);
       const escala = Math.max(...cats.map(([, o, r]) => Math.max(o, r)), 1);
       const pctTotal = realizado / orcado;
       const col = (i) => ({ padding: i ? '16px 20px' : '16px 20px 16px 0', borderLeft: i ? '1px solid var(--color-divider)' : 0 });
@@ -1066,32 +1105,7 @@ class Component extends DCLogic {
           realStyle: barra(r, acima ? 'var(--status-rejected)' : '#2f7a3a'),
         };
       });
-      const decidir = (id, status, motivo, texto) => this.setState({
-        decisoes: { ...decisoes, [id]: { status, motivo } },
-        analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: texto
-      });
-      const lancs = lancDef.filter(([, , projeto]) => projeto === nome).map(([id, data, , categoria, valor, st, autor, descricao]) => {
-        const cat = cats.find(([c]) => c === categoria) || [categoria, 0, 0];
-        const saldoCat = cat[1] - cat[2];
-        const depois = saldoCat - valor;
-        const aberto = this.state.analisando === id;
-        return {
-          id, data, categoria, autor, status: st, valor: this.brl(valor), tagClass: this.tagFor(st),
-          descricao: descricao || 'Lançamento ' + id,
-          pendente: st === 'Pendente', aberto,
-          rotuloAnalisar: aberto ? 'Fechar' : 'Analisar',
-          onAnalisar: () => this.setState({ analisando: aberto ? null : id, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '' }),
-          catOrcado: this.brl(cat[1]), catRealizado: this.brl(cat[2]), catSaldo: this.brl(saldoCat), catDepois: this.brl(depois),
-          depoisStyle: { fontSize: 16, color: depois < 0 ? 'var(--status-rejected)' : 'var(--color-text)' },
-          alerta: depois < 0 ? '⚠ Aprovar deixa a categoria ' + this.brl(-depois) + ' acima do orçado.' : '',
-          onAprovar: () => decidir(id, 'Aprovado', '', id + ' aprovado — ' + this.brl(valor) + ' debitado do saldo de ' + categoria + '.'),
-          onConfirmarRejeicao: () => {
-            const motivo = (this.state.motivoRej || '').trim();
-            if (!motivo) return this.setState({ erroMotivo: 'Informe o motivo da rejeição.' });
-            decidir(id, 'Rejeitado', motivo, id + ' rejeitado. O motivo foi registrado para o autor.');
-          }
-        };
-      });
+      const lancs = lancDef.filter(([, , projeto]) => projeto === nome).map(analisarLanc);
       return {
         nome, codigo, area, status, tagClass: this.tagFor(status),
         vigencia: status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026',
@@ -1111,10 +1125,6 @@ class Component extends DCLogic {
     return {
       dp, sDetalheProjeto: on('projeto-detalhe'),
       podeAprovar, naoPodeAprovar: !podeAprovar,
-      resumoPendentes: (() => {
-        const pend = lancDef.filter((l) => l[5] === 'Pendente');
-        return pend.length + (pend.length === 1 ? ' pendente · ' : ' pendentes · ') + this.brl(pend.reduce((t, l) => t + l[4], 0));
-      })(),
       rejeitando: !!this.state.rejeitando, naoRejeitando: !this.state.rejeitando,
       motivoRej: this.state.motivoRej || '', erroMotivo: this.state.erroMotivo || '', avisoDecisao: this.state.avisoDecisao || '',
       onMotivoRej: (e) => this.setState({ motivoRej: e.target.value, erroMotivo: '' }),
@@ -1128,7 +1138,6 @@ class Component extends DCLogic {
       kicker: ok ? (M[0] || '') : 'Acesso restrito',
       title: ok ? (s === 'orcamento-form' ? '' : s === 'projeto-detalhe' ? 'Detalhes do projeto' : M[1] || '') : 'Sem permissão',
       breadcrumbGroup: s === 'orcamento-form' || s === 'projeto-detalhe' ? 'Orçamento' : grupoDe(s),
-      podeConciliar: P.telas.indexOf('conciliacao') >= 0,
       escreve: P.editaOrcamento === true,
       podeVerValores: P.telas.indexOf('orcamentos') >= 0,
       podeRefazer: this.per() === 'educador' || this.per() === 'coordenacao',
@@ -1146,7 +1155,26 @@ class Component extends DCLogic {
       editandoProjeto: !!editado, novoOrcamento: !editado,
       listaProjetos, semListaProjetos: listaProjetos.length === 0,
       contagemProjetos: listaProjetos.length + (listaProjetos.length === 1 ? ' projeto' : ' projetos'),
-      opcoesProjeto: todosProjetos.map((p) => p.nome + ' (' + p.codigo + ')'),
+      ...(() => {
+        const termo = norm((this.state.selBusca || '').trim());
+        const escolhido = this.state.selProjeto;
+        const lista = todosProjetos.filter((p) => !termo || escolhido === p.nome || norm(p.nome + ' ' + p.codigo).indexOf(termo) >= 0);
+        const escolher = (p) => (e) => { e.preventDefault(); this.setState({ selProjeto: p.nome, selBusca: p.nome + ' (' + p.codigo + ')', selAberto: false }); };
+        return {
+          selBusca: this.state.selBusca || '', selAberto: !!this.state.selAberto, selVazio: lista.length === 0,
+          onSelBusca: (e) => this.setState({ selBusca: e.target.value, selProjeto: null, selAberto: true }),
+          abrirSel: () => this.setState({ selAberto: true }),
+          fecharSel: () => this.setState({ selAberto: false }),
+          onSelTecla: (e) => {
+            if (e.key === 'Escape') this.setState({ selAberto: false });
+            if (e.key === 'Enter' && lista.length) escolher(lista[0])(e);
+          },
+          selOpcoes: lista.map((p) => ({
+            nome: p.nome, codigo: p.codigo, selecionado: escolhido === p.nome, onEscolher: escolher(p),
+            style: { display: 'flex', justifyContent: 'space-between', gap: 12, width: '100%', textAlign: 'left', padding: '9px 14px', border: 0, cursor: 'pointer', font: 'inherit', fontSize: 14, color: 'var(--color-text)', background: escolhido === p.nome ? 'var(--color-accent-100)' : 'transparent' }
+          }))
+        };
+      })(),
       proximoCC, criarProjeto, goProjetos: go('projetos'),
       npNome: this.state.npNome || '', npArea: this.state.npArea || '', npInicio: this.state.npInicio || '', npFim: this.state.npFim || '',
       npErro: this.state.npErro || '', npOk: this.state.npOk || '',
@@ -1180,7 +1208,6 @@ class Component extends DCLogic {
       sOrcamentos: on('orcamentos'),
       sForm: on('orcamento-form'),
       sLancamentos: on('lancamentos'),
-      sAprovacao: on('aprovacao'),
       sConciliacao: on('conciliacao'),
       sPrestacao: on('prestacao'),
       sPapeisAuditoria: on('papeis-auditoria'),
@@ -1203,11 +1230,6 @@ class Component extends DCLogic {
         { quando: '10/09 · 17:42', quem: 'Luana Ferraz', oque: 'rejeitou com motivo registrado; notificação enviada ao autor.' },
         { quando: '11/09 · 08:30', quem: 'Marcos Vieira', oque: 'visualizou o motivo da rejeição.' }
       ],
-      pendentes: [
-        { id: 'L-1042', data: '12/09/2026', autor: 'Marcos Vieira', descricao: 'Lanche da oficina de leitura', projeto: 'Semear — Contraturno Escolar', categoria: 'Alimentação', valor: this.brl(486.90), saldoDepois: this.brl(31613.10), onDetalhe: abrirDetalhe },
-        { id: 'L-1043', data: '12/09/2026', autor: 'Rita Souza', descricao: 'Tintas e pincéis para o ateliê', projeto: 'Núcleo de Arte e Cultura', categoria: 'Material didático', valor: this.brl(1320.50), saldoDepois: this.brl(-2921.00), onDetalhe: abrirDetalhe },
-        { id: 'L-1044', data: '11/09/2026', autor: 'Marcos Vieira', descricao: 'Transporte para visita ao museu', projeto: 'Casa de Convivência', categoria: 'Transporte', valor: this.brl(1800.00), saldoDepois: this.brl(51900.00), onDetalhe: abrirDetalhe }
-      ].filter((x) => !decisoes[x.id]),
       conciliar: [
         { id: 'L-1041', data: '11/09', projeto: 'Núcleo de Arte e Cultura', valor: this.brl(1240.00), situacao: 'A conciliar', tagClass: 'tag-outline', acao: 'Conciliar' },
         { id: 'L-1038', data: '09/09', projeto: 'Plantão Jurídico', valor: this.brl(1500.00), situacao: 'A conciliar', tagClass: 'tag-outline', acao: 'Conciliar' },
@@ -1244,8 +1266,7 @@ class Component extends DCLogic {
         { label: 'Realizado (aprovado)', value: this.k(totReal), note: Math.round(totReal / totOrc * 100) + '% do orçado consumido', colStyle: { padding: '18px 24px', borderLeft: '1px solid var(--color-divider)' } },
         { label: 'Saldo disponível', value: this.k(totOrc - totReal), note: '1 projeto acima de 100%', colStyle: { padding: '18px 0 18px 24px', borderLeft: '1px solid var(--color-divider)' } }
       ],
-      goOrcamentos: go('orcamentos'), goForm: () => { go('orcamento-form')(); this.setState({ editando: null }); }, goLancamentos: go('lancamentos'),
-      goConciliacao: go('conciliacao'),
+      goOrcamentos: go('orcamentos'), goForm: () => { go('orcamento-form')(); this.setState({ editando: null, selBusca: '', selProjeto: null, selAberto: false }); }, goLancamentos: go('lancamentos'),
       navGroups: this.navDef().map(([title, items]) => ({
         title,
         items: items.filter(([, key]) => P.telas.indexOf(key) >= 0).map(([label, key]) => ({
