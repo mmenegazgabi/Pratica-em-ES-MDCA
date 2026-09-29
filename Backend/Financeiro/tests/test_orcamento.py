@@ -2,8 +2,9 @@ from datetime import date
 
 from fastapi.testclient import TestClient
 
-from main import _orcamentos, app
+from main import app
 from orcamento import Lancamento, Orcamento, StatusLancamento
+from routers.orcamentos import _orcamentos
 
 client = TestClient(app)
 
@@ -113,3 +114,38 @@ def test_saldo_fica_negativo_quando_aprovados_ultrapassam_o_valor_total():
     )
 
     assert orcamento.saldo == -200
+
+
+def test_get_orcamento_inexistente_retorna_404():
+    response = client.get("/orcamentos/nao-existe")
+
+    assert response.status_code == 404
+
+
+def test_get_orcamento_sem_lancamentos_retorna_saldo_igual_ao_valor_total():
+    _orcamentos.append(orcamento_de_teste(id="orcamento-1", valor_total=500))
+
+    response = client.get("/orcamentos/orcamento-1")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == "orcamento-1"
+    assert body["saldo"] == 500
+
+
+def test_get_orcamento_com_lancamentos_aprovados_reflete_saldo_calculado():
+    _orcamentos.append(
+        orcamento_de_teste(
+            id="orcamento-1",
+            valor_total=1000,
+            lancamentos=[
+                Lancamento(valor=200, status=StatusLancamento.APROVADO),
+                Lancamento(valor=100, status=StatusLancamento.PENDENTE),
+            ],
+        )
+    )
+
+    response = client.get("/orcamentos/orcamento-1")
+
+    assert response.status_code == 200
+    assert response.json()["saldo"] == 800
