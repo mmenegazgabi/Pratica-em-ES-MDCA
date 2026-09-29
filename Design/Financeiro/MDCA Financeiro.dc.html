@@ -208,6 +208,113 @@
                   </tbody>
                 </table>
             </sc-if>
+            <sc-if value="{{ sDetalheProjeto }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 10px">
+                    <h3 style="font-size: 26px; font-weight: 400; margin: 0">{{ dp.nome }}</h3>
+                    <span class="tag {{ dp.tagClass }}">{{ dp.status }}</span>
+                  </div>
+                  <div style="font-size: 13px; color: var(--color-neutral-700); margin-top: 4px; font-variant-numeric: tabular-nums">{{ dp.codigo }} · {{ dp.area }} · vigência {{ dp.vigencia }}</div>
+                </div>
+                <div style="margin-left: auto; display: flex; gap: 10px">
+                  <button class="btn btn-secondary" onClick="{{ goOrcamentos }}">Voltar</button>
+                  <sc-if value="{{ escreve }}" hint-placeholder-val="{{ true }}">
+                    <button class="btn btn-primary" onClick="{{ dp.onEditar }}">Editar orçamento</button>
+                  </sc-if>
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); margin-bottom: 28px">
+                <sc-for list="{{ dp.kpis }}" as="k" hint-placeholder-count="4">
+                  <div style="{{ k.colStyle }}">
+                    <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent-700)">{{ k.label }}</div>
+                    <div style="font-family: var(--font-heading); font-size: 28px; font-variant-numeric: tabular-nums; margin-top: 4px">{{ k.value }}</div>
+                    <div style="font-size: 12px; color: var(--color-neutral-700); margin-top: 4px">{{ k.note }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <section aria-labelledby="graf-titulo" style="margin-bottom: 30px">
+                <div style="display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 14px">
+                  <h4 id="graf-titulo" style="font-family: var(--font-heading); font-size: 19px; font-weight: 400; margin: 0">Orçado × realizado por categoria</h4>
+                  <div style="display: flex; gap: 16px; font-size: 12px; color: var(--color-neutral-700)" aria-label="Legenda">
+                    <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #b98a3e"></span>Orçado</span>
+                    <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #2f7a3a"></span>Realizado</span>
+                    <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: var(--status-rejected)"></span>⚠ Acima do orçado</span>
+                  </div>
+                </div>
+                <div role="img" aria-label="{{ dp.graficoResumo }}" style="display: grid; gap: 6px">
+                  <sc-for list="{{ dp.barras }}" as="b" hint-placeholder-count="4">
+                    <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 0; border-bottom: 1px solid var(--color-divider)">
+                      <div style="font-size: 13px">{{ b.nome }}</div>
+                      <div style="display: grid; gap: 2px">
+                        <div style="position: relative; height: 16px; width: calc(100% - 170px)"><div style="{{ b.orcStyle }}"></div><span style="{{ b.orcLabelStyle }}">{{ b.orcLabel }}</span></div>
+                        <div style="position: relative; height: 16px; width: calc(100% - 170px)"><div style="{{ b.realStyle }}"></div><span style="{{ b.realLabelStyle }}">{{ b.realLabel }}</span></div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </section>
+              <h4 style="font-family: var(--font-heading); font-size: 19px; font-weight: 400; margin: 0 0 8px">Categorias</h4>
+              <table class="table" style="font-variant-numeric: tabular-nums; margin-bottom: 30px">
+                <thead><tr><th>Categoria</th><th style="text-align: right">Orçado</th><th style="text-align: right">Realizado</th><th style="text-align: right">Saldo</th><th style="text-align: right">Consumo</th></tr></thead>
+                <tbody>
+                  <sc-for list="{{ dp.barras }}" as="b" hint-placeholder-count="4">
+                    <tr><td style="font-size: 14px">{{ b.nome }}</td><td style="text-align: right">{{ b.orcado }}</td><td style="text-align: right">{{ b.realizado }}</td><td style="{{ b.saldoStyle }}">{{ b.saldo }}</td><td style="text-align: right">{{ b.pctTexto }}</td></tr>
+                  </sc-for>
+                </tbody>
+              </table>
+              <h4 style="font-family: var(--font-heading); font-size: 19px; font-weight: 400; margin: 0 0 8px">Últimos lançamentos</h4>
+              <sc-if value="{{ avisoDecisao }}" hint-placeholder-val="{{ false }}">
+                <div role="status" style="font-size: 13px; color: var(--color-accent-800); background: var(--color-accent-100); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 10px">{{ avisoDecisao }}</div>
+              </sc-if>
+              <table class="table" style="font-variant-numeric: tabular-nums">
+                <thead><tr><th style="width: 78px">Nº</th><th style="width: 96px">Data</th><th>Categoria</th><th>Autor</th><th style="text-align: right">Valor</th><th style="width: 118px">Status</th><th style="width: 110px"></th></tr></thead>
+                <tbody>
+                  <sc-if value="{{ dp.semLancamentos }}" hint-placeholder-val="{{ false }}">
+                    <tr><td colspan="7" style="padding: 22px 8px; text-align: center; color: var(--color-neutral-700)">Nenhum lançamento recente neste projeto.</td></tr>
+                  </sc-if>
+                  <sc-for list="{{ dp.lancamentos }}" as="l" hint-placeholder-count="3">
+                    <tr><td style="font-size: 13px; color: var(--color-neutral-700)">{{ l.id }}</td><td>{{ l.data }}</td><td style="font-size: 13px">{{ l.categoria }}</td><td style="font-size: 13px">{{ l.autor }}</td><td style="text-align: right">{{ l.valor }}</td><td><span class="tag {{ l.tagClass }}">{{ l.status }}</span></td><td style="text-align: right"><sc-if value="{{ l.pendente }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost" style="font-size: 12px" aria-expanded="{{ l.aberto }}" onClick="{{ l.onAnalisar }}">{{ l.rotuloAnalisar }}</button></sc-if></td></tr>
+                    <sc-if value="{{ l.aberto }}" hint-placeholder-val="{{ false }}">
+                      <tr><td colspan="7" style="background: var(--color-neutral-100); padding: 16px 18px">
+                        <div style="font-size: 13px; margin-bottom: 12px"><span style="font-family: var(--font-heading); font-size: 15px">{{ l.descricao }}</span> <span style="color: var(--color-neutral-700)">· {{ l.valor }} em {{ l.categoria }}</span></div>
+                        <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 8px">Orçamento da categoria {{ l.categoria }}</div>
+                        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px">
+                          <div><div style="font-size: 11px; color: var(--color-neutral-700)">Orçado</div><div style="font-size: 16px">{{ l.catOrcado }}</div></div>
+                          <div><div style="font-size: 11px; color: var(--color-neutral-700)">Realizado</div><div style="font-size: 16px">{{ l.catRealizado }}</div></div>
+                          <div><div style="font-size: 11px; color: var(--color-neutral-700)">Saldo atual</div><div style="font-size: 16px">{{ l.catSaldo }}</div></div>
+                          <div><div style="font-size: 11px; color: var(--color-neutral-700)">Saldo se aprovar</div><div style="{{ l.depoisStyle }}">{{ l.catDepois }}</div></div>
+                        </div>
+                        <sc-if value="{{ l.alerta }}" hint-placeholder-val="{{ false }}">
+                          <div style="font-size: 12px; color: var(--status-rejected); margin-bottom: 12px">{{ l.alerta }}</div>
+                        </sc-if>
+                        <sc-if value="{{ podeAprovar }}" hint-placeholder-val="{{ true }}">
+                          <sc-if value="{{ naoRejeitando }}" hint-placeholder-val="{{ true }}">
+                            <div style="display: flex; gap: 10px">
+                              <button class="btn btn-primary" style="font-size: 13px" onClick="{{ l.onAprovar }}">Aprovar</button>
+                              <button class="btn btn-secondary" style="font-size: 13px" onClick="{{ iniciarRejeicao }}">Rejeitar</button>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ rejeitando }}" hint-placeholder-val="{{ false }}">
+                            <div class="field" style="margin-bottom: 10px"><label>Motivo da rejeição *</label><textarea class="input" style="min-height: 64px" aria-label="Motivo da rejeição" value="{{ motivoRej }}" onChange="{{ onMotivoRej }}" placeholder="Explique ao autor o que precisa ser corrigido"></textarea></div>
+                            <sc-if value="{{ erroMotivo }}" hint-placeholder-val="{{ false }}">
+                              <div role="alert" style="font-size: 12px; color: var(--status-rejected); margin-bottom: 10px">{{ erroMotivo }}</div>
+                            </sc-if>
+                            <div style="display: flex; gap: 10px">
+                              <button class="btn btn-primary" style="font-size: 13px" onClick="{{ l.onConfirmarRejeicao }}">Confirmar rejeição</button>
+                              <button class="btn btn-secondary" style="font-size: 13px" onClick="{{ cancelarRejeicao }}">Cancelar</button>
+                            </div>
+                          </sc-if>
+                        </sc-if>
+                        <sc-if value="{{ naoPodeAprovar }}" hint-placeholder-val="{{ false }}">
+                          <div style="font-size: 12px; color: var(--color-neutral-700)">Somente a Coordenação pode aprovar ou rejeitar lançamentos.</div>
+                        </sc-if>
+                      </td></tr>
+                    </sc-if>
+                  </sc-for>
+                </tbody>
+              </table>
+            </sc-if>
             <sc-if value="{{ sOrcamentos }}" hint-placeholder-val="{{ true }}">
               <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); margin-bottom: 24px">
                 <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="3">
@@ -254,7 +361,7 @@
                         <div style="font-size: 11px; margin-top: 4px; color: var(--color-neutral-700)">{{ p.pctLabel }} · {{ p.alerta }}</div>
                       </td>
                       <td><span class="tag {{ p.tagClass }}">{{ p.status }}</span></td>
-                      <td style="text-align: right; white-space: nowrap"><sc-if value="{{ escreve }}" hint-placeholder-val="{{ true }}"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ p.onEditar }}">Editar</button></sc-if></td>
+                      <td style="text-align: right; white-space: nowrap"><button class="btn btn-ghost" style="font-size: 12px" onClick="{{ p.onDetalhes }}">Detalhes</button></td>
                     </tr>
                   </sc-for>
                 </tbody>
@@ -360,7 +467,7 @@
             </sc-if>
             <sc-if value="{{ sAprovacao }}" hint-placeholder-val="{{ false }}">
               <div style="display: flex; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--color-divider); margin-bottom: 18px">
-                <span class="tag tag-outline">3 pendentes · R$ 3.607,40</span>
+                <span class="tag tag-outline">{{ resumoPendentes }}</span>
                 <span style="margin-left: 14px; font-size: 12px; color: var(--color-neutral-600)">Rejeição exige motivo</span>
                 <sc-if value="{{ podeConciliar }}" hint-placeholder-val="{{ true }}">
                   <a href="#" onClick="{{ goConciliacao }}" style="margin-left: auto; font-size: 12px">Ver conciliação bancária →</a>
@@ -641,9 +748,9 @@
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;projetos&quot;,&quot;orcamentos&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;lancamentos&quot;,&quot;aprovacao&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;,&quot;admin&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;projetos&quot;,&quot;orcamentos&quot;,&quot;projeto-detalhe&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;lancamentos&quot;,&quot;aprovacao&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;,&quot;admin&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
-  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', editando: null, novosProjetos: [], npNome: '', npArea: '', npInicio: '2026-01-01', npFim: '2026-12-31', npErro: '', npOk: '' };
+  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', editando: null, detalhe: null, decisoes: {}, analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '', novosProjetos: [], npNome: '', npArea: '', npInicio: '2026-01-01', npFim: '2026-12-31', npErro: '', npOk: '' };
 
   cur() { return this.state.screen || this.props.screen || 'orcamentos'; }
   per() { return this.state.persona || this.props.persona || 'coordenacao'; }
@@ -653,7 +760,7 @@ class Component extends DCLogic {
       coordenacao: {
         label: 'Coordenação', nome: 'Luana Ferraz', papel: 'Coordenação Adm.-Financeira', iniciais: 'LF', notif: 3,
         home: 'orcamentos', escreve: true, editaOrcamento: true,
-        telas: ['projetos', 'orcamentos', 'orcamento-form', 'despesa-mobile', 'lancamentos', 'aprovacao', 'conciliacao', 'prestacao', 'papeis-auditoria'],
+        telas: ['projetos', 'orcamentos', 'projeto-detalhe', 'orcamento-form', 'despesa-mobile', 'lancamentos', 'aprovacao', 'conciliacao', 'prestacao', 'papeis-auditoria'],
         pode: 'Perfil completo: cria orçamentos, aprova despesas e emite prestações de contas.'
       },
       educador: {
@@ -667,7 +774,7 @@ class Component extends DCLogic {
       direcao: {
         label: 'Direção', nome: 'Jane Almeida', papel: 'Diretoria / Presidência', iniciais: 'JA', notif: 2,
         home: 'orcamentos', escreve: false,
-        telas: ['orcamentos', 'projetos', 'prestacao', 'lancamentos', 'papeis-auditoria'],
+        telas: ['orcamentos', 'projeto-detalhe', 'projetos', 'prestacao', 'lancamentos', 'papeis-auditoria'],
         pode: 'Somente leitura: visão consolidada, relatórios e trilha de auditoria.'
       },
       voluntario: {
@@ -691,6 +798,7 @@ class Component extends DCLogic {
   meta() {
     return {
       'projetos': ['Tela 10 · Épico 1', 'Projetos', 'mdca.org.br/financas/projetos', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
+      'projeto-detalhe': ['Tela 11 · Épico 1', 'Detalhes do projeto', 'mdca.org.br/financas/projetos/detalhe', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'orcamentos': ['Tela 1 · Épico 1 · US-01, US-02', 'Orçamentos e saldo por projeto', 'mdca.org.br/financas/orcamentos', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'orcamento-form': ['Tela 2 · Épico 1 · US-01', 'Cadastro / edição de orçamento', 'mdca.org.br/financas/orcamentos/novo', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'despesa-mobile': ['Tela 3 · Épico 2 · US-03', 'Lançamento de despesa', 'mdca.org.br/financas/despesas/nova', 'Marcos Vieira', 'Educador', 'MV'],
@@ -711,6 +819,16 @@ class Component extends DCLogic {
     ];
   }
 
+  categoriasDef() {
+    return {
+      'Semear — Contraturno Escolar': [['Alimentação', 48000, 41200], ['Transporte', 26000, 19800], ['Material didático', 38000, 31400], ['Serviços de terceiros', 68000, 57300], ['Manutenção', 4000, 2200]],
+      'Casa de Convivência': [['Alimentação', 40000, 18900], ['Transporte', 12000, 5200], ['Manutenção', 20000, 8700], ['Serviços de terceiros', 24000, 9500]],
+      'Núcleo de Arte e Cultura': [['Material didático', 30000, 33800], ['Serviços de terceiros', 28000, 27500], ['Transporte', 8500, 7100], ['Alimentação', 6000, 5700]],
+      'Plantão Jurídico — Defesa de Direitos': [['Serviços de terceiros', 36000, 13200], ['Material de escritório', 8000, 2950], ['Transporte', 6000, 2300], ['Custas e taxas', 8000, 3000]],
+      'Formação de Conselheiros': [['Serviços de terceiros', 18000, 5600], ['Material didático', 7000, 1900], ['Alimentação', 5000, 1500], ['Locação de espaço', 4000, 800]]
+    };
+  }
+
   projetosDef() {
     return [
       ['Semear — Contraturno Escolar', 'CC-101 · Educação', 184000, 151900, 'Vigente'],
@@ -723,7 +841,9 @@ class Component extends DCLogic {
 
   lancamentosDef() {
     return [
-      ['L-1042', '12/09/2026', 'Semear — Contraturno Escolar', 'Alimentação', 486.90, 'Pendente', 'Marcos Vieira'],
+      ['L-1043', '12/09/2026', 'Núcleo de Arte e Cultura', 'Material didático', 1320.50, 'Pendente', 'Rita Souza', 'Tintas e pincéis para o ateliê'],
+      ['L-1042', '12/09/2026', 'Semear — Contraturno Escolar', 'Alimentação', 486.90, 'Pendente', 'Marcos Vieira', 'Lanche da oficina de leitura'],
+      ['L-1044', '11/09/2026', 'Casa de Convivência', 'Transporte', 1800.00, 'Pendente', 'Marcos Vieira', 'Transporte para visita ao museu'],
       ['L-1041', '11/09/2026', 'Núcleo de Arte e Cultura', 'Material didático', 1240.00, 'Aprovado', 'Marcos Vieira'],
       ['L-1040', '11/09/2026', 'Casa de Convivência', 'Transporte', 320.00, 'Conciliado', 'Rita Souza'],
       ['L-1039', '10/09/2026', 'Semear — Contraturno Escolar', 'Manutenção', 2780.50, 'Rejeitado', 'Marcos Vieira'],
@@ -760,11 +880,18 @@ class Component extends DCLogic {
     const s = this.cur();
     const M = this.meta()[s] || [];
     const P = this.personasDef()[this.per()];
+    const decisoes = this.state.decisoes || {};
+    const lancDef = this.lancamentosDef().map((l) => decisoes[l[0]] ? [...l.slice(0, 5), decisoes[l[0]].status, ...l.slice(6)] : l);
+    const aprovadoAgora = (projeto, categoria) => this.lancamentosDef()
+      .filter((l) => (decisoes[l[0]] || {}).status === 'Aprovado' && l[2] === projeto && (!categoria || l[3] === categoria))
+      .reduce((a, l) => a + l[4], 0);
+    const projDef = this.projetosDef().map(([nome, cc, orcado, realizado, status]) => [nome, cc, orcado, realizado + aprovadoAgora(nome), status]);
+    const podeAprovar = P.telas.indexOf('aprovacao') >= 0;
     const ok = P.telas.indexOf(s) >= 0;
     const on = (k) => ok && s === k;
     const go = (key) => () => {
       if (key === this.cur()) return;
-      this.setState({ screen: key, history: [...(this.state.history || []), this.cur()], detalheOpen: false, relatorioGerado: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', npErro: '', npOk: '' });
+      this.setState({ screen: key, history: [...(this.state.history || []), this.cur()], detalheOpen: false, relatorioGerado: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', npErro: '', npOk: '', analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '' });
     };
     const goBack = () => {
       const hist = [...(this.state.history || [])];
@@ -801,13 +928,13 @@ class Component extends DCLogic {
     const tabUsuarios = podeGerenciarUsuarios && t07tab === 'usuarios';
     const tabAuditoria = !tabUsuarios;
 
-    const projetos = this.projetosDef().map(([nome, cc, orcado, realizado, status]) => {
+    const projetos = projDef.map(([nome, cc, orcado, realizado, status]) => {
       const pct = realizado / orcado;
       const over = pct > 1;
       const warn = pct > 0.8;
       return {
         nome, cc, status, warn,
-        onEditar: () => { go('orcamento-form')(); this.setState({ editando: nome }); },
+        onDetalhes: () => { go('projeto-detalhe')(); this.setState({ detalhe: nome }); },
         vigencia: status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026',
         orcado: this.brl(orcado), realizado: this.brl(realizado), saldo: this.brl(orcado - realizado),
         saldoColor: over ? 'var(--color-accent-700)' : 'var(--color-text)',
@@ -854,7 +981,7 @@ class Component extends DCLogic {
       });
     };
     const todosProjetos = [
-      ...this.projetosDef().map(([nome, cc, orcado, realizado, status]) => {
+      ...projDef.map(([nome, cc, orcado, realizado, status]) => {
         const [codigo, area] = cc.split(' · ');
         return { nome, codigo, area, status, orcamento: this.brl(orcado), orcamentoCor: 'var(--color-text)',
           vigencia: status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026' };
@@ -868,9 +995,9 @@ class Component extends DCLogic {
     const projetosFiltrados = projetos.filter((p) => bate(p.nome, p.cc) && passaStatus(p));
 
     const totOrc = this.projetosDef().reduce((a, p) => a + p[2], 0);
-    const totReal = this.projetosDef().reduce((a, p) => a + p[3], 0);
+    const totReal = projDef.reduce((a, p) => a + p[3], 0);
 
-    const visiveis = this.lancamentosDef().filter(([, , projeto, , , status]) =>
+    const visiveis = lancDef.filter(([, , projeto, , , status]) =>
       (!P.projetos || P.projetos.indexOf(projeto) >= 0) &&
       (!P.statusVisiveis || P.statusVisiveis.indexOf(status) >= 0));
 
@@ -897,7 +1024,14 @@ class Component extends DCLogic {
     const audAte = this.state.audAte ?? '2026-09-12';
     const campo = (k) => (e) => this.setState({ [k]: e.target.value });
     const isoAud = (q) => '2026-' + q.slice(3, 5) + '-' + q.slice(0, 2);
-    const auditoria = auditoriaBase.filter((a) =>
+    const auditoriaDecisoes = Object.keys(decisoes).map((id) => {
+      const l = this.lancamentosDef().find((x) => x[0] === id);
+      const d = decisoes[id];
+      return d.status === 'Aprovado'
+        ? { quando: '12/09 · agora', quem: P.nome, acao: 'Aprovação', tagClass: 'tag-accent', objeto: 'Lançamento ' + id, detalhe: 'debitado do saldo de ' + l[3] }
+        : { quando: '12/09 · agora', quem: P.nome, acao: 'Rejeição', tagClass: 'tag-danger', objeto: 'Lançamento ' + id, detalhe: 'motivo: ' + d.motivo };
+    });
+    const auditoria = [...auditoriaDecisoes, ...auditoriaBase].filter((a) =>
       (!audBusca.trim() || [a.quem, a.objeto, a.detalhe].some((c) => norm(c).indexOf(norm(audBusca.trim())) >= 0))
       && (audAcao === 'todas' || a.acao === audAcao)
       && (!audDe || isoAud(a.quando) >= audDe) && (!audAte || isoAud(a.quando) <= audAte));
@@ -910,15 +1044,90 @@ class Component extends DCLogic {
       onClick: abrirDetalhe
     }));
 
+    const dpDef = projDef.find(([nome]) => nome === this.state.detalhe) || projDef[0];
+    const dp = (() => {
+      const [nome, cc, orcado, realizado, status] = dpDef;
+      const [codigo, area] = cc.split(' · ');
+      const cats = (this.categoriasDef()[nome] || []).map(([c, o, r]) => [c, o, r + aprovadoAgora(nome, c)]);
+      const escala = Math.max(...cats.map(([, o, r]) => Math.max(o, r)), 1);
+      const pctTotal = realizado / orcado;
+      const col = (i) => ({ padding: i ? '16px 20px' : '16px 20px 16px 0', borderLeft: i ? '1px solid var(--color-divider)' : 0 });
+      const barra = (valor, cor) => ({ position: 'absolute', left: 0, top: 2, height: 12, width: (valor / escala * 100) + '%', minWidth: 2, background: cor, borderRadius: '0 4px 4px 0' });
+      const rotulo = (valor, cor) => ({ position: 'absolute', top: 0, left: 'calc(' + (valor / escala * 100) + '% + 8px)', fontSize: 11, lineHeight: '16px', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', color: cor });
+      const barras = cats.map(([cat, o, r]) => {
+        const acima = r > o;
+        const pct = Math.round(r / o * 100) + '%';
+        return {
+          nome: cat, orcado: this.brl(o), realizado: this.brl(r), saldo: this.brl(o - r), pct,
+          pctTexto: acima ? '⚠ ' + pct : pct,
+          orcLabel: this.brl(o), realLabel: this.brl(r) + ' · ' + (acima ? '⚠ ' : '') + pct,
+          saldoStyle: { textAlign: 'right', color: acima ? 'var(--status-rejected)' : 'var(--color-text)' },
+          orcStyle: barra(o, '#b98a3e'), orcLabelStyle: rotulo(o, 'var(--color-neutral-700)'), realLabelStyle: rotulo(r, 'var(--color-text)'),
+          realStyle: barra(r, acima ? 'var(--status-rejected)' : '#2f7a3a'),
+        };
+      });
+      const decidir = (id, status, motivo, texto) => this.setState({
+        decisoes: { ...decisoes, [id]: { status, motivo } },
+        analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: texto
+      });
+      const lancs = lancDef.filter(([, , projeto]) => projeto === nome).map(([id, data, , categoria, valor, st, autor, descricao]) => {
+        const cat = cats.find(([c]) => c === categoria) || [categoria, 0, 0];
+        const saldoCat = cat[1] - cat[2];
+        const depois = saldoCat - valor;
+        const aberto = this.state.analisando === id;
+        return {
+          id, data, categoria, autor, status: st, valor: this.brl(valor), tagClass: this.tagFor(st),
+          descricao: descricao || 'Lançamento ' + id,
+          pendente: st === 'Pendente', aberto,
+          rotuloAnalisar: aberto ? 'Fechar' : 'Analisar',
+          onAnalisar: () => this.setState({ analisando: aberto ? null : id, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '' }),
+          catOrcado: this.brl(cat[1]), catRealizado: this.brl(cat[2]), catSaldo: this.brl(saldoCat), catDepois: this.brl(depois),
+          depoisStyle: { fontSize: 16, color: depois < 0 ? 'var(--status-rejected)' : 'var(--color-text)' },
+          alerta: depois < 0 ? '⚠ Aprovar deixa a categoria ' + this.brl(-depois) + ' acima do orçado.' : '',
+          onAprovar: () => decidir(id, 'Aprovado', '', id + ' aprovado — ' + this.brl(valor) + ' debitado do saldo de ' + categoria + '.'),
+          onConfirmarRejeicao: () => {
+            const motivo = (this.state.motivoRej || '').trim();
+            if (!motivo) return this.setState({ erroMotivo: 'Informe o motivo da rejeição.' });
+            decidir(id, 'Rejeitado', motivo, id + ' rejeitado. O motivo foi registrado para o autor.');
+          }
+        };
+      });
+      return {
+        nome, codigo, area, status, tagClass: this.tagFor(status),
+        vigencia: status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026',
+        onEditar: () => { go('orcamento-form')(); this.setState({ editando: nome }); },
+        kpis: [
+          { label: 'Orçado', value: this.brl(orcado), note: cats.length + ' categorias', colStyle: col(0) },
+          { label: 'Realizado', value: this.brl(realizado), note: 'lançamentos aprovados', colStyle: col(1) },
+          { label: 'Saldo', value: this.brl(orcado - realizado), note: orcado - realizado < 0 ? '⚠ acima do orçado' : 'disponível', colStyle: col(2) },
+          { label: 'Consumo', value: Math.round(pctTotal * 100) + '%', note: pctTotal > 1 ? '⚠ Estourado · acima de 100%' : pctTotal > 0.8 ? 'Atenção · acima de 80%' : 'Dentro do orçado', colStyle: col(3) }
+        ],
+        barras,
+        graficoResumo: 'Orçado e realizado por categoria: ' + cats.map(([c, o, r]) => c + ', orçado ' + this.brl(o) + ', realizado ' + this.brl(r)).join('; '),
+        lancamentos: lancs, semLancamentos: lancs.length === 0
+      };
+    })();
+
     return {
+      dp, sDetalheProjeto: on('projeto-detalhe'),
+      podeAprovar, naoPodeAprovar: !podeAprovar,
+      resumoPendentes: (() => {
+        const pend = lancDef.filter((l) => l[5] === 'Pendente');
+        return pend.length + (pend.length === 1 ? ' pendente · ' : ' pendentes · ') + this.brl(pend.reduce((t, l) => t + l[4], 0));
+      })(),
+      rejeitando: !!this.state.rejeitando, naoRejeitando: !this.state.rejeitando,
+      motivoRej: this.state.motivoRej || '', erroMotivo: this.state.erroMotivo || '', avisoDecisao: this.state.avisoDecisao || '',
+      onMotivoRej: (e) => this.setState({ motivoRej: e.target.value, erroMotivo: '' }),
+      iniciarRejeicao: () => this.setState({ rejeitando: true }),
+      cancelarRejeicao: () => this.setState({ rejeitando: false, motivoRej: '', erroMotivo: '' }),
       isPhone: s === 'despesa-mobile',
       isDesktop: s !== 'despesa-mobile',
       w: 1240, h: 780,
       url: ok ? (M[2] || 'mdca.org.br/financas') : 'mdca.org.br/acesso-restrito',
       tabs: [{ title: 'MDCA · Plataforma' }, { title: 'Extrato — Banco' }],
       kicker: ok ? (M[0] || '') : 'Acesso restrito',
-      title: ok ? (s === 'orcamento-form' ? '' : M[1] || '') : 'Sem permissão',
-      breadcrumbGroup: s === 'orcamento-form' ? 'Orçamento' : grupoDe(s),
+      title: ok ? (s === 'orcamento-form' ? '' : s === 'projeto-detalhe' ? 'Detalhes do projeto' : M[1] || '') : 'Sem permissão',
+      breadcrumbGroup: s === 'orcamento-form' || s === 'projeto-detalhe' ? 'Orçamento' : grupoDe(s),
       podeConciliar: P.telas.indexOf('conciliacao') >= 0,
       escreve: P.editaOrcamento === true,
       podeVerValores: P.telas.indexOf('orcamentos') >= 0,
@@ -998,7 +1207,7 @@ class Component extends DCLogic {
         { id: 'L-1042', data: '12/09/2026', autor: 'Marcos Vieira', descricao: 'Lanche da oficina de leitura', projeto: 'Semear — Contraturno Escolar', categoria: 'Alimentação', valor: this.brl(486.90), saldoDepois: this.brl(31613.10), onDetalhe: abrirDetalhe },
         { id: 'L-1043', data: '12/09/2026', autor: 'Rita Souza', descricao: 'Tintas e pincéis para o ateliê', projeto: 'Núcleo de Arte e Cultura', categoria: 'Material didático', valor: this.brl(1320.50), saldoDepois: this.brl(-2921.00), onDetalhe: abrirDetalhe },
         { id: 'L-1044', data: '11/09/2026', autor: 'Marcos Vieira', descricao: 'Transporte para visita ao museu', projeto: 'Casa de Convivência', categoria: 'Transporte', valor: this.brl(1800.00), saldoDepois: this.brl(51900.00), onDetalhe: abrirDetalhe }
-      ],
+      ].filter((x) => !decisoes[x.id]),
       conciliar: [
         { id: 'L-1041', data: '11/09', projeto: 'Núcleo de Arte e Cultura', valor: this.brl(1240.00), situacao: 'A conciliar', tagClass: 'tag-outline', acao: 'Conciliar' },
         { id: 'L-1038', data: '09/09', projeto: 'Plantão Jurídico', valor: this.brl(1500.00), situacao: 'A conciliar', tagClass: 'tag-outline', acao: 'Conciliar' },
@@ -1029,12 +1238,7 @@ class Component extends DCLogic {
         { nome: 'Ana Ribeiro', email: 'ana.ribeiro@mdca.org.br', papel: 'Administradora', tagClass: 'tag-neutral', projetos: '—', situacao: 'Ativo' }
       ],
       auditoria,
-      categorias: [
-        { nome: 'Alimentação', limite: this.brl(48000) },
-        { nome: 'Transporte', limite: this.brl(26000) },
-        { nome: 'Material didático', limite: this.brl(38000) },
-        { nome: 'Serviços de terceiros', limite: this.brl(72000) }
-      ],
+      categorias: (this.categoriasDef()[editado ? editado[0] : 'Semear — Contraturno Escolar'] || []).map(([nome, limite]) => ({ nome, limite: this.brl(limite) })),
       kpis: [
         { label: 'Orçado — todos os projetos', value: this.k(totOrc), note: '5 centros de custo · exercício 2026', colStyle: { padding: '18px 24px 18px 0' } },
         { label: 'Realizado (aprovado)', value: this.k(totReal), note: Math.round(totReal / totOrc * 100) + '% do orçado consumido', colStyle: { padding: '18px 24px', borderLeft: '1px solid var(--color-divider)' } },
