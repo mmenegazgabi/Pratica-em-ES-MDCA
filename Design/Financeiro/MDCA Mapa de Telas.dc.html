@@ -92,7 +92,7 @@ class Component extends DCLogic {
 
   renderVals() {
     const m = this.mount();
-    const papel = { 'despesa-mobile': 'educador', 'dashboard': 'direcao', 'conciliacao': 'voluntario', 'papeis-auditoria': 'admin' };
+    const papel = { 'despesa-mobile': 'educador', 'conciliacao': 'voluntario', 'papeis-auditoria': 'admin' };
     const row = ([num, nome, screen, desc, persona, us]) => ({ num, nome, screen, desc, persona, us, mountStyle: m, papel: papel[screen] || 'coordenacao' });
     return {
       financeiras: [
@@ -100,10 +100,10 @@ class Component extends DCLogic {
         ['2', 'Cadastro / Edição de Orçamento', 'orcamento-form', 'Vínculo a projeto existente, vigência, categorias e validações.', 'Luana — criação e edição', 'US-01'],
         ['3', 'Lançamento de Despesa (mobile)', 'despesa-mobile', 'Formulário de toque com foto do comprovante pela câmera.', 'Marcos — só nos seus projetos', 'US-03'],
         ['4', 'Lançamentos (com painel de detalhe)', 'lancamentos', 'Filtros por status, projeto e período; abre o detalhe do lançamento em um painel lateral, sem trocar de tela.', 'Marcos · Luana · Lucas', 'US-03, 04, 05'],
-        ['5', 'Aprovação de Pendentes', 'aprovacao', 'Fila por data; aprovar debita o saldo, rejeitar exige motivo. Abre o mesmo painel de detalhe.', 'Luana — única a aprovar', 'US-04'],
         ['6', 'Conciliação Bancária', 'conciliacao', 'Lançamentos contra o extrato; destaque para +7 dias em aberto.', 'Lucas — edição limitada', 'US-05'],
         ['7', 'Prestação de Contas', 'prestacao', 'Parâmetros e prévia na mesma tela; ao gerar, a prévia vira o relatório final com exportação.', 'Luana — geração · Jane — leitura', 'US-06'],
-        ['8', 'Dashboard Executivo', 'dashboard', 'Orçado vs. realizado em gráfico e tabela, com filtros e exportação.', 'Jane — somente leitura', 'US-07']
+        ['10', 'Projetos', 'projetos', 'Lista dos projetos com centro de custo, área, vigência e orçamento; cadastro de novo projeto com centro de custo gerado.', 'Luana — criação · Jane — leitura', '—'],
+        ['11', 'Detalhes do Projeto', 'projeto-detalhe', 'Indicadores do projeto, gráfico de orçado × realizado por categoria, tabela de categorias e últimos lançamentos.', 'Luana · Jane — leitura', '—']
       ].map(row),
       compartilhadas: [
         ['9', 'Papéis, Acessos e Auditoria', 'papeis-auditoria', 'Uma tela com duas abas: usuários/papéis/vínculo a projetos (admin) e trilha de auditoria (leitura de Coordenação e Direção).', 'Ana — gestão · Luana/Jane — auditoria', 'US-08']
