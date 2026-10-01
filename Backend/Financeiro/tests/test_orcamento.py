@@ -1,5 +1,6 @@
 from datetime import date
 
+import pytest
 from fastapi.testclient import TestClient
 
 from main import app
@@ -114,6 +115,100 @@ def test_saldo_fica_negativo_quando_aprovados_ultrapassam_o_valor_total():
     )
 
     assert orcamento.saldo == -200
+
+
+def test_aprovar_lancamento_debita_saldo_no_mesmo_instante():
+    lancamento = Lancamento(valor=200, status=StatusLancamento.PENDENTE)
+    orcamento = orcamento_de_teste(valor_total=1000, lancamentos=[lancamento])
+
+    orcamento.aprovar_lancamento(lancamento.id)
+
+    assert lancamento.status == StatusLancamento.APROVADO
+    assert orcamento.saldo == 800
+
+
+def test_aprovar_lancamento_ja_aprovado_nao_debita_novamente():
+    lancamento = Lancamento(valor=200, status=StatusLancamento.APROVADO)
+    orcamento = orcamento_de_teste(valor_total=1000, lancamentos=[lancamento])
+
+    orcamento.aprovar_lancamento(lancamento.id)
+
+    assert orcamento.saldo == 800
+
+
+def test_aprovar_lancamento_inexistente_levanta_erro():
+    orcamento = orcamento_de_teste(valor_total=1000, lancamentos=[])
+
+    with pytest.raises(ValueError):
+        orcamento.aprovar_lancamento("nao-existe")
+
+
+def test_reverter_aprovacao_recredita_saldo_e_volta_para_pendente():
+    lancamento = Lancamento(valor=200, status=StatusLancamento.APROVADO)
+    orcamento = orcamento_de_teste(valor_total=1000, lancamentos=[lancamento])
+
+    orcamento.reverter_aprovacao(lancamento.id)
+
+    assert lancamento.status == StatusLancamento.PENDENTE
+    assert orcamento.saldo == 1000
+
+
+def test_reverter_aprovacao_de_lancamento_nao_aprovado_levanta_erro():
+    lancamento = Lancamento(valor=200, status=StatusLancamento.PENDENTE)
+    orcamento = orcamento_de_teste(valor_total=1000, lancamentos=[lancamento])
+
+    with pytest.raises(ValueError):
+        orcamento.reverter_aprovacao(lancamento.id)
+
+    assert orcamento.saldo == 1000
+
+
+def test_reverter_aprovacao_de_lancamento_inexistente_levanta_erro():
+    orcamento = orcamento_de_teste(valor_total=1000, lancamentos=[])
+
+    with pytest.raises(ValueError):
+        orcamento.reverter_aprovacao("nao-existe")
+
+
+def test_aprovacoes_concorrentes_serializam_acesso_ao_saldo():
+    import threading
+    import time
+
+    lancamentos = [
+        Lancamento(valor=10, status=StatusLancamento.PENDENTE) for _ in range(5)
+    ]
+    orcamento = orcamento_de_teste(valor_total=1000, lancamentos=lancamentos)
+
+    buscar_original = orcamento._buscar_lancamento
+    contador_lock = threading.Lock()
+    ativos = 0
+    maximo_simultaneo = 0
+
+    def buscar_com_atraso(lancamento_id):
+        nonlocal ativos, maximo_simultaneo
+        with contador_lock:
+            ativos += 1
+            maximo_simultaneo = max(maximo_simultaneo, ativos)
+        time.sleep(0.02)
+        resultado = buscar_original(lancamento_id)
+        with contador_lock:
+            ativos -= 1
+        return resultado
+
+    orcamento._buscar_lancamento = buscar_com_atraso
+
+    threads = [
+        threading.Thread(target=orcamento.aprovar_lancamento, args=(l.id,))
+        for l in lancamentos
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert maximo_simultaneo == 1
+    assert orcamento.saldo == 1000 - 5 * 10
+    assert all(l.status == StatusLancamento.APROVADO for l in lancamentos)
 
 
 def test_get_orcamento_inexistente_retorna_404():
