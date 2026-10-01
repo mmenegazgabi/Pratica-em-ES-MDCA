@@ -1,6 +1,4 @@
-// Troque pela URL do backend publicado no Google Cloud Run, sem barra no final.
-// Exemplo: https://nome-do-servico-xxxxxxxxxx.southamerica-east1.run.app
-const API_BASE_URL = "https://pratica-em-es-mdca-547285598829.southamerica-east1.run.app";
+const API_BASE_URL = "https://pratica-em-es-mdca-be6wbkhk3q-rj.a.run.app";
 
 async function testarEndpoint(caminho, elementoId) {
   const elemento = document.getElementById(elementoId);
@@ -51,12 +49,16 @@ document.getElementById("form-upload").addEventListener("submit", async (evento)
     }
 
     status.textContent = `Arquivo enviado: ${resultado.filename}`;
-    const anchor = document.createElement("a");
-    anchor.href = resultado.url;
-    anchor.target = "_blank";
-    anchor.rel = "noreferrer";
-    anchor.textContent = resultado.url;
-    link.appendChild(anchor);
+    if (resultado.url) {
+      const anchor = document.createElement("a");
+      anchor.href = resultado.url;
+      anchor.target = "_blank";
+      anchor.rel = "noreferrer";
+      anchor.textContent = resultado.url;
+      link.appendChild(anchor);
+    } else {
+      link.textContent = `Objeto privado armazenado: ${resultado.key}`;
+    }
   } catch (erro) {
     status.textContent = `Erro: ${erro.message}`;
   }

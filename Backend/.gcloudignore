@@ -1,0 +1,12 @@
+.gcloudignore
+.git
+.gitignore
+.env
+.env.*
+env-vars.yaml
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store

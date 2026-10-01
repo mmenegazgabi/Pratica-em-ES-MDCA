@@ -19,7 +19,7 @@ def get_r2_config() -> R2Config:
         access_key_id=os.environ["R2_ACCESS_KEY_ID"],
         secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
         bucket_name=os.environ["R2_BUCKET_NAME"],
-        public_url=os.environ["R2_PUBLIC_URL"].rstrip("/"),
+        public_url=os.getenv("R2_PUBLIC_URL", "").rstrip("/"),
     )
 
 

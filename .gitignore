@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.DS_Store
+venv/
+.env
+.env.*
+!.env.example
+env-vars.yaml
+.local/

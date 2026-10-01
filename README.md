@@ -1,62 +1,68 @@
 # Pratica-em-ES-MDCA
 
-Estrutura genérica para publicar o trabalho com:
+Monorepo compartilhado entre o **Módulo Financeiro** e o **Módulo de Gestão**.
+Cada módulo vive em sua própria subpasta de domínio dentro de `Backend/` e
+`Frontend/`, e código comum aos dois fica em `Shared/`.
 
-- `frontend/`: site estático para Cloudflare Pages.
-- `backend/`: API Python FastAPI para Google Cloud Run.
-- Neon PostgreSQL configurado pela variável `DATABASE_URL`.
-- Cloudflare R2 configurado para armazenar arquivos enviados pela API.
+## Estrutura
 
-## Onde preencher as configurações
-
-Para teste local, edite `backend/.env`:
-
-```env
-DATABASE_URL=postgresql://usuario:senha@ep-xxxx-pooler.regiao.aws.neon.tech/neondb?sslmode=require
-APP_NAME=Pratica-em-ES-MDCA
-R2_ACCOUNT_ID=COLE_AQUI_O_ACCOUNT_ID_DA_CLOUDFLARE
-R2_ACCESS_KEY_ID=COLE_AQUI_O_ACCESS_KEY_ID_DO_R2
-R2_SECRET_ACCESS_KEY=COLE_AQUI_O_SECRET_ACCESS_KEY_DO_R2
-R2_BUCKET_NAME=mdca-arquivos
-R2_PUBLIC_URL=https://pub-xxxxxxxxxxxxxxxxxxxx.r2.dev
+```
+Backend/
+  Financeiro/   # backend do Módulo Financeiro — dono: time Financeiro
+  Gestao/       # backend do Módulo de Gestão   — dono: time de Gestão
+  Shared/       # código de backend comum aos dois módulos
+Frontend/
+  Financeiro/   # frontend do Módulo Financeiro — dono: time Financeiro
+  Gestao/       # frontend do Módulo de Gestão   — dono: time de Gestão
+  Shared/       # código de frontend comum aos dois módulos
 ```
 
-Para deploy no Cloud Run, edite `backend/env-vars.yaml` com os mesmos valores reais.
+Regra geral: só mexa fora do seu domínio (`Shared/` ou a pasta do outro
+time) combinando antes com o time dono.
 
-No frontend, edite `frontend/app.js` e troque `API_BASE_URL` pela URL gerada pelo Cloud Run.
+## Como rodar localmente
 
-## Rodar backend localmente
+### Backend
+
+Cada domínio de backend tem seu próprio `requirements.txt`. Exemplo para o
+Financeiro (o mesmo vale para `Backend/Gestao`, trocando o caminho):
 
 ```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate
+cd Backend/Financeiro
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn main:app --reload
+python main.py
 ```
 
-Endpoints disponíveis:
+### Frontend
 
-- `GET /health`: testa se a API está no ar.
-- `GET /db/health`: testa conexão com o banco Neon.
-- `GET /storage/health`: testa conexão com o bucket Cloudflare R2.
-- `POST /files`: envia um arquivo genérico para o bucket R2.
-
-## Deploy do backend
+Cada domínio de frontend é servido de forma independente. Exemplo para o
+Financeiro (o mesmo vale para `Frontend/Gestao`, trocando o caminho):
 
 ```bash
-cd backend
-gcloud run deploy mdca-backend --source . --region southamerica-east1 --allow-unauthenticated --env-vars-file env-vars.yaml
+cd Frontend/Financeiro
+python3 -m http.server 8080
+# abrir http://localhost:8080
 ```
 
-Copie a `Service URL` gerada pelo Cloud Run e cole em `frontend/app.js`.
+### Testes
 
-## Deploy do frontend
+```bash
+# Financeiro
+cd Backend/Financeiro && pip install -r requirements.txt && pytest
 
-No Cloudflare Pages:
+# Gestão
+cd Backend/Gestao && pip install -r requirements.txt && pytest
+```
 
-- Framework preset: `None`
-- Build command: vazio
-- Build output directory: `frontend`
+## CI
 
-Arquivos com segredos (`backend/.env` e `backend/env-vars.yaml`) estão ignorados pelo Git.
+A API integrada e o deploy no Cloud Run estão descritos em
+[docs/deploy-backend.md](docs/deploy-backend.md). O frontend publicado continua
+usando a pasta `Frontend/`; configurações privadas do backend ficam em
+`Backend/.env`, fora do Git.
+
+O workflow em [.github/workflows/ci.yml](.github/workflows/ci.yml) roda os
+testes de `Backend/Financeiro` e `Backend/Gestao` em jobs independentes, para
+que uma alteração em um módulo não quebre o build do outro.

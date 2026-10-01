@@ -2,7 +2,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from storage import build_public_file_url, get_r2_config, sanitize_file_name
+from Shared.storage import build_public_file_url, get_r2_config, sanitize_file_name
 
 
 class StorageConfigTest(unittest.TestCase):

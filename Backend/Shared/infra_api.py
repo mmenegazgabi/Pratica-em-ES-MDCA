@@ -1,34 +1,18 @@
 import os
 import uuid
-from pathlib import Path
-
-if Path(".env").exists():
-    from dotenv import load_dotenv
-
-    load_dotenv()
 
 import boto3
 import psycopg
 from botocore.client import Config
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from storage import build_public_file_url, get_r2_config, sanitize_file_name
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from .storage import build_public_file_url, get_r2_config, sanitize_file_name
 
-DATABASE_URL = os.environ["DATABASE_URL"]
 APP_NAME = os.getenv("APP_NAME", "Pratica-em-ES-MDCA")
 
-app = FastAPI(title=f"API - {APP_NAME}")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+router = APIRouter()
 
 def get_conn():
-    return psycopg.connect(DATABASE_URL)
+    return psycopg.connect(os.environ["DATABASE_URL"], connect_timeout=10)
 
 
 def get_r2_client():
@@ -38,13 +22,12 @@ def get_r2_client():
         endpoint_url=f"https://{config.account_id}.r2.cloudflarestorage.com",
         aws_access_key_id=config.access_key_id,
         aws_secret_access_key=config.secret_access_key,
-        config=Config(signature_version="s3v4"),
+        config=Config(signature_version="s3v4", connect_timeout=5, read_timeout=10, retries={"max_attempts": 1}),
         region_name="auto",
     )
     return client, config
 
 
-@app.on_event("startup")
 def preparar_banco():
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -68,17 +51,17 @@ def preparar_banco():
         conn.commit()
 
 
-@app.get("/")
+@router.get("/")
 def raiz():
     return {"status": "ok", "app": APP_NAME}
 
 
-@app.get("/health")
+@router.get("/health")
 def health():
     return {"status": "ok"}
 
 
-@app.get("/db/health")
+@router.get("/db/health")
 def db_health():
     try:
         with get_conn() as conn:
@@ -91,7 +74,7 @@ def db_health():
     return {"status": "ok", "database": "connected", "result": resultado[0]}
 
 
-@app.get("/storage/health")
+@router.get("/storage/health")
 def storage_health():
     try:
         client, config = get_r2_client()
@@ -102,7 +85,7 @@ def storage_health():
     return {"status": "ok", "storage": "connected", "bucket": config.bucket_name}
 
 
-@app.post("/files")
+@router.post("/files")
 async def upload_file(
     arquivo: UploadFile = File(...),
     pasta: str = Form("uploads"),
@@ -129,7 +112,7 @@ async def upload_file(
     return {
         "filename": nome_original,
         "key": chave,
-        "url": build_public_file_url(config.public_url, chave),
+        "url": build_public_file_url(config.public_url, chave) if config.public_url else None,
         "content_type": arquivo.content_type,
         "size": len(conteudo),
     }
