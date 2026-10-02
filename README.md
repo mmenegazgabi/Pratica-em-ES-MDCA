@@ -66,3 +66,8 @@ usando a pasta `Frontend/`; configurações privadas do backend ficam em
 O workflow em [.github/workflows/ci.yml](.github/workflows/ci.yml) roda os
 testes de `Backend/Financeiro` e `Backend/Gestao` em jobs independentes, para
 que uma alteração em um módulo não quebre o build do outro.
+Também verifica a API integrada. Em pushes na `main`, publica o backend no
+Cloud Run somente após todos os testes passarem, usando credenciais temporárias
+via Workload Identity Federation e verificando `/health` após o deploy.
+PRs não publicam o backend. Veja os detalhes em
+[docs/deploy-backend.md](docs/deploy-backend.md).

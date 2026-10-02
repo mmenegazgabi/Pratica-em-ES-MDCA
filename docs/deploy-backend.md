@@ -60,3 +60,53 @@ configuradas no serviço Cloud Run, não no código versionado.
 O Pages continua publicando `Frontend/`, conforme a main. O painel técnico
 herdado da infra fica em `Frontend/Shared/infra-smoke.html` para verificar a
 comunicação frontend/API; ele não substitui a página inicial da plataforma.
+
+## Deploy automático pela main
+
+O job `deploy-backend` em `.github/workflows/ci.yml` publica somente em um
+`push` na `main` do repositório `mmenegazgabi/Pratica-em-ES-MDCA`, depois que
+os três jobs de testes passarem. Um merge de PR na main gera esse push.
+PRs e outras branches não publicam o backend. O job usa `Backend/` e seu
+Dockerfile, preservando as variáveis e a política de acesso do serviço.
+Não lê `Backend/.env` nem envia credenciais do banco/R2 pelo GitHub.
+
+A autenticação usa Workload Identity Federation, sem chave JSON permanente:
+
+- Conta de deploy: `mdca-github-deploy@pratica-em-es-mdca.iam.gserviceaccount.com`.
+- Provider: `projects/547285598829/locations/global/workloadIdentityPools/mdca-github/providers/github-main`.
+- Repositório autorizado: ID `1333555429`; proprietário: ID `177751658`.
+- Condições: branch `refs/heads/main`, evento `push` e workflow
+  `mmenegazgabi/Pratica-em-ES-MDCA/.github/workflows/ci.yml@refs/heads/main`.
+
+Esses identificadores são públicos, não segredos; estão diretamente no
+workflow. Não é necessário cadastrar `GCP_SA_KEY` ou copiar o `.env` para
+GitHub Secrets. Forks e outro workflow não recebem essa autorização.
+Renomear/mover o workflow ou trocar o proprietário do repositório exige
+atualizar a condição do provider.
+
+A conta de deploy tem `roles/run.sourceDeveloper` e
+`roles/serviceusage.serviceUsageConsumer` no projeto, e
+`roles/iam.serviceAccountUser` apenas na identidade atual do serviço:
+`547285598829-compute@developer.gserviceaccount.com`.
+O build continua usando a configuração existente do Cloud Build. A identidade
+padrão de execução já tinha o papel Editor; este pipeline não altera essa
+configuração herdada. Uma futura redução desses privilégios deve ser tratada
+separadamente, com revisão do impacto no build e na execução.
+
+Deploys são serializados pelo grupo de concorrência `cloud-run-production`.
+Dentro dessa fila, `scripts/check-main-head.sh` consulta a main no GitHub:
+se o commit testado já não for seu HEAD, a execução ignora autenticação e
+publicação. Uma falha nessa consulta bloqueia o job. O checkout continua
+no commit testado, sem substituir o código por uma versão ainda não testada.
+Depois da publicação, `scripts/verify-backend.py` consulta `/health`, exige
+HTTP 200 com `status: ok`, e repete a consulta em caso de falha transitória.
+Uma falha nessa verificação deixa o job vermelho; não há rollback automático.
+`/health` verifica a API, não substitui os testes de PostgreSQL/R2.
+
+Para conferir a execução, abra GitHub → Actions → CI → Backend · Deploy no
+Cloud Run e examine as etapas de autenticação, publicação e verificação.
+A primeira execução real desse caminho só acontece após o workflow chegar
+à main; validar YAML e testes localmente não prova a troca de tokens OIDC.
+
+O deploy manual continua disponível para diagnóstico. Ele não tem a
+restrição de branch do workflow e usa as configurações do `.env` local.

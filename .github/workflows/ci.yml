@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   backend-infra:
     name: Backend · Infraestrutura integrada
@@ -38,3 +41,47 @@ jobs:
           python-version: "3.12"
       - run: pip install -r Backend/Gestao/requirements.txt
       - run: pytest Backend/Gestao
+
+  deploy-backend:
+    name: Backend · Deploy no Cloud Run
+    needs: [backend-infra, backend-financeiro, backend-gestao]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'mmenegazgabi/Pratica-em-ES-MDCA'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: cloud-run-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Ignorar execução de um commit antigo
+        id: latest-main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/check-main-head.sh
+      - name: Autenticar no Google Cloud sem chave permanente
+        if: steps.latest-main.outputs.current == 'true'
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: pratica-em-es-mdca
+          workload_identity_provider: projects/547285598829/locations/global/workloadIdentityPools/mdca-github/providers/github-main
+          service_account: mdca-github-deploy@pratica-em-es-mdca.iam.gserviceaccount.com
+      - name: Publicar Backend usando o Dockerfile
+        id: deploy
+        if: steps.latest-main.outputs.current == 'true'
+        uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3
+        with:
+          project_id: pratica-em-es-mdca
+          service: pratica-em-es-mdca
+          region: southamerica-east1
+          source: Backend
+          flags: --clear-base-image
+      - name: Verificar API publicada
+        if: steps.deploy.outcome == 'success'
+        env:
+          BACKEND_URL: ${{ steps.deploy.outputs.url }}
+        run: python3 scripts/verify-backend.py "$BACKEND_URL"
