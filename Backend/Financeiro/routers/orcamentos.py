@@ -5,7 +5,10 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from orcamento import Orcamento
+if __package__ == "routers":
+    from orcamento import Orcamento
+else:
+    from ..orcamento import Orcamento
 
 router = APIRouter(tags=["orcamentos"])
 

@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 
-from routers.orcamentos import router as orcamentos_router
+if __package__:
+    from .routers.orcamentos import router as orcamentos_router
+else:
+    from routers.orcamentos import router as orcamentos_router
 
 app = FastAPI(title="MDCA — Financeiro")
 app.include_router(orcamentos_router)
