@@ -3,3 +3,10 @@ __pycache__/
 .venv/
 .pytest_cache/
 .DS_Store
+venv/
+.env
+.env.*
+!.env.example
+env-vars.yaml
+.local/
+gha-creds-*.json

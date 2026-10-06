@@ -2,9 +2,9 @@ from datetime import date
 
 from fastapi.testclient import TestClient
 
-from main import app
-from orcamento import Lancamento, Orcamento, StatusLancamento
-from routers.orcamentos import _orcamentos
+from Financeiro.main import app
+from Financeiro.orcamento import Lancamento, Orcamento, StatusLancamento
+from Financeiro.routers.orcamentos import _orcamentos
 
 client = TestClient(app)
 
