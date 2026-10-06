@@ -27,6 +27,7 @@
        <sc-if value="{{ phoneHome }}" hint-placeholder-val="{{ false }}">
         <div style="display: grid; gap: 14px">
           <button class="btn btn-primary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ goDespesa }}">+ Lançar despesa</button>
+          <button class="btn btn-secondary btn-block" style="min-height: 44px; font-size: 14px" onClick="{{ goAuditoriaMobile }}">Trilha de auditoria</button>
           <sc-if value="{{ dspOk }}" hint-placeholder-val="{{ false }}">
             <div role="status" style="font-size: 13px; color: var(--color-accent-700); border: 1px solid var(--color-accent); border-radius: var(--radius-md); padding: 10px 12px">{{ dspOk }}</div>
           </sc-if>
@@ -62,6 +63,42 @@
           </div>
           <sc-if value="{{ semMeusLancamentos }}" hint-placeholder-val="{{ false }}">
             <div style="padding: 20px 0; text-align: center; font-size: 13px; color: var(--color-neutral-700)">Nenhum lançamento com esses filtros.</div>
+          </sc-if>
+        </div>
+       </sc-if>
+       <sc-if value="{{ phoneAuditoria }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 12px">
+          <input type="search" class="input" style="min-height: 44px; font-size: 15px" placeholder="Buscar por usuário, nº ou projeto" aria-label="Buscar na auditoria" value="{{ audBusca }}" onChange="{{ onAudBusca }}">
+          <select class="input" style="min-height: 44px; font-size: 14px" aria-label="Filtrar por ação" value="{{ audAcao }}" onChange="{{ onAudAcao }}">
+            <option value="todas">Todas as ações</option>
+            <option value="Criação">Criação</option>
+            <option value="Edição">Edição</option>
+            <option value="Aprovação">Aprovação</option>
+            <option value="Rejeição">Rejeição</option>
+            <option value="Conciliação">Conciliação</option>
+            <option value="Permissão">Permissão</option>
+            <option value="Leitura">Leitura</option>
+          </select>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-700)">
+            <input type="date" class="input" style="min-height: 44px; min-width: 0; font-size: 14px; font-variant-numeric: tabular-nums" aria-label="Auditoria: data inicial" value="{{ audDe }}" max="{{ audAte }}" onChange="{{ onAudDe }}">
+            <span>até</span>
+            <input type="date" class="input" style="min-height: 44px; min-width: 0; font-size: 14px; font-variant-numeric: tabular-nums" aria-label="Auditoria: data final" value="{{ audAte }}" min="{{ audDe }}" onChange="{{ onAudAte }}">
+          </div>
+          <div style="font-size: 12px; color: var(--color-neutral-600)">{{ audContagem }}</div>
+          <div style="display: grid; gap: 10px">
+            <sc-for list="{{ auditoria }}" as="a" hint-placeholder-count="5">
+              <div style="display: grid; gap: 6px; padding: 14px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: var(--color-neutral-100)">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px">
+                  <span style="font-size: 15px; font-family: var(--font-heading)">{{ a.objeto }}</span>
+                  <span class="tag {{ a.tagClass }}">{{ a.acao }}</span>
+                </div>
+                <div style="font-size: 12px; color: var(--color-neutral-700)">{{ a.detalhe }}</div>
+                <div style="font-size: 11px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ a.quem }} · {{ a.quando }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ semAuditoria }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 20px 0; text-align: center; font-size: 13px; color: var(--color-neutral-700)">Nenhum registro encontrado com esses filtros.</div>
           </sc-if>
         </div>
        </sc-if>
@@ -476,7 +513,9 @@
                           </div>
                         </sc-if>
                         </div>
+                        <sc-if value="{{ podeVerProjetos }}" hint-placeholder-val="{{ true }}">
                         <div style="font-size: 11px; color: var(--color-neutral-600); margin-top: 5px">Não encontrou o projeto? <a href="#" onClick="{{ goProjetos }}">Cadastre na aba Projetos</a>.</div>
+                        </sc-if>
                       </div>
                     </sc-if>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px">
@@ -785,34 +824,7 @@
               </sc-if>
             </sc-if>
             <sc-if value="{{ sPapeisAuditoria }}" hint-placeholder-val="{{ false }}">
-              <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 18px">
-                <sc-if value="{{ podeGerenciarUsuarios }}" hint-placeholder-val="{{ true }}">
-                  <button class="{{ tabUsuariosBtnClass }}" style="font-size: 13px" onClick="{{ irTabUsuarios }}">Usuários e papéis</button>
-                </sc-if>
-                <button class="{{ tabAuditoriaBtnClass }}" style="font-size: 13px" onClick="{{ irTabAuditoria }}">Trilha de auditoria</button>
-                <span style="margin-left: auto; font-size: 12px; color: var(--color-neutral-600)">{{ papeisAuditoriaNota }}</span>
-              </div>
-              <sc-if value="{{ tabUsuarios }}" hint-placeholder-val="{{ true }}">
-                <div style="display: flex; justify-content: flex-end; margin-bottom: 14px">
-                  <button class="btn btn-primary" style="white-space: nowrap">Novo usuário</button>
-                </div>
-                <table class="table">
-                  <thead><tr><th>Usuário</th><th>E-mail</th><th style="width: 190px">Papel</th><th>Projetos vinculados</th><th style="width: 100px">Situação</th><th></th></tr></thead>
-                  <tbody>
-                    <sc-for list="{{ usuarios }}" as="u" hint-placeholder-count="5">
-                      <tr>
-                        <td style="font-family: var(--font-heading); font-size: 15px">{{ u.nome }}</td>
-                        <td style="font-size: 13px; color: var(--color-neutral-700)">{{ u.email }}</td>
-                        <td><span class="tag {{ u.tagClass }}">{{ u.papel }}</span></td>
-                        <td style="font-size: 13px; color: var(--color-neutral-700)">{{ u.projetos }}</td>
-                        <td style="font-size: 13px">{{ u.situacao }}</td>
-                        <td style="text-align: right"><button class="btn btn-ghost" style="font-size: 12px">Editar</button></td>
-                      </tr>
-                    </sc-for>
-                  </tbody>
-                </table>
-              </sc-if>
-              <sc-if value="{{ tabAuditoria }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ tabAuditoria }}" hint-placeholder-val="{{ true }}">
                 <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px">
                   <input type="search" class="input" style="width: 260px" placeholder="Buscar por usuário, nº ou projeto" aria-label="Buscar na auditoria" value="{{ audBusca }}" onChange="{{ onAudBusca }}">
                   <select class="input" style="width: 180px" aria-label="Filtrar por ação" value="{{ audAcao }}" onChange="{{ onAudAcao }}">
@@ -911,9 +923,9 @@
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;projetos&quot;,&quot;orcamentos&quot;,&quot;projeto-detalhe&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;despesas-home&quot;,&quot;despesa-detalhe&quot;,&quot;lancamentos&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;,&quot;admin&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;projetos&quot;,&quot;orcamentos&quot;,&quot;projeto-detalhe&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;despesas-home&quot;,&quot;despesa-detalhe&quot;,&quot;auditoria-mobile&quot;,&quot;lancamentos&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
-  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false, buscaProjeto: '', filtroStatus: 'todos', filtroAlerta: false, filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', editando: null, detalhe: null, decisoes: {}, selBusca: '', selProjeto: null, selAberto: false, analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '', novosProjetos: [], npNome: '', npArea: '', npInicio: '2026-01-01', npFim: '2026-12-31', npErro: '', npOk: '' };
+  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, userMenuOpen: false, buscaProjeto: '', filtroStatus: 'todos', filtroAlerta: false, filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', editando: null, detalhe: null, decisoes: {}, selBusca: '', selProjeto: null, selAberto: false, analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '', novosProjetos: [], npNome: '', npArea: '', npInicio: '2026-01-01', npFim: '2026-12-31', npErro: '', npOk: '' };
 
   cur() { return this.state.screen || this.props.screen || 'orcamentos'; }
   per() { return this.state.persona || this.props.persona || 'coordenacao'; }
@@ -923,35 +935,29 @@ class Component extends DCLogic {
       coordenacao: {
         label: 'Coordenação', nome: 'Luana Ferraz', papel: 'Coordenação Adm.-Financeira', iniciais: 'LF', notif: 3,
         home: 'orcamentos', escreve: true, editaOrcamento: true, aprova: true,
-        telas: ['projetos', 'orcamentos', 'projeto-detalhe', 'orcamento-form', 'despesa-mobile', 'lancamentos', 'conciliacao', 'prestacao', 'papeis-auditoria'],
-        pode: 'Perfil completo: cria orçamentos, aprova despesas e emite prestações de contas.'
+        telas: ['orcamentos', 'projeto-detalhe', 'orcamento-form', 'lancamentos', 'prestacao', 'papeis-auditoria'],
+        pode: 'Gerencia orçamentos e saldos, aprova lançamentos e emite prestações de contas.'
       },
       educador: {
         label: 'Educador', nome: 'Marcos Vieira', papel: 'Educador — Semear, Casa de Convivência', iniciais: 'MV', notif: 1,
         home: 'despesas-home',
         projetos: ['Semear — Contraturno Escolar', 'Casa de Convivência'],
         statusVisiveis: null, escreve: false, tituloLancamentos: 'Meus lançamentos',
-        telas: ['despesas-home', 'despesa-mobile', 'despesa-detalhe', 'lancamentos'],
-        pode: 'Lança despesas e acompanha só os lançamentos dos projetos a que está vinculado.'
+        telas: ['despesas-home', 'despesa-mobile', 'despesa-detalhe', 'auditoria-mobile'],
+        pode: 'Usa só o celular: lança despesas e acompanha os próprios lançamentos.'
       },
       direcao: {
         label: 'Direção', nome: 'Jane Almeida', papel: 'Diretoria / Presidência', iniciais: 'JA', notif: 2,
         home: 'orcamentos', escreve: false,
-        telas: ['orcamentos', 'projeto-detalhe', 'projetos', 'prestacao', 'lancamentos', 'papeis-auditoria'],
-        pode: 'Somente leitura: visão consolidada, relatórios e trilha de auditoria.'
+        telas: ['orcamentos', 'projeto-detalhe', 'papeis-auditoria'],
+        pode: 'Somente leitura: acompanha orçamentos e saldos de todos os projetos.'
       },
       voluntario: {
         label: 'Voluntário', nome: 'Lucas Prado', papel: 'Voluntário Financeiro (remoto)', iniciais: 'LP', notif: 1,
         home: 'conciliacao',
         statusVisiveis: ['Aprovado', 'Conciliado'], escreve: false, tituloLancamentos: 'Lançamentos aprovados',
-        telas: ['conciliacao', 'lancamentos'],
-        pode: 'Edição limitada à conciliação bancária — não aprova despesas nem vê orçamentos.'
-      },
-      admin: {
-        label: 'Administrador', nome: 'Ana Ribeiro', papel: 'Administradora do sistema', iniciais: 'AR', notif: 0,
-        home: 'papeis-auditoria', escreve: true,
-        telas: ['papeis-auditoria'],
-        pode: 'Gerencia usuários, papéis e vínculos — sem acesso aos valores financeiros.'
+        telas: ['conciliacao', 'lancamentos', 'prestacao', 'papeis-auditoria'],
+        pode: 'Concilia o extrato bancário e gera relatórios de prestação de contas — não aprova despesas nem edita orçamentos.'
       }
     };
   }
@@ -966,11 +972,12 @@ class Component extends DCLogic {
       'orcamento-form': ['Tela 2 · Épico 1 · US-01', 'Cadastro / edição de orçamento', 'mdca.org.br/financas/orcamentos/novo', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'despesa-mobile': ['Tela 3 · Épico 2 · US-03', 'Lançamento de despesa', 'mdca.org.br/financas/despesas/nova', 'Marcos Vieira', 'Educador', 'MV'],
       'despesas-home': ['Tela 3 · Épico 2 · US-03', 'Meus lançamentos', 'mdca.org.br/financas/despesas', 'Marcos Vieira', 'Educador', 'MV'],
+      'auditoria-mobile': ['Tela 9 · Compartilhada · US-08', 'Trilha de auditoria', 'mdca.org.br/financas/auditoria', 'Marcos Vieira', 'Educador', 'MV'],
       'despesa-detalhe': ['Tela 3 · Épico 2 · US-03', 'Detalhe do lançamento', 'mdca.org.br/financas/despesas/detalhe', 'Marcos Vieira', 'Educador', 'MV'],
       'lancamentos': ['Tela 4 · Épico 2 · US-03, 04, 05', 'Lançamentos', 'mdca.org.br/financas/lancamentos', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'conciliacao': ['Tela 6 · Épico 2 · US-05', 'Conciliação bancária', 'mdca.org.br/financas/conciliacao', 'Lucas Prado', 'Voluntário Financeiro (remoto)', 'LP'],
       'prestacao': ['Tela 7 · Épico 3 · US-06', 'Prestação de contas', 'mdca.org.br/financas/prestacao', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
-      'papeis-auditoria': ['Tela 9 · Compartilhada · US-08', 'Papéis, acessos e auditoria', 'mdca.org.br/admin/papeis-auditoria', 'Ana Ribeiro', 'Administradora do sistema', 'AR']
+      'papeis-auditoria': ['Tela 9 · Compartilhada · US-08', 'Trilha de auditoria', 'mdca.org.br/financas/auditoria', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF']
     };
   }
 
@@ -979,7 +986,7 @@ class Component extends DCLogic {
       ['Orçamento', [['Projetos', 'projetos'], ['Orçamentos e saldo', 'orcamentos']]],
       ['Lançamentos', [['Lançar despesa', 'despesa-mobile'], ['Todos os lançamentos', 'lancamentos'], ['Conciliação bancária', 'conciliacao']]],
       ['Prestação de contas', [['Prestação de contas', 'prestacao']]],
-      ['Plataforma', [['Papéis e auditoria', 'papeis-auditoria']]]
+      ['Auditoria', [['Trilha de auditoria', 'papeis-auditoria']]]
     ];
   }
 
@@ -1034,8 +1041,7 @@ class Component extends DCLogic {
       { para: ['coordenacao', 'direcao'], novo: false },
       { para: ['coordenacao'], novo: true },
       { para: ['voluntario'], novo: true },
-      { para: ['educador'], novo: false },
-      { para: ['admin'], novo: false }
+      { para: ['educador'], novo: false }
     ];
     return todas.filter((n) => n.para.indexOf(persona) >= 0);
   }
@@ -1079,7 +1085,7 @@ class Component extends DCLogic {
       this.setState({
         persona: key,
         screen: np.telas.indexOf(this.cur()) >= 0 ? this.cur() : np.home,
-        detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false
+        detalheOpen: false, relatorioGerado: false, userMenuOpen: false
       });
     };
     const toggleUserMenu = () => this.setState({ userMenuOpen: !this.state.userMenuOpen });
@@ -1087,14 +1093,7 @@ class Component extends DCLogic {
     const fecharDetalhe = () => this.setState({ detalheOpen: false });
     const abrirPrestacao = () => this.setState({ relatorioGerado: true });
     const fecharPrestacao = () => this.setState({ relatorioGerado: false });
-    const irTabUsuarios = () => this.setState({ t07tab: 'usuarios' });
-    const irTabAuditoria = () => this.setState({ t07tab: 'auditoria' });
 
-    const papelAtual = this.per();
-    const podeGerenciarUsuarios = papelAtual === 'admin';
-    const t07tab = this.state.t07tab || (podeGerenciarUsuarios ? 'usuarios' : 'auditoria');
-    const tabUsuarios = podeGerenciarUsuarios && t07tab === 'usuarios';
-    const tabAuditoria = !tabUsuarios;
 
     const projetos = projDef.map(([nome, cc, orcado, realizado, status, vig]) => {
       const pct = realizado / orcado;
@@ -1225,7 +1224,7 @@ class Component extends DCLogic {
       { quando: '11/09 · 16:05', quem: 'Lucas Prado', acao: 'Conciliação', tagClass: 'tag-info', objeto: 'Lançamento L-1040', detalhe: 'vinculado ao extrato de 11/09' },
       { quando: '10/09 · 17:42', quem: 'Luana Ferraz', acao: 'Rejeição', tagClass: 'tag-danger', objeto: 'Lançamento L-1039', detalhe: 'motivo: nota fiscal ilegível' },
       { quando: '10/09 · 11:20', quem: 'Luana Ferraz', acao: 'Edição', tagClass: 'tag-neutral', objeto: 'Orçamento CC-103', detalhe: 'valor total 68.000 → 72.500' },
-      { quando: '09/09 · 09:58', quem: 'Ana Ribeiro', acao: 'Permissão', tagClass: 'tag-neutral', objeto: 'Usuário Rita Souza', detalhe: 'vínculo ao projeto CC-104' },
+      { quando: '09/09 · 09:58', quem: 'Luana Ferraz', acao: 'Permissão', tagClass: 'tag-neutral', objeto: 'Usuário Rita Souza', detalhe: 'vínculo ao projeto CC-104' },
       { quando: '08/09 · 07:31', quem: 'Jane Almeida', acao: 'Leitura', tagClass: 'tag-neutral', objeto: 'Prestação de contas', detalhe: 'exportou relatório consolidado 2026' }
     ];
     const audBusca = this.state.audBusca || '';
@@ -1279,7 +1278,7 @@ class Component extends DCLogic {
       ...analisarLanc(l), projeto: l[2], onClick: () => this.setState({ detalheOpen: true, lancProjeto: l[2] })
     }));
 
-    const phoneTelas = ['despesas-home', 'despesa-mobile', 'despesa-detalhe'];
+    const phoneTelas = ['despesas-home', 'despesa-mobile', 'despesa-detalhe', 'auditoria-mobile'];
     const motivoBase = { 'L-1039': 'Nota fiscal ilegível na foto e valor acima do limite da categoria Manutenção. Refaça o lançamento com o comprovante legível.' };
     const motivoDe = (id) => (decisoes[id] || {}).motivo || motivoBase[id] || '';
     const meus = lancDef.filter((l) => l[6] === P.nome && (!P.projetos || P.projetos.indexOf(l[2]) >= 0));
@@ -1385,8 +1384,8 @@ class Component extends DCLogic {
       cancelarRejeicao: () => this.setState({ rejeitando: false, motivoRej: '', erroMotivo: '' }),
       isPhone: phoneTelas.indexOf(s) >= 0,
       isDesktop: phoneTelas.indexOf(s) < 0,
-      phoneHome: s === 'despesas-home', phoneForm: s === 'despesa-mobile', phoneDetalhe: s === 'despesa-detalhe',
-      phoneTitulo: s === 'despesas-home' ? 'Meus lançamentos' : s === 'despesa-detalhe' ? 'Lançamento' : 'Lançar despesa',
+      phoneHome: s === 'despesas-home', phoneForm: s === 'despesa-mobile', phoneDetalhe: s === 'despesa-detalhe', phoneAuditoria: s === 'auditoria-mobile',
+      phoneTitulo: s === 'despesas-home' ? 'Meus lançamentos' : s === 'despesa-detalhe' ? 'Lançamento' : s === 'auditoria-mobile' ? 'Auditoria' : 'Lançar despesa',
       meusChips, meusBusca, meusProjeto, ds, goMeusLancamentos, enviarDespesa,
       onMeusBusca: (e) => this.setState({ meusBusca: e.target.value }),
       onMeusProjeto: (e) => this.setState({ meusProjeto: e.target.value }),
@@ -1404,7 +1403,8 @@ class Component extends DCLogic {
       breadcrumbGroup: s === 'orcamento-form' || s === 'projeto-detalhe' ? 'Orçamento' : grupoDe(s),
       escreve: P.editaOrcamento === true,
       podeVerValores: P.telas.indexOf('orcamentos') >= 0,
-      podeRefazer: this.per() === 'educador' || this.per() === 'coordenacao',
+      podeRefazer: P.telas.indexOf('despesa-mobile') >= 0,
+      podeVerProjetos: P.telas.indexOf('projetos') >= 0,
       naoEscreve: P.editaOrcamento !== true,
       tituloLancamentos: P.tituloLancamentos || 'Todos os lançamentos',
       escopoLancamentos: P.projetos ? 'Somente os projetos aos quais você está vinculado'
@@ -1454,6 +1454,8 @@ class Component extends DCLogic {
       onOrcFim: (e) => this.setState({ orcFim: e.target.value, orcErro: '' }),
       buscaProjeto: busca, onBuscaProjeto, projetosFiltrados, filtroStatus, onFiltroStatus, filtroAlerta, onFiltroAlerta, filtroStatusLanc, onFiltroStatusLanc, dataDe, dataAte, onDataDe, onDataAte,
       audBusca, audAcao, audDe, audAte, semAuditoria: auditoria.length === 0,
+      audContagem: auditoria.length + (auditoria.length === 1 ? ' registro' : ' registros'),
+      goAuditoriaMobile: go('auditoria-mobile'),
       onAudBusca: campo('audBusca'), onAudAcao: campo('audAcao'), onAudDe: campo('audDe'), onAudAte: campo('audAte'),
       semProjetos: projetosFiltrados.length === 0, semLancamentos: lancamentos.length === 0,
       contagemOrcamentos: projetosFiltrados.length + (projetosFiltrados.length === 1 ? ' orçamento' : ' orçamentos') + ' · 2026',
@@ -1483,13 +1485,7 @@ class Component extends DCLogic {
       prestacaoGerada: this.state.relatorioGerado === true,
       prestacaoNaoGerada: this.state.relatorioGerado !== true,
       sDetalheDrawer: this.state.detalheOpen === true,
-      podeGerenciarUsuarios, tabUsuarios, tabAuditoria,
-      tabUsuariosBtnClass: tabUsuarios ? 'btn btn-primary' : 'btn btn-secondary',
-      tabAuditoriaBtnClass: tabAuditoria ? 'btn btn-primary' : 'btn btn-secondary',
-      papeisAuditoriaNota: tabUsuarios
-        ? 'Educador vê só os seus projetos · consolidado restrito a Coordenação e Direção'
-        : 'Registro transversal · leitura de Coordenação e Direção',
-      irTabUsuarios, irTabAuditoria,
+      tabAuditoria: true,
       projetos, lancamentos,
       goDespesa: go('despesa-mobile'),
       abrirDetalhe, fecharDetalhe, abrirPrestacao, fecharPrestacao,
@@ -1520,14 +1516,6 @@ class Component extends DCLogic {
         { id: 'L-0871', data: '12/06/2026', categoria: 'Serviços de terceiros', descricao: 'Oficina de contação de histórias', valor: this.brl(3200.00), fornecedor: 'CIA. CONTA COMIGO', cnpj: '34.567.890/0001-12', nf: '000.512', arquivo: 'nfs-000512.pdf' },
         { id: 'L-0844', data: '05/06/2026', categoria: 'Transporte', descricao: 'Fretamento — saída pedagógica', valor: this.brl(2150.00), fornecedor: 'TRANSLESTE FRETAMENTO', cnpj: '45.678.901/0001-23', nf: '008.064', arquivo: 'IMG_8064.jpg' },
         { id: 'L-0820', data: '31/05/2026', categoria: 'Recursos humanos', descricao: 'Equipe de educadores — maio', valor: this.brl(28400.00), fornecedor: 'FOLHA DE PAGAMENTO · MDCA', cnpj: '04.512.887/0001-36', nf: '05/2026', arquivo: 'folha-05-2026.pdf' }
-      ],
-      usuarios: [
-        { nome: 'Luana Ferraz', email: 'luana.ferraz@mdca.org.br', papel: 'Coordenação', tagClass: 'tag-accent', projetos: 'Todos (consolidado)', situacao: 'Ativo' },
-        { nome: 'Jane Almeida', email: 'jane.almeida@mdca.org.br', papel: 'Direção', tagClass: 'tag-accent', projetos: 'Todos (leitura)', situacao: 'Ativo' },
-        { nome: 'Marcos Vieira', email: 'marcos.vieira@mdca.org.br', papel: 'Educador', tagClass: 'tag-outline', projetos: 'Semear · Casa de Convivência', situacao: 'Ativo' },
-        { nome: 'Rita Souza', email: 'rita.souza@mdca.org.br', papel: 'Educadora', tagClass: 'tag-outline', projetos: 'Arte e Cultura · Plantão Jurídico', situacao: 'Ativo' },
-        { nome: 'Lucas Prado', email: 'lucas.prado@voluntario.org', papel: 'Voluntário Financeiro', tagClass: 'tag-neutral', projetos: 'Conciliação — todos', situacao: 'Ativo' },
-        { nome: 'Ana Ribeiro', email: 'ana.ribeiro@mdca.org.br', papel: 'Administradora', tagClass: 'tag-neutral', projetos: '—', situacao: 'Ativo' }
       ],
       auditoria,
       categorias: catsForm.map(([nome, limite]) => ({
