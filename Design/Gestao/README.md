@@ -7,12 +7,12 @@ Abra `index.html` para usar os arquivos separados ou `MDCA_Gestao_E2.html` para 
 ## Arquivos para editar
 
 - `index.html`: entrada das telas.
-- `style.css`: estilos Classical, fontes locais, layout e adaptação mobile.
+- `style.css`: tokens e componentes do design system MDCA (os mesmos do Financeiro, em `../Financeiro/_ds/mdca-…/styles.css`), fontes locais, layout e adaptação mobile.
 - `app.js`: telas, navegação e interações com dados fictícios.
-- `assets/`: fontes locais.
+- `assets/`: fontes locais (Bitter e General Sans, em woff2), embutidas no HTML portátil pelo `build.mjs`.
 - `build.mjs`: gera o HTML portátil. Execute `node build.mjs` nesta pasta após editar os arquivos acima. Não exige instalação de pacotes.
 
-Os arquivos antigos `classical.css`, `layout.css` e `fonts.css` foram preservados como referência; não são carregados pela versão atual. Edite `style.css` para alterar o visual.
+Edite `style.css` para alterar o visual. Para manter Gestão e Finanças iguais, mudanças no design system devem ser feitas no `styles.css` do Financeiro e copiadas para o bloco MDCA no topo do `style.css`.
 
 ## Uso e limites
 
