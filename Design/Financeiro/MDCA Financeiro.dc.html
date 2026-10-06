@@ -22,26 +22,140 @@
 <div style="min-height: 100vh; background: var(--color-neutral-200); font-family: var(--font-body)">
   <sc-if value="{{ isPhone }}" hint-placeholder-val="{{ false }}">
    <div style="display: flex; width: fit-content; margin: 0 auto; padding: 36px; flex-direction: column; align-items: center; gap: 14px">
-    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" title="Nova despesa" onBack="{{ goBack }}" bg="var(--color-bg)" accent="var(--color-accent-700)" font="var(--font-heading)" style="flex: none" hint-size="390px,844px">
+    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" title="{{ phoneTitulo }}" onBack="{{ goBack }}" bg="var(--color-bg)" accent="var(--color-accent-700)" font="var(--font-heading)" style="flex: none" hint-size="390px,844px">
       <div style="height: 100%; overflow: auto; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); padding: 18px 18px 40px">
-        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px">
-          <span style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Tela 3 · Épico 2</span>
-          <span style="font-size: 11px; color: var(--color-neutral-600)">Marcos · Educador</span>
+       <sc-if value="{{ phoneHome }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 14px">
+          <button class="btn btn-primary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ goDespesa }}">+ Lançar despesa</button>
+          <button class="btn btn-secondary btn-block" style="min-height: 44px; font-size: 14px" onClick="{{ goAuditoriaMobile }}">Trilha de auditoria</button>
+          <sc-if value="{{ dspOk }}" hint-placeholder-val="{{ false }}">
+            <div role="status" style="font-size: 13px; color: var(--color-accent-700); border: 1px solid var(--color-accent); border-radius: var(--radius-md); padding: 10px 12px">{{ dspOk }}</div>
+          </sc-if>
+          <input type="search" class="input" style="min-height: 44px; font-size: 15px" placeholder="Buscar por descrição ou nº" aria-label="Buscar lançamento" value="{{ meusBusca }}" onChange="{{ onMeusBusca }}">
+          <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px" role="group" aria-label="Filtrar por status">
+            <sc-for list="{{ meusChips }}" as="c" hint-placeholder-count="5">
+              <button type="button" class="{{ c.cls }}" style="font-size: 12px; padding: 6px 12px; white-space: nowrap; flex: none" aria-pressed="{{ c.ativo }}" onClick="{{ c.onClick }}">{{ c.label }}</button>
+            </sc-for>
+          </div>
+          <select class="input" style="min-height: 44px; font-size: 14px" aria-label="Filtrar por projeto" value="{{ meusProjeto }}" onChange="{{ onMeusProjeto }}">
+            <option value="todos">Todos os meus projetos</option>
+            <option value="Semear — Contraturno Escolar">Semear — Contraturno Escolar</option>
+            <option value="Casa de Convivência">Casa de Convivência</option>
+          </select>
+          <div style="font-size: 12px; color: var(--color-neutral-600)">{{ meusContagem }}</div>
+          <div style="display: grid; gap: 10px">
+            <sc-for list="{{ meusLancamentos }}" as="m" hint-placeholder-count="4">
+              <button type="button" onClick="{{ m.onAbrir }}" style="display: grid; gap: 6px; width: 100%; text-align: left; padding: 14px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: var(--color-neutral-100); font: inherit; color: var(--color-text); cursor: pointer">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px">
+                  <span style="font-size: 15px; font-family: var(--font-heading)">{{ m.descricao }}</span>
+                  <span style="font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap">{{ m.valor }}</span>
+                </div>
+                <div style="font-size: 12px; color: var(--color-neutral-700)">{{ m.projeto }} · {{ m.categoria }}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center">
+                  <span style="font-size: 11px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ m.id }} · {{ m.data }}</span>
+                  <span class="tag {{ m.tagClass }}">{{ m.status }}</span>
+                </div>
+                <sc-if value="{{ m.motivo }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size: 12px; color: var(--color-accent-700)">Motivo: {{ m.motivo }}</div>
+                </sc-if>
+              </button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ semMeusLancamentos }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 20px 0; text-align: center; font-size: 13px; color: var(--color-neutral-700)">Nenhum lançamento com esses filtros.</div>
+          </sc-if>
         </div>
-        <h3 style="font-size: 27px; font-weight: 400; margin: 0 0 2px">Lançar despesa</h3>
-        <p style="font-size: 12px; color: var(--color-neutral-700); margin: 0 0 14px">Entra como <em>pendente de aprovação</em>.</p>
-        <hr class="hr" style="margin: 0 0 18px">
+       </sc-if>
+       <sc-if value="{{ phoneAuditoria }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 12px">
+          <input type="search" class="input" style="min-height: 44px; font-size: 15px" placeholder="Buscar por usuário, nº ou projeto" aria-label="Buscar na auditoria" value="{{ audBusca }}" onChange="{{ onAudBusca }}">
+          <select class="input" style="min-height: 44px; font-size: 14px" aria-label="Filtrar por ação" value="{{ audAcao }}" onChange="{{ onAudAcao }}">
+            <option value="todas">Todas as ações</option>
+            <option value="Criação">Criação</option>
+            <option value="Edição">Edição</option>
+            <option value="Aprovação">Aprovação</option>
+            <option value="Rejeição">Rejeição</option>
+            <option value="Conciliação">Conciliação</option>
+            <option value="Permissão">Permissão</option>
+            <option value="Leitura">Leitura</option>
+          </select>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; font-size: 12px; color: var(--color-neutral-700)">
+            <input type="date" class="input" style="min-height: 44px; min-width: 0; font-size: 14px; font-variant-numeric: tabular-nums" aria-label="Auditoria: data inicial" value="{{ audDe }}" max="{{ audAte }}" onChange="{{ onAudDe }}">
+            <span>até</span>
+            <input type="date" class="input" style="min-height: 44px; min-width: 0; font-size: 14px; font-variant-numeric: tabular-nums" aria-label="Auditoria: data final" value="{{ audAte }}" min="{{ audDe }}" onChange="{{ onAudAte }}">
+          </div>
+          <div style="font-size: 12px; color: var(--color-neutral-600)">{{ audContagem }}</div>
+          <div style="display: grid; gap: 10px">
+            <sc-for list="{{ auditoria }}" as="a" hint-placeholder-count="5">
+              <div style="display: grid; gap: 6px; padding: 14px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: var(--color-neutral-100)">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px">
+                  <span style="font-size: 15px; font-family: var(--font-heading)">{{ a.objeto }}</span>
+                  <span class="tag {{ a.tagClass }}">{{ a.acao }}</span>
+                </div>
+                <div style="font-size: 12px; color: var(--color-neutral-700)">{{ a.detalhe }}</div>
+                <div style="font-size: 11px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ a.quem }} · {{ a.quando }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ semAuditoria }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 20px 0; text-align: center; font-size: 13px; color: var(--color-neutral-700)">Nenhum registro encontrado com esses filtros.</div>
+          </sc-if>
+        </div>
+       </sc-if>
+       <sc-if value="{{ phoneDetalhe }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; gap: 14px">
+          <div style="display: flex; justify-content: space-between; align-items: center">
+            <span class="tag {{ ds.tagClass }}">{{ ds.status }}</span>
+            <span style="font-family: var(--font-heading); font-size: 24px; font-variant-numeric: tabular-nums">{{ ds.valor }}</span>
+          </div>
+          <h3 style="font-size: 20px; font-weight: 400; margin: 0">{{ ds.descricao }}</h3>
+          <sc-if value="{{ ds.motivo }}" hint-placeholder-val="{{ false }}">
+            <div style="border: 1px solid var(--color-accent); border-radius: var(--radius-md); padding: 12px 14px">
+              <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Motivo da rejeição</div>
+              <div style="font-size: 13px; margin-top: 4px">{{ ds.motivo }}</div>
+            </div>
+          </sc-if>
+          <table class="table" style="font-size: 13px">
+            <tbody>
+              <tr><th style="width: 110px">Nº</th><td style="font-variant-numeric: tabular-nums">{{ ds.id }}</td></tr>
+              <tr><th>Projeto</th><td>{{ ds.projeto }}</td></tr>
+              <tr><th>Categoria</th><td>{{ ds.categoria }}</td></tr>
+              <tr><th>Data do gasto</th><td style="font-variant-numeric: tabular-nums">{{ ds.data }}</td></tr>
+            </tbody>
+          </table>
+          <div>
+            <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 8px">Comprovante</div>
+            <div class="plate" style="background: var(--color-neutral-300); height: 120px; display: grid; place-items: center; text-align: center; border-radius: var(--radius-md)">
+              <div style="font-size: 11px; color: var(--color-neutral-800); line-height: 1.6">Foto do comprovante<br>{{ ds.arquivo }}</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 4px">Andamento</div>
+            <sc-for list="{{ ds.andamento }}" as="h" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: 76px 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--color-divider); font-size: 12.5px">
+                <div style="color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ h.quando }}</div>
+                <div><strong style="font-weight: 500">{{ h.quem }}</strong> — {{ h.oque }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ ds.podeRefazer }}" hint-placeholder-val="{{ false }}">
+            <button class="btn btn-primary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ ds.onRefazer }}">Refazer lançamento</button>
+          </sc-if>
+          <button class="btn btn-secondary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ goMeusLancamentos }}">Voltar para meus lançamentos</button>
+        </div>
+       </sc-if>
+       <sc-if value="{{ phoneForm }}" hint-placeholder-val="{{ true }}">
         <div style="display: grid; gap: 16px">
           <div class="field">
             <label>Projeto (apenas os seus)</label>
-            <select class="input" style="min-height: 48px; font-size: 15px">
+            <select class="input" style="min-height: 48px; font-size: 15px" value="{{ dspProjeto }}" onChange="{{ onDspProjeto }}">
               <option>Semear — Contraturno Escolar</option>
               <option>Casa de Convivência</option>
             </select>
           </div>
           <div class="field">
             <label>Categoria</label>
-            <select class="input" style="min-height: 48px; font-size: 15px">
+            <select class="input" style="min-height: 48px; font-size: 15px" value="{{ dspCategoria }}" onChange="{{ onDspCategoria }}">
               <option>Alimentação</option>
               <option>Transporte</option>
               <option>Material didático</option>
@@ -51,16 +165,16 @@
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
             <div class="field">
               <label>Valor (R$)</label>
-              <input class="input" style="min-height: 48px; font-size: 20px; font-family: var(--font-heading); font-variant-numeric: tabular-nums" value="486,90">
+              <input class="input" style="min-height: 48px; font-size: 20px; font-family: var(--font-heading); font-variant-numeric: tabular-nums" value="{{ dspValor }}" onChange="{{ onDspValor }}">
             </div>
             <div class="field">
               <label>Data</label>
-              <input class="input" style="min-height: 48px; font-size: 15px; font-variant-numeric: tabular-nums" value="12/09/2026">
+              <input class="input" style="min-height: 48px; font-size: 15px; font-variant-numeric: tabular-nums" value="{{ dspData }}" onChange="{{ onDspData }}">
             </div>
           </div>
           <div class="field">
             <label>Descrição</label>
-            <textarea class="input" style="min-height: 76px; font-size: 15px">Lanche da oficina de leitura — 32 crianças</textarea>
+            <textarea class="input" style="min-height: 76px; font-size: 15px" value="{{ dspDescricao }}" onChange="{{ onDspDescricao }}"></textarea>
           </div>
           <div>
             <div style="font-size: 12px; color: var(--color-neutral-700); margin-bottom: 6px">Comprovante</div>
@@ -70,11 +184,15 @@
               <div style="font-size: 11px; color: var(--color-neutral-600)">ou escolher da galeria</div>
             </div>
           </div>
+          <sc-if value="{{ dspErro }}" hint-placeholder-val="{{ false }}">
+            <div role="alert" style="font-size: 12px; color: var(--color-danger, #b3261e)">{{ dspErro }}</div>
+          </sc-if>
           <div style="display: grid; gap: 10px; margin-top: 4px">
-            <button class="btn btn-primary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ goLancamentos }}">Enviar para aprovação</button>
-            <button class="btn btn-secondary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ goLancamentos }}">Ver meus lançamentos</button>
+            <button class="btn btn-primary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ enviarDespesa }}">Enviar para aprovação</button>
+            <button class="btn btn-secondary btn-block" style="min-height: 50px; font-size: 15px" onClick="{{ goMeusLancamentos }}">Ver meus lançamentos</button>
           </div>
         </div>
+       </sc-if>
       </div>
     </x-import>
     <div style="width: 390px; padding: 12px 14px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: var(--color-neutral-100)">
@@ -325,14 +443,17 @@
                   </div>
                 </sc-for>
               </div>
+              <sc-if value="{{ orcOk }}" hint-placeholder-val="{{ false }}">
+                <div role="status" style="font-size: 13px; color: var(--color-accent-700); margin-bottom: 12px">{{ orcOk }}</div>
+              </sc-if>
               <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 4px">
                 <input type="search" class="input" style="width: 250px" placeholder="Buscar projeto ou centro de custo" aria-label="Buscar projeto" value="{{ buscaProjeto }}" onChange="{{ onBuscaProjeto }}">
                 <select class="input" style="width: 170px" aria-label="Filtrar por status" value="{{ filtroStatus }}" onChange="{{ onFiltroStatus }}">
                   <option value="todos">Todos os status</option>
                   <option value="vigente">Vigente</option>
-                  <option value="alerta">Em alerta</option>
                   <option value="encerrado">Encerrado</option>
                 </select>
+                <label class="radio" style="white-space: nowrap"><input type="checkbox" checked="{{ filtroAlerta }}" onChange="{{ onFiltroAlerta }}"><span class="dot"></span>Em alerta</label>
                 <span style="margin-left: auto; text-align: right; font-size: 12px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ contagemOrcamentos }}<div style="font-size: 11px">atualizado há 2 minutos</div></span>
                 <sc-if value="{{ escreve }}" hint-placeholder-val="{{ true }}">
                   <button class="btn btn-primary" style="white-space: nowrap" onClick="{{ goForm }}">Novo orçamento</button>
@@ -392,13 +513,15 @@
                           </div>
                         </sc-if>
                         </div>
+                        <sc-if value="{{ podeVerProjetos }}" hint-placeholder-val="{{ true }}">
                         <div style="font-size: 11px; color: var(--color-neutral-600); margin-top: 5px">Não encontrou o projeto? <a href="#" onClick="{{ goProjetos }}">Cadastre na aba Projetos</a>.</div>
+                        </sc-if>
                       </div>
                     </sc-if>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px">
-                      <div class="field"><label>Valor total (R$) *</label><input class="input" style="font-variant-numeric: tabular-nums" value="{{ formValor }}"></div>
-                      <div class="field"><label>Início da vigência *</label><input class="input" style="font-variant-numeric: tabular-nums" value="{{ formInicio }}"></div>
-                      <div class="field"><label>Fim da vigência *</label><input class="input" style="font-variant-numeric: tabular-nums" value="{{ formFim }}"></div>
+                      <div class="field"><label>Valor total (R$) *</label><input class="input" style="font-variant-numeric: tabular-nums" value="{{ formValor }}" onChange="{{ onOrcValor }}"></div>
+                      <div class="field"><label>Início da vigência *</label><input class="input" style="font-variant-numeric: tabular-nums" value="{{ formInicio }}" onChange="{{ onOrcInicio }}"></div>
+                      <div class="field"><label>Fim da vigência *</label><input class="input" style="font-variant-numeric: tabular-nums" value="{{ formFim }}" onChange="{{ onOrcFim }}"></div>
                     </div>
                     <div>
                       <div style="font-size: 12px; color: var(--color-neutral-700); margin-bottom: 8px">Categorias de despesa e limites</div>
@@ -406,14 +529,23 @@
                         <thead><tr><th>Categoria</th><th style="text-align: right; width: 150px">Limite</th><th style="width: 40px"></th></tr></thead>
                         <tbody>
                           <sc-for list="{{ categorias }}" as="c" hint-placeholder-count="4">
-                            <tr><td style="font-size: 14px">{{ c.nome }}</td><td style="text-align: right; white-space: nowrap">{{ c.limite }}</td><td style="text-align: right"><button class="btn btn-ghost" style="font-size: 12px">×</button></td></tr>
+                            <tr><td style="font-size: 14px">{{ c.nome }}</td><td style="text-align: right; white-space: nowrap">{{ c.limite }}</td><td style="text-align: right"><button class="btn btn-ghost" style="font-size: 12px" aria-label="{{ c.rotuloRemover }}" onClick="{{ c.onRemover }}">×</button></td></tr>
                           </sc-for>
                         </tbody>
                       </table>
-                      <button class="btn btn-secondary" style="margin-top: 12px; font-size: 13px">Adicionar categoria</button>
+                      <sc-if value="{{ semCategorias }}" hint-placeholder-val="{{ false }}">
+                        <div style="padding: 12px 0; font-size: 13px; color: var(--color-neutral-700)">Nenhuma categoria. Adicione ao menos uma.</div>
+                      </sc-if>
+                      <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px">
+                        <button class="btn btn-secondary" style="font-size: 13px" onClick="{{ abrirCat }}">Adicionar categoria</button>
+                        <span style="margin-left: auto; font-size: 12px; color: var(--color-neutral-700); font-variant-numeric: tabular-nums">Soma dos limites: {{ somaCategorias }}</span>
+                      </div>
                     </div>
+                    <sc-if value="{{ orcErro }}" hint-placeholder-val="{{ false }}">
+                      <div role="alert" style="font-size: 12px; color: var(--color-danger, #b3261e)">{{ orcErro }}</div>
+                    </sc-if>
                     <div style="display: flex; gap: 12px; padding-top: 6px">
-                      <button class="btn btn-primary" onClick="{{ goOrcamentos }}">Salvar orçamento</button>
+                      <button class="btn btn-primary" onClick="{{ salvarOrcamento }}">Salvar orçamento</button>
                       <button class="btn btn-secondary" onClick="{{ goOrcamentos }}">Cancelar</button>
                     </div>
                   </div>
@@ -430,6 +562,41 @@
                   </div>
                 </aside>
               </div>
+              <sc-if value="{{ catAberto }}" hint-placeholder-val="{{ false }}">
+                <div onMouseDown="{{ fecharCatFundo }}" style="position: fixed; inset: 0; z-index: 50; background: rgba(32, 31, 29, 0.35); display: grid; place-items: center; padding: 16px">
+                  <div role="dialog" aria-modal="true" aria-labelledby="cat-titulo" onKeyDown="{{ onCatTecla }}" class="card" style="width: 100%; max-width: 440px; background: var(--color-bg, #fff); display: grid; gap: 16px">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline">
+                      <h3 id="cat-titulo" style="font-size: 22px; font-weight: 400; margin: 0">Adicionar categoria</h3>
+                      <button class="btn btn-ghost" style="font-size: 12px" onClick="{{ fecharCat }}">Fechar ×</button>
+                    </div>
+                    <div class="field"><label id="cat-existente-rotulo" for="cat-busca">Categoria *</label>
+                      <div style="position: relative">
+                      <input id="cat-busca" style="width: 100%; box-sizing: border-box" type="search" class="input" role="combobox" aria-autocomplete="list" aria-controls="lista-categorias" aria-expanded="{{ catListaAberta }}" autocomplete="off" placeholder="Digite para pesquisar" value="{{ catBusca }}" onChange="{{ onCatBusca }}" onFocus="{{ abrirCatLista }}" onBlur="{{ fecharCatLista }}" onKeyDown="{{ onCatBuscaTecla }}">
+                      <sc-if value="{{ catListaAberta }}" hint-placeholder-val="{{ false }}">
+                        <div id="lista-categorias" role="listbox" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 20; margin-top: 4px; max-height: 200px; overflow: auto; background: var(--color-neutral-100); border: 1px solid var(--color-divider); border-radius: var(--radius-md); box-shadow: var(--shadow-sm)">
+                          <sc-for list="{{ catDisponiveis }}" as="cd" hint-placeholder-count="4">
+                            <button type="button" role="option" aria-selected="{{ cd.selecionada }}" onMouseDown="{{ cd.onEscolher }}" style="{{ cd.style }}">{{ cd.nome }}</button>
+                          </sc-for>
+                          <sc-if value="{{ catSemDisponiveis }}" hint-placeholder-val="{{ false }}">
+                            <div style="padding: 10px 14px; font-size: 13px; color: var(--color-neutral-700)">Nenhuma categoria encontrada.</div>
+                          </sc-if>
+                        </div>
+                      </sc-if>
+                      </div>
+                    </div>
+                    <div class="field"><label for="cat-limite">Limite (R$) *</label>
+                      <input id="cat-limite" class="input" style="font-variant-numeric: tabular-nums" placeholder="0,00" value="{{ catLimite }}" onChange="{{ onCatLimite }}">
+                    </div>
+                    <sc-if value="{{ catErro }}" hint-placeholder-val="{{ false }}">
+                      <div role="alert" style="font-size: 12px; color: var(--color-danger, #b3261e)">{{ catErro }}</div>
+                    </sc-if>
+                    <div style="display: flex; gap: 12px">
+                      <button class="btn btn-primary" onClick="{{ adicionarCat }}">Adicionar</button>
+                      <button class="btn btn-secondary" onClick="{{ fecharCat }}">Cancelar</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
             </sc-if>
             <sc-if value="{{ sLancamentos }}" hint-placeholder-val="{{ false }}">
               <div style="display: flex; gap: 12px; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 4px">
@@ -558,7 +725,21 @@
                     <p style="text-align: justify; font-size: 14px; color: var(--color-neutral-800)">Sai com o cabeçalho institucional, os blocos de orçado, realizado e saldo e os lançamentos aprovados com comprovantes.</p>
                     <hr class="hr">
                     <div style="display: grid; gap: 18px">
-                      <div class="field"><label>Projeto *</label><select class="input"><option>Semear — Contraturno Escolar (CC-101)</option><option>Casa de Convivência (CC-102)</option><option>Todos os projetos</option></select></div>
+                      <div class="field"><label for="busca-projeto-prest">Projeto *</label>
+                        <div style="position: relative">
+                        <input id="busca-projeto-prest" style="width: 100%; box-sizing: border-box" type="search" class="input" role="combobox" aria-autocomplete="list" aria-controls="lista-projetos-prest" aria-expanded="{{ selAberto }}" autocomplete="off" placeholder="Digite o nome ou o centro de custo" value="{{ selBusca }}" onChange="{{ onSelBusca }}" onFocus="{{ abrirSel }}" onBlur="{{ fecharSel }}" onKeyDown="{{ onSelTecla }}">
+                        <sc-if value="{{ selAberto }}" hint-placeholder-val="{{ false }}">
+                          <div id="lista-projetos-prest" role="listbox" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 20; margin-top: 4px; max-height: 240px; overflow: auto; background: var(--color-neutral-100); border: 1px solid var(--color-divider); border-radius: var(--radius-md); box-shadow: var(--shadow-sm)">
+                            <sc-for list="{{ selOpcoes }}" as="op" hint-placeholder-count="5">
+                              <button type="button" role="option" aria-selected="{{ op.selecionado }}" onMouseDown="{{ op.onEscolher }}" style="{{ op.style }}"><span>{{ op.nome }}</span><span style="font-size: 11px; color: var(--color-neutral-600); font-variant-numeric: tabular-nums">{{ op.codigo }}</span></button>
+                            </sc-for>
+                            <sc-if value="{{ selVazio }}" hint-placeholder-val="{{ false }}">
+                              <div style="padding: 10px 14px; font-size: 13px; color: var(--color-neutral-700)">Nenhum projeto encontrado.</div>
+                            </sc-if>
+                          </div>
+                        </sc-if>
+                        </div>
+                      </div>
                       <div class="field"><label>Período de referência *</label>
                         <div class="seg" style="width: 100%">
                           <label class="seg-opt" style="flex: 1; justify-content: center"><input type="radio" name="per"><span>Mensal</span></label>
@@ -571,11 +752,6 @@
                         <div class="field"><label>De</label><input class="input" style="font-variant-numeric: tabular-nums" value="01/01/2026"></div>
                         <div class="field"><label>Até</label><input class="input" style="font-variant-numeric: tabular-nums" value="30/06/2026"></div>
                       </div>
-                      <div style="display: grid; gap: 8px">
-                        <label class="radio"><input type="checkbox" checked><span class="dot"></span>Anexar comprovantes dos lançamentos</label>
-                        <label class="radio"><input type="checkbox" checked><span class="dot"></span>Incluir quadro por categoria de despesa</label>
-                        <label class="radio"><input type="checkbox"><span class="dot"></span>Incluir lançamentos rejeitados como anexo</label>
-                      </div>
                     </div>
                   </div>
                   <aside style="display: grid; gap: 16px; align-content: start">
@@ -583,26 +759,22 @@
                       <div class="card-kicker">Prévia dos parâmetros</div>
                       <table class="table" style="font-variant-numeric: tabular-nums">
                         <tbody>
-                          <tr><th style="width: 118px">Projeto</th><td style="font-size: 13px">Semear — Contraturno Escolar</td></tr>
+                          <tr><th style="width: 118px">Projeto</th><td style="font-size: 13px">{{ prestProjetoPrevia }}</td></tr>
                           <tr><th>Período</th><td style="font-size: 13px">01/01 – 30/06/2026</td></tr>
                           <tr><th>Lançamentos</th><td style="font-size: 13px">64 aprovados · 58 comprovantes</td></tr>
                           <tr><th>Realizado</th><td style="font-size: 13px">R$ 151.900,00</td></tr>
                         </tbody>
                       </table>
                     </div>
-                    <div style="display: grid; gap: 10px">
-                      <button class="btn btn-primary btn-block" onClick="{{ abrirPrestacao }}">Gerar e visualizar</button>
-                      <div style="display: flex; gap: 10px">
-                        <button class="btn btn-secondary" style="flex: 1">Exportar PDF</button>
-                        <button class="btn btn-secondary" style="flex: 1">Exportar XLSX</button>
-                      </div>
-                    </div>
+                    <button class="btn btn-primary btn-block" onClick="{{ abrirPrestacao }}">Gerar e visualizar</button>
                   </aside>
                 </div>
               </sc-if>
               <sc-if value="{{ prestacaoGerada }}" hint-placeholder-val="{{ false }}">
-                <div style="max-width: 900px; margin: 0 auto 14px">
+                <div style="max-width: 900px; margin: 0 auto 14px; display: flex; align-items: center; gap: 10px">
                   <a href="#" onClick="{{ fecharPrestacao }}" style="font-size: 12px">← Editar parâmetros</a>
+                  <button class="btn btn-primary" style="margin-left: auto">Exportar PDF</button>
+                  <button class="btn btn-secondary">Exportar XLSX</button>
                 </div>
                 <div style="max-width: 900px; margin: 0 auto; border: 1px solid var(--color-divider); background: var(--color-neutral-100); padding: 40px 46px" class="elev-sm">
                   <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--color-divider); padding-bottom: 18px">
@@ -612,7 +784,7 @@
                     </div>
                     <div style="text-align: right; font-size: 12px; color: var(--color-neutral-700); font-variant-numeric: tabular-nums">Prestação de contas<br>01/01 – 30/06/2026<br>emitida em 12/09/2026</div>
                   </div>
-                  <h4 style="font-size: 20px; font-weight: 400; margin: 22px 0 4px">Semear — Contraturno Escolar · CC-101</h4>
+                  <h4 style="font-size: 20px; font-weight: 400; margin: 22px 0 4px">{{ prestProjetoTitulo }}</h4>
                   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); margin: 18px 0 22px">
                     <div style="padding: 16px 0"><div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Orçado</div><div style="font-family: var(--font-heading); font-size: 30px; font-variant-numeric: tabular-nums">R$ 184.000,00</div></div>
                     <div style="padding: 16px 0 16px 22px; border-left: 1px solid var(--color-divider)"><div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent)">Realizado</div><div style="font-family: var(--font-heading); font-size: 30px; font-variant-numeric: tabular-nums">R$ 151.900,00</div></div>
@@ -620,51 +792,39 @@
                   </div>
                   <div style="font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-600); margin-bottom: 8px">Lançamentos aprovados no período</div>
                   <table class="table" style="font-variant-numeric: tabular-nums">
-                    <thead><tr><th>Nº</th><th>Data</th><th>Categoria</th><th>Descrição</th><th style="text-align: right">Valor</th><th style="width: 92px">Compr.</th></tr></thead>
+                    <thead><tr><th>Nº</th><th>Data</th><th>Categoria</th><th>Descrição</th><th style="text-align: right">Valor</th></tr></thead>
                     <tbody>
                       <sc-for list="{{ relatorioLinhas }}" as="r" hint-placeholder-count="5">
-                        <tr><td style="font-size: 13px">{{ r.id }}</td><td>{{ r.data }}</td><td style="font-size: 13px">{{ r.categoria }}</td><td style="font-size: 13px">{{ r.descricao }}</td><td style="text-align: right; white-space: nowrap">{{ r.valor }}</td><td><a href="#" style="font-size: 12px">anexo</a></td></tr>
+                        <tr><td style="font-size: 13px; border-bottom: 0">{{ r.id }}</td><td style="border-bottom: 0">{{ r.data }}</td><td style="font-size: 13px; border-bottom: 0">{{ r.categoria }}</td><td style="font-size: 13px; border-bottom: 0">{{ r.descricao }}</td><td style="text-align: right; white-space: nowrap; border-bottom: 0">{{ r.valor }}</td></tr>
+                        <tr><td colspan="5" style="padding-top: 4px; padding-bottom: 18px">
+                          <figure style="margin: 0; width: 280px; break-inside: avoid">
+                            <figcaption style="font-size: 11px; color: var(--color-neutral-700); margin-bottom: 6px; font-variant-numeric: tabular-nums">Comprovante · {{ r.arquivo }}</figcaption>
+                            <div style="background: #fff; border: 1px solid var(--color-divider); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); padding: 16px 16px 14px; font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.5; color: #2b2a28">
+                              <div style="text-align: center; font-weight: 700; letter-spacing: 0.04em">{{ r.fornecedor }}</div>
+                              <div style="text-align: center; font-size: 10px; color: #6b6864">CNPJ {{ r.cnpj }}</div>
+                              <div style="border-top: 1px dashed #b9b6b0; margin: 8px 0"></div>
+                              <div style="display: flex; justify-content: space-between; font-size: 10px"><span>NF-e nº {{ r.nf }}</span><span>{{ r.data }}</span></div>
+                              <div style="border-top: 1px dashed #b9b6b0; margin: 8px 0"></div>
+                              <div>{{ r.descricao }}</div>
+                              <div style="color: #6b6864">{{ r.categoria }}</div>
+                              <div style="border-top: 1px dashed #b9b6b0; margin: 8px 0"></div>
+                              <div style="display: flex; justify-content: space-between; font-weight: 700"><span>TOTAL</span><span>{{ r.valor }}</span></div>
+                              <div style="margin-top: 10px; height: 22px; background: repeating-linear-gradient(90deg, #2b2a28 0 2px, transparent 2px 4px, #2b2a28 4px 5px, transparent 5px 8px)" aria-hidden="true"></div>
+                            </div>
+                          </figure>
+                        </td></tr>
                       </sc-for>
-                      <tr><td colspan="4" style="text-align: right; font-family: var(--font-heading)">Total do período</td><td style="text-align: right; font-family: var(--font-heading)">R$ 151.900,00</td><td></td></tr>
+                      <tr><td colspan="4" style="text-align: right; font-family: var(--font-heading)">Total do período</td><td style="text-align: right; font-family: var(--font-heading)">R$ 151.900,00</td></tr>
                     </tbody>
                   </table>
                   <div style="display: flex; gap: 10px; margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--color-divider)">
-                    <button class="btn btn-primary">Exportar PDF</button>
-                    <button class="btn btn-secondary">Exportar XLSX</button>
-                    <span style="margin-left: auto; font-size: 11px; color: var(--color-neutral-600); align-self: center">Página 1 de 9 · 58 comprovantes anexos</span>
+                    <span style="margin-left: auto; font-size: 11px; color: var(--color-neutral-600); align-self: center">Página 1 de 9 · 58 comprovantes no documento</span>
                   </div>
                 </div>
               </sc-if>
             </sc-if>
             <sc-if value="{{ sPapeisAuditoria }}" hint-placeholder-val="{{ false }}">
-              <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--color-divider); margin-bottom: 18px">
-                <sc-if value="{{ podeGerenciarUsuarios }}" hint-placeholder-val="{{ true }}">
-                  <button class="{{ tabUsuariosBtnClass }}" style="font-size: 13px" onClick="{{ irTabUsuarios }}">Usuários e papéis</button>
-                </sc-if>
-                <button class="{{ tabAuditoriaBtnClass }}" style="font-size: 13px" onClick="{{ irTabAuditoria }}">Trilha de auditoria</button>
-                <span style="margin-left: auto; font-size: 12px; color: var(--color-neutral-600)">{{ papeisAuditoriaNota }}</span>
-              </div>
-              <sc-if value="{{ tabUsuarios }}" hint-placeholder-val="{{ true }}">
-                <div style="display: flex; justify-content: flex-end; margin-bottom: 14px">
-                  <button class="btn btn-primary" style="white-space: nowrap">Novo usuário</button>
-                </div>
-                <table class="table">
-                  <thead><tr><th>Usuário</th><th>E-mail</th><th style="width: 190px">Papel</th><th>Projetos vinculados</th><th style="width: 100px">Situação</th><th></th></tr></thead>
-                  <tbody>
-                    <sc-for list="{{ usuarios }}" as="u" hint-placeholder-count="5">
-                      <tr>
-                        <td style="font-family: var(--font-heading); font-size: 15px">{{ u.nome }}</td>
-                        <td style="font-size: 13px; color: var(--color-neutral-700)">{{ u.email }}</td>
-                        <td><span class="tag {{ u.tagClass }}">{{ u.papel }}</span></td>
-                        <td style="font-size: 13px; color: var(--color-neutral-700)">{{ u.projetos }}</td>
-                        <td style="font-size: 13px">{{ u.situacao }}</td>
-                        <td style="text-align: right"><button class="btn btn-ghost" style="font-size: 12px">Editar</button></td>
-                      </tr>
-                    </sc-for>
-                  </tbody>
-                </table>
-              </sc-if>
-              <sc-if value="{{ tabAuditoria }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ tabAuditoria }}" hint-placeholder-val="{{ true }}">
                 <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px">
                   <input type="search" class="input" style="width: 260px" placeholder="Buscar por usuário, nº ou projeto" aria-label="Buscar na auditoria" value="{{ audBusca }}" onChange="{{ onAudBusca }}">
                   <select class="input" style="width: 180px" aria-label="Filtrar por ação" value="{{ audAcao }}" onChange="{{ onAudAcao }}">
@@ -754,7 +914,7 @@
                 <button class="btn btn-primary" style="font-size: 13px" onClick="{{ goDespesa }}">Refazer lançamento</button>
               </sc-if>
               <sc-if value="{{ podeVerValores }}" hint-placeholder-val="{{ true }}">
-                <button class="btn btn-ghost" style="font-size: 13px" onClick="{{ goOrcamentos }}">Ver orçamento</button>
+                <button class="btn btn-ghost" style="font-size: 13px" onClick="{{ verOrcamentoLanc }}">Ver orçamento</button>
               </sc-if>
             </div>
           </aside>
@@ -763,9 +923,9 @@
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;projetos&quot;,&quot;orcamentos&quot;,&quot;projeto-detalhe&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;lancamentos&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;,&quot;admin&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:860},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;orcamentos&quot;,&quot;options&quot;:[&quot;projetos&quot;,&quot;orcamentos&quot;,&quot;projeto-detalhe&quot;,&quot;orcamento-form&quot;,&quot;despesa-mobile&quot;,&quot;despesas-home&quot;,&quot;despesa-detalhe&quot;,&quot;auditoria-mobile&quot;,&quot;lancamentos&quot;,&quot;conciliacao&quot;,&quot;prestacao&quot;,&quot;papeis-auditoria&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;persona&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;coordenacao&quot;,&quot;options&quot;:[&quot;coordenacao&quot;,&quot;educador&quot;,&quot;direcao&quot;,&quot;voluntario&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
 class Component extends DCLogic {
-  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', editando: null, detalhe: null, decisoes: {}, selBusca: '', selProjeto: null, selAberto: false, analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '', novosProjetos: [], npNome: '', npArea: '', npInicio: '2026-01-01', npFim: '2026-12-31', npErro: '', npOk: '' };
+  state = { screen: null, history: [], persona: null, detalheOpen: false, relatorioGerado: false, userMenuOpen: false, buscaProjeto: '', filtroStatus: 'todos', filtroAlerta: false, filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', editando: null, detalhe: null, decisoes: {}, selBusca: '', selProjeto: null, selAberto: false, analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '', novosProjetos: [], npNome: '', npArea: '', npInicio: '2026-01-01', npFim: '2026-12-31', npErro: '', npOk: '' };
 
   cur() { return this.state.screen || this.props.screen || 'orcamentos'; }
   per() { return this.state.persona || this.props.persona || 'coordenacao'; }
@@ -775,35 +935,29 @@ class Component extends DCLogic {
       coordenacao: {
         label: 'Coordenação', nome: 'Luana Ferraz', papel: 'Coordenação Adm.-Financeira', iniciais: 'LF', notif: 3,
         home: 'orcamentos', escreve: true, editaOrcamento: true, aprova: true,
-        telas: ['projetos', 'orcamentos', 'projeto-detalhe', 'orcamento-form', 'despesa-mobile', 'lancamentos', 'conciliacao', 'prestacao', 'papeis-auditoria'],
-        pode: 'Perfil completo: cria orçamentos, aprova despesas e emite prestações de contas.'
+        telas: ['orcamentos', 'projeto-detalhe', 'orcamento-form', 'lancamentos', 'prestacao', 'papeis-auditoria'],
+        pode: 'Gerencia orçamentos e saldos, aprova lançamentos e emite prestações de contas.'
       },
       educador: {
         label: 'Educador', nome: 'Marcos Vieira', papel: 'Educador — Semear, Casa de Convivência', iniciais: 'MV', notif: 1,
-        home: 'despesa-mobile',
+        home: 'despesas-home',
         projetos: ['Semear — Contraturno Escolar', 'Casa de Convivência'],
         statusVisiveis: null, escreve: false, tituloLancamentos: 'Meus lançamentos',
-        telas: ['despesa-mobile', 'lancamentos'],
-        pode: 'Lança despesas e acompanha só os lançamentos dos projetos a que está vinculado.'
+        telas: ['despesas-home', 'despesa-mobile', 'despesa-detalhe', 'auditoria-mobile'],
+        pode: 'Usa só o celular: lança despesas e acompanha os próprios lançamentos.'
       },
       direcao: {
         label: 'Direção', nome: 'Jane Almeida', papel: 'Diretoria / Presidência', iniciais: 'JA', notif: 2,
         home: 'orcamentos', escreve: false,
-        telas: ['orcamentos', 'projeto-detalhe', 'projetos', 'prestacao', 'lancamentos', 'papeis-auditoria'],
-        pode: 'Somente leitura: visão consolidada, relatórios e trilha de auditoria.'
+        telas: ['orcamentos', 'projeto-detalhe', 'papeis-auditoria'],
+        pode: 'Somente leitura: acompanha orçamentos e saldos de todos os projetos.'
       },
       voluntario: {
         label: 'Voluntário', nome: 'Lucas Prado', papel: 'Voluntário Financeiro (remoto)', iniciais: 'LP', notif: 1,
         home: 'conciliacao',
         statusVisiveis: ['Aprovado', 'Conciliado'], escreve: false, tituloLancamentos: 'Lançamentos aprovados',
-        telas: ['conciliacao', 'lancamentos'],
-        pode: 'Edição limitada à conciliação bancária — não aprova despesas nem vê orçamentos.'
-      },
-      admin: {
-        label: 'Administrador', nome: 'Ana Ribeiro', papel: 'Administradora do sistema', iniciais: 'AR', notif: 0,
-        home: 'papeis-auditoria', escreve: true,
-        telas: ['papeis-auditoria'],
-        pode: 'Gerencia usuários, papéis e vínculos — sem acesso aos valores financeiros.'
+        telas: ['conciliacao', 'lancamentos', 'prestacao', 'papeis-auditoria'],
+        pode: 'Concilia o extrato bancário e gera relatórios de prestação de contas — não aprova despesas nem edita orçamentos.'
       }
     };
   }
@@ -817,10 +971,13 @@ class Component extends DCLogic {
       'orcamentos': ['Tela 1 · Épico 1 · US-01, US-02', 'Orçamentos e saldo por projeto', 'mdca.org.br/financas/orcamentos', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'orcamento-form': ['Tela 2 · Épico 1 · US-01', 'Cadastro / edição de orçamento', 'mdca.org.br/financas/orcamentos/novo', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'despesa-mobile': ['Tela 3 · Épico 2 · US-03', 'Lançamento de despesa', 'mdca.org.br/financas/despesas/nova', 'Marcos Vieira', 'Educador', 'MV'],
+      'despesas-home': ['Tela 3 · Épico 2 · US-03', 'Meus lançamentos', 'mdca.org.br/financas/despesas', 'Marcos Vieira', 'Educador', 'MV'],
+      'auditoria-mobile': ['Tela 9 · Compartilhada · US-08', 'Trilha de auditoria', 'mdca.org.br/financas/auditoria', 'Marcos Vieira', 'Educador', 'MV'],
+      'despesa-detalhe': ['Tela 3 · Épico 2 · US-03', 'Detalhe do lançamento', 'mdca.org.br/financas/despesas/detalhe', 'Marcos Vieira', 'Educador', 'MV'],
       'lancamentos': ['Tela 4 · Épico 2 · US-03, 04, 05', 'Lançamentos', 'mdca.org.br/financas/lancamentos', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
       'conciliacao': ['Tela 6 · Épico 2 · US-05', 'Conciliação bancária', 'mdca.org.br/financas/conciliacao', 'Lucas Prado', 'Voluntário Financeiro (remoto)', 'LP'],
       'prestacao': ['Tela 7 · Épico 3 · US-06', 'Prestação de contas', 'mdca.org.br/financas/prestacao', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF'],
-      'papeis-auditoria': ['Tela 9 · Compartilhada · US-08', 'Papéis, acessos e auditoria', 'mdca.org.br/admin/papeis-auditoria', 'Ana Ribeiro', 'Administradora do sistema', 'AR']
+      'papeis-auditoria': ['Tela 9 · Compartilhada · US-08', 'Trilha de auditoria', 'mdca.org.br/financas/auditoria', 'Luana Ferraz', 'Coordenação Adm.-Financeira', 'LF']
     };
   }
 
@@ -829,7 +986,7 @@ class Component extends DCLogic {
       ['Orçamento', [['Projetos', 'projetos'], ['Orçamentos e saldo', 'orcamentos']]],
       ['Lançamentos', [['Lançar despesa', 'despesa-mobile'], ['Todos os lançamentos', 'lancamentos'], ['Conciliação bancária', 'conciliacao']]],
       ['Prestação de contas', [['Prestação de contas', 'prestacao']]],
-      ['Plataforma', [['Papéis e auditoria', 'papeis-auditoria']]]
+      ['Auditoria', [['Trilha de auditoria', 'papeis-auditoria']]]
     ];
   }
 
@@ -858,11 +1015,11 @@ class Component extends DCLogic {
       ['L-1043', '12/09/2026', 'Núcleo de Arte e Cultura', 'Material didático', 1320.50, 'Pendente', 'Rita Souza', 'Tintas e pincéis para o ateliê'],
       ['L-1042', '12/09/2026', 'Semear — Contraturno Escolar', 'Alimentação', 486.90, 'Pendente', 'Marcos Vieira', 'Lanche da oficina de leitura'],
       ['L-1044', '11/09/2026', 'Casa de Convivência', 'Transporte', 1800.00, 'Pendente', 'Marcos Vieira', 'Transporte para visita ao museu'],
-      ['L-1041', '11/09/2026', 'Núcleo de Arte e Cultura', 'Material didático', 1240.00, 'Aprovado', 'Marcos Vieira'],
+      ['L-1041', '11/09/2026', 'Núcleo de Arte e Cultura', 'Material didático', 1240.00, 'Aprovado', 'Marcos Vieira', 'Papel e cola para oficina de colagem'],
       ['L-1040', '11/09/2026', 'Casa de Convivência', 'Transporte', 320.00, 'Conciliado', 'Rita Souza'],
-      ['L-1039', '10/09/2026', 'Semear — Contraturno Escolar', 'Manutenção', 2780.50, 'Rejeitado', 'Marcos Vieira'],
+      ['L-1039', '10/09/2026', 'Semear — Contraturno Escolar', 'Manutenção', 2780.50, 'Rejeitado', 'Marcos Vieira', 'Manutenção elétrica da sede'],
       ['L-1038', '09/09/2026', 'Plantão Jurídico — Defesa de Direitos', 'Serviços de terceiros', 1500.00, 'Aprovado', 'Rita Souza'],
-      ['L-1037', '08/09/2026', 'Semear — Contraturno Escolar', 'Alimentação', 742.15, 'Conciliado', 'Marcos Vieira'],
+      ['L-1037', '08/09/2026', 'Semear — Contraturno Escolar', 'Alimentação', 742.15, 'Conciliado', 'Marcos Vieira', 'Lanche da oficina de leitura — agosto'],
       ['L-1036', '05/09/2026', 'Formação de Conselheiros', 'Locação de espaço', 900.00, 'Aprovado', 'Rita Souza']
     ];
   }
@@ -884,8 +1041,7 @@ class Component extends DCLogic {
       { para: ['coordenacao', 'direcao'], novo: false },
       { para: ['coordenacao'], novo: true },
       { para: ['voluntario'], novo: true },
-      { para: ['educador'], novo: false },
-      { para: ['admin'], novo: false }
+      { para: ['educador'], novo: false }
     ];
     return todas.filter((n) => n.para.indexOf(persona) >= 0);
   }
@@ -895,17 +1051,21 @@ class Component extends DCLogic {
     const M = this.meta()[s] || [];
     const P = this.personasDef()[this.per()];
     const decisoes = this.state.decisoes || {};
-    const lancDef = this.lancamentosDef().map((l) => decisoes[l[0]] ? [...l.slice(0, 5), decisoes[l[0]].status, ...l.slice(6)] : l);
-    const aprovadoAgora = (projeto, categoria) => this.lancamentosDef()
+    const lancBase = [...(this.state.despesasNovas || []), ...this.lancamentosDef()];
+    const lancDef = lancBase.map((l) => decisoes[l[0]] ? [...l.slice(0, 5), decisoes[l[0]].status, ...l.slice(6)] : l);
+    const aprovadoAgora = (projeto, categoria) => lancBase
       .filter((l) => (decisoes[l[0]] || {}).status === 'Aprovado' && l[2] === projeto && (!categoria || l[3] === categoria))
       .reduce((a, l) => a + l[4], 0);
-    const projDef = this.projetosDef().map(([nome, cc, orcado, realizado, status]) => [nome, cc, orcado, realizado + aprovadoAgora(nome), status]);
+    const orcNovos = this.state.orcamentosNovos || [];
+    const orcDef = [...this.projetosDef(), ...orcNovos.map((o) => [o.nome, o.cc, o.valor, 0, 'Vigente', o.vigencia])];
+    const catsDef = { ...this.categoriasDef(), ...Object.fromEntries(orcNovos.map((o) => [o.nome, o.cats])) };
+    const projDef = orcDef.map(([nome, cc, orcado, realizado, status, vig]) => [nome, cc, orcado, realizado + aprovadoAgora(nome), status, vig]);
     const podeAprovar = !!P.aprova;
     const ok = P.telas.indexOf(s) >= 0;
     const on = (k) => ok && s === k;
     const go = (key) => () => {
       if (key === this.cur()) return;
-      this.setState({ screen: key, history: [...(this.state.history || []), this.cur()], detalheOpen: false, relatorioGerado: false, buscaProjeto: '', filtroStatus: 'todos', filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', npErro: '', npOk: '', analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '', selBusca: '', selProjeto: null, selAberto: false });
+      this.setState({ screen: key, history: [...(this.state.history || []), this.cur()], detalheOpen: false, relatorioGerado: false, buscaProjeto: '', filtroStatus: 'todos', filtroAlerta: false, filtroStatusLanc: 'todos', dataDe: '2026-09-01', dataAte: '2026-09-12', audBusca: '', audAcao: 'todas', audDe: '2026-09-01', audAte: '2026-09-12', npErro: '', npOk: '', analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: '', selBusca: '', selProjeto: null, selAberto: false, orcValor: null, orcInicio: null, orcFim: null, orcErro: '', orcOk: '', formCats: null, catAberto: false, dspErro: '', dspOk: '' });
     };
     const goBack = () => {
       const hist = [...(this.state.history || [])];
@@ -925,7 +1085,7 @@ class Component extends DCLogic {
       this.setState({
         persona: key,
         screen: np.telas.indexOf(this.cur()) >= 0 ? this.cur() : np.home,
-        detalheOpen: false, relatorioGerado: false, t07tab: null, userMenuOpen: false
+        detalheOpen: false, relatorioGerado: false, userMenuOpen: false
       });
     };
     const toggleUserMenu = () => this.setState({ userMenuOpen: !this.state.userMenuOpen });
@@ -933,23 +1093,16 @@ class Component extends DCLogic {
     const fecharDetalhe = () => this.setState({ detalheOpen: false });
     const abrirPrestacao = () => this.setState({ relatorioGerado: true });
     const fecharPrestacao = () => this.setState({ relatorioGerado: false });
-    const irTabUsuarios = () => this.setState({ t07tab: 'usuarios' });
-    const irTabAuditoria = () => this.setState({ t07tab: 'auditoria' });
 
-    const papelAtual = this.per();
-    const podeGerenciarUsuarios = papelAtual === 'admin';
-    const t07tab = this.state.t07tab || (podeGerenciarUsuarios ? 'usuarios' : 'auditoria');
-    const tabUsuarios = podeGerenciarUsuarios && t07tab === 'usuarios';
-    const tabAuditoria = !tabUsuarios;
 
-    const projetos = projDef.map(([nome, cc, orcado, realizado, status]) => {
+    const projetos = projDef.map(([nome, cc, orcado, realizado, status, vig]) => {
       const pct = realizado / orcado;
       const over = pct > 1;
       const warn = pct > 0.8;
       return {
         nome, cc, status, warn,
         onDetalhes: () => { go('projeto-detalhe')(); this.setState({ detalhe: nome }); },
-        vigencia: status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026',
+        vigencia: vig || (status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026'),
         orcado: this.brl(orcado), realizado: this.brl(realizado), saldo: this.brl(orcado - realizado),
         saldoColor: over ? 'var(--color-accent-700)' : 'var(--color-text)',
         pctLabel: Math.round(pct * 100) + '%',
@@ -971,10 +1124,12 @@ class Component extends DCLogic {
     const onBuscaProjeto = (e) => this.setState({ buscaProjeto: e.target.value });
     const filtroStatus = this.state.filtroStatus || 'todos';
     const onFiltroStatus = (e) => this.setState({ filtroStatus: e.target.value });
-    const passaStatus = (p) => filtroStatus === 'todos'
+    const filtroAlerta = !!this.state.filtroAlerta;
+    const onFiltroAlerta = (e) => this.setState({ filtroAlerta: e.target.checked });
+    const passaStatus = (p) => (filtroStatus === 'todos'
       || (filtroStatus === 'vigente' && p.status === 'Vigente')
-      || (filtroStatus === 'alerta' && p.warn)
-      || (filtroStatus === 'encerrado' && p.status === 'Encerrado');
+      || (filtroStatus === 'encerrado' && p.status === 'Encerrado'))
+      && (!filtroAlerta || p.warn);
     const br = (iso) => iso.split('-').reverse().join('/');
     const novos = this.state.novosProjetos || [];
     const proximoCC = 'CC-' + (106 + novos.length);
@@ -995,20 +1150,60 @@ class Component extends DCLogic {
       });
     };
     const todosProjetos = [
-      ...projDef.map(([nome, cc, orcado, realizado, status]) => {
+      ...projDef.map(([nome, cc, orcado, realizado, status, vig]) => {
         const [codigo, area] = cc.split(' · ');
         return { nome, codigo, area, status, orcamento: this.brl(orcado), orcamentoCor: 'var(--color-text)',
-          vigencia: status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026' };
+          vigencia: vig || (status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026') };
       }),
-      ...novos.map((p) => ({ nome: p.nome, codigo: p.cc, area: p.area, status: 'Vigente', orcamento: 'Sem orçamento',
+      ...novos.filter((p) => !orcNovos.some((o) => o.nome === p.nome)).map((p) => ({ nome: p.nome, codigo: p.cc, area: p.area, status: 'Vigente', orcamento: 'Sem orçamento',
         orcamentoCor: 'var(--color-neutral-600)', vigencia: br(p.inicio).slice(0, 5) + ' – ' + br(p.fim) }))
     ].map((p) => ({ ...p, tagClass: this.tagFor(p.status), orcStyle: { textAlign: 'right', whiteSpace: 'nowrap', fontSize: 14, color: p.orcamentoCor } }));
     const listaProjetos = todosProjetos.filter((p) => bate(p.nome, p.codigo, p.area));
 
-    const editado = this.projetosDef().find(([nome]) => nome === this.state.editando);
+    const editado = orcDef.find(([nome]) => nome === this.state.editando);
+    const catsForm = this.state.formCats || catsDef[editado ? editado[0] : 'Semear — Contraturno Escolar'] || [];
+    const catBusca = this.state.catBusca || '';
+    const catsConhecidas = [...new Set(Object.values(catsDef).flat().map(([c]) => c))]
+      .filter((c) => !catsForm.some(([f]) => norm(f) === norm(c))
+        && (catBusca === this.state.catEscolhida || norm(c).indexOf(norm(catBusca.trim())) >= 0))
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const fecharCat = () => this.setState({ catAberto: false });
+    const adicionarCat = () => {
+      const nome = this.state.catEscolhida || '';
+      const limite = Number((this.state.catLimite || '').replace(/[^\d,]/g, '').replace(',', '.'));
+      let erro = '';
+      if (!nome) erro = 'Escolha uma categoria.';
+      else if (catsForm.some(([c]) => norm(c) === norm(nome))) erro = 'Essa categoria já está no orçamento.';
+      else if (!(limite > 0)) erro = 'O limite deve ser maior que zero.';
+      if (erro) return this.setState({ catErro: erro });
+      this.setState({ formCats: [...catsForm, [nome, limite, 0]], catAberto: false, orcErro: '' });
+    };
+    const formValor = this.state.orcValor ?? (editado ? this.brl(editado[2]).replace('R$', '').trim() : '184.000,00');
+    const formInicio = this.state.orcInicio ?? (editado && editado[5] ? editado[5].split(' – ')[0] : '01/01/2026');
+    const formFim = this.state.orcFim ?? (editado && editado[5] ? editado[5].split(' – ')[1] : editado && editado[4] === 'Encerrado' ? '30/06/2026' : '31/12/2026');
+    const salvarOrcamento = () => {
+      if (editado) return go('orcamentos')();
+      const proj = todosProjetos.find((p) => p.nome === this.state.selProjeto);
+      const valor = Number(formValor.replace(/[^\d,]/g, '').replace(',', '.'));
+      const data = (t) => /^\d{2}\/\d{2}\/\d{4}$/.test(t.trim()) ? t.trim().split('/').reverse().join('-') : '';
+      const ini = data(formInicio), fim = data(formFim);
+      let erro = '';
+      if (!proj) erro = 'Escolha um projeto existente na lista.';
+      else if (orcDef.some(([nome]) => nome === proj.nome)) erro = '“' + proj.nome + '” já tem orçamento. Use Editar na tela de Orçamentos.';
+      else if (!(valor > 0)) erro = 'O valor total deve ser maior que zero.';
+      else if (!ini || !fim) erro = 'Informe as datas no formato dd/mm/aaaa.';
+      else if (fim <= ini) erro = 'O fim da vigência deve ser posterior ao início.';
+      else if (!catsForm.length) erro = 'Adicione ao menos uma categoria de despesa.';
+      else if (catsForm.reduce((a, [, o]) => a + o, 0) > valor) erro = 'A soma dos limites das categorias passa do valor total.';
+      if (erro) return this.setState({ orcErro: erro });
+      const novo = { nome: proj.nome, cc: proj.codigo + ' · ' + proj.area, valor,
+        vigencia: formInicio.trim().slice(0, 5) + ' – ' + formFim.trim(), cats: catsForm.map(([c, o]) => [c, o, 0]) };
+      go('orcamentos')();
+      this.setState({ orcamentosNovos: [...orcNovos, novo], orcOk: 'Orçamento de ' + proj.nome + ' (' + proj.codigo + ') salvo.' });
+    };
     const projetosFiltrados = projetos.filter((p) => bate(p.nome, p.cc) && passaStatus(p));
 
-    const totOrc = this.projetosDef().reduce((a, p) => a + p[2], 0);
+    const totOrc = orcDef.reduce((a, p) => a + p[2], 0);
     const totReal = projDef.reduce((a, p) => a + p[3], 0);
 
     const visiveis = lancDef.filter(([, , projeto, , , status]) =>
@@ -1029,7 +1224,7 @@ class Component extends DCLogic {
       { quando: '11/09 · 16:05', quem: 'Lucas Prado', acao: 'Conciliação', tagClass: 'tag-info', objeto: 'Lançamento L-1040', detalhe: 'vinculado ao extrato de 11/09' },
       { quando: '10/09 · 17:42', quem: 'Luana Ferraz', acao: 'Rejeição', tagClass: 'tag-danger', objeto: 'Lançamento L-1039', detalhe: 'motivo: nota fiscal ilegível' },
       { quando: '10/09 · 11:20', quem: 'Luana Ferraz', acao: 'Edição', tagClass: 'tag-neutral', objeto: 'Orçamento CC-103', detalhe: 'valor total 68.000 → 72.500' },
-      { quando: '09/09 · 09:58', quem: 'Ana Ribeiro', acao: 'Permissão', tagClass: 'tag-neutral', objeto: 'Usuário Rita Souza', detalhe: 'vínculo ao projeto CC-104' },
+      { quando: '09/09 · 09:58', quem: 'Luana Ferraz', acao: 'Permissão', tagClass: 'tag-neutral', objeto: 'Usuário Rita Souza', detalhe: 'vínculo ao projeto CC-104' },
       { quando: '08/09 · 07:31', quem: 'Jane Almeida', acao: 'Leitura', tagClass: 'tag-neutral', objeto: 'Prestação de contas', detalhe: 'exportou relatório consolidado 2026' }
     ];
     const audBusca = this.state.audBusca || '';
@@ -1039,7 +1234,7 @@ class Component extends DCLogic {
     const campo = (k) => (e) => this.setState({ [k]: e.target.value });
     const isoAud = (q) => '2026-' + q.slice(3, 5) + '-' + q.slice(0, 2);
     const auditoriaDecisoes = Object.keys(decisoes).map((id) => {
-      const l = this.lancamentosDef().find((x) => x[0] === id);
+      const l = lancBase.find((x) => x[0] === id);
       const d = decisoes[id];
       return d.status === 'Aprovado'
         ? { quando: '12/09 · agora', quem: P.nome, acao: 'Aprovação', tagClass: 'tag-accent', objeto: 'Lançamento ' + id, detalhe: 'debitado do saldo de ' + l[3] }
@@ -1050,7 +1245,7 @@ class Component extends DCLogic {
       && (audAcao === 'todas' || a.acao === audAcao)
       && (!audDe || isoAud(a.quando) >= audDe) && (!audAte || isoAud(a.quando) <= audAte));
 
-    const catsDe = (nome) => (this.categoriasDef()[nome] || []).map(([c, o, r]) => [c, o, r + aprovadoAgora(nome, c)]);
+    const catsDe = (nome) => (catsDef[nome] || []).map(([c, o, r]) => [c, o, r + aprovadoAgora(nome, c)]);
     const decidir = (id, status, motivo, texto) => this.setState({
       decisoes: { ...decisoes, [id]: { status, motivo } },
       analisando: null, rejeitando: false, motivoRej: '', erroMotivo: '', avisoDecisao: texto
@@ -1080,12 +1275,69 @@ class Component extends DCLogic {
 
     const lancamentos = visiveis.filter(([, data, projeto, , , status]) =>
       bate(projeto) && (filtroStatusLanc === 'todos' || status === filtroStatusLanc) && noPeriodo(data)).map((l) => ({
-      ...analisarLanc(l), projeto: l[2], onClick: abrirDetalhe
+      ...analisarLanc(l), projeto: l[2], onClick: () => this.setState({ detalheOpen: true, lancProjeto: l[2] })
     }));
+
+    const phoneTelas = ['despesas-home', 'despesa-mobile', 'despesa-detalhe', 'auditoria-mobile'];
+    const motivoBase = { 'L-1039': 'Nota fiscal ilegível na foto e valor acima do limite da categoria Manutenção. Refaça o lançamento com o comprovante legível.' };
+    const motivoDe = (id) => (decisoes[id] || {}).motivo || motivoBase[id] || '';
+    const meus = lancDef.filter((l) => l[6] === P.nome && (!P.projetos || P.projetos.indexOf(l[2]) >= 0));
+    const meusFiltro = this.state.meusFiltro || 'todos';
+    const meusProjeto = this.state.meusProjeto || 'todos';
+    const meusBusca = this.state.meusBusca || '';
+    const meusFiltrados = meus.filter(([id, , projeto, , , status, , descricao]) =>
+      (meusFiltro === 'todos' || status === meusFiltro)
+      && (meusProjeto === 'todos' || projeto === meusProjeto)
+      && (!meusBusca.trim() || norm(id + ' ' + (descricao || '')).indexOf(norm(meusBusca.trim())) >= 0));
+    const meusChips = ['todos', 'Pendente', 'Aprovado', 'Rejeitado', 'Conciliado'].map((st) => {
+      const n = st === 'todos' ? meus.length : meus.filter((l) => l[5] === st).length;
+      return { label: (st === 'todos' ? 'Todos' : st) + ' · ' + n, ativo: meusFiltro === st,
+        cls: 'btn ' + (meusFiltro === st ? 'btn-primary' : 'btn-secondary'), onClick: () => this.setState({ meusFiltro: st }) };
+    });
+    const resumoLanc = ([id, data, projeto, categoria, valor, status, , descricao]) => ({
+      id, data, projeto, categoria, status, valor: this.brl(valor), tagClass: this.tagFor(status),
+      descricao: descricao || 'Lançamento ' + id, motivo: status === 'Rejeitado' ? motivoDe(id) : ''
+    });
+    const goMeusLancamentos = go(P.telas.indexOf('despesas-home') >= 0 ? 'despesas-home' : 'lancamentos');
+    const dsDef = lancDef.find((l) => l[0] === this.state.despesaSel) || meus[0] || lancDef[0];
+    const ds = (() => {
+      const base = resumoLanc(dsDef);
+      const [id, data, projeto, categoria, valor, status, autor, descricao] = dsDef;
+      const dia = data.slice(0, 5);
+      const andamento = [{ quando: dia, quem: autor, oque: 'enviou para aprovação' }];
+      if (status === 'Aprovado' || status === 'Conciliado') andamento.push({ quando: dia, quem: 'Luana Ferraz', oque: 'aprovou o lançamento' });
+      if (status === 'Conciliado') andamento.push({ quando: dia, quem: 'Lucas Prado', oque: 'conciliou com o extrato bancário' });
+      if (status === 'Rejeitado') andamento.push({ quando: dia, quem: 'Luana Ferraz', oque: 'rejeitou o lançamento' });
+      if (status === 'Pendente') andamento.push({ quando: '—', quem: 'Coordenação', oque: 'aguardando análise' });
+      return { ...base, andamento, arquivo: 'IMG_' + id.slice(2) + '.jpg', podeRefazer: status === 'Rejeitado',
+        onRefazer: () => { go('despesa-mobile')(); this.setState({ dspProjeto: projeto, dspCategoria: categoria, dspValor: this.brl(valor).replace('R$', '').trim(), dspData: data, dspDescricao: descricao || '' }); } };
+    })();
+    const dspProjeto = this.state.dspProjeto || 'Semear — Contraturno Escolar';
+    const dspCategoria = this.state.dspCategoria || 'Alimentação';
+    const dspValor = this.state.dspValor ?? '486,90';
+    const dspData = this.state.dspData ?? '12/09/2026';
+    const dspDescricao = this.state.dspDescricao ?? 'Lanche da oficina de leitura — 32 crianças';
+    const dspCampo = (k) => (e) => this.setState({ [k]: e.target.value, dspErro: '' });
+    const enviarDespesa = () => {
+      const valor = Number(dspValor.replace(/[^\d,]/g, '').replace(',', '.'));
+      let erro = '';
+      if (!(valor > 0)) erro = 'Informe um valor maior que zero.';
+      else if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dspData.trim())) erro = 'Informe a data no formato dd/mm/aaaa.';
+      else if (!dspDescricao.trim()) erro = 'Descreva a despesa.';
+      if (erro) return this.setState({ dspErro: erro });
+      const novas = this.state.despesasNovas || [];
+      const id = 'L-' + (1045 + novas.length);
+      goMeusLancamentos();
+      this.setState({
+        despesasNovas: [[id, dspData.trim(), dspProjeto, dspCategoria, valor, 'Pendente', P.nome, dspDescricao.trim()], ...novas],
+        dspOk: id + ' enviado para aprovação.', meusFiltro: 'todos', meusProjeto: 'todos', meusBusca: '',
+        dspProjeto: null, dspCategoria: null, dspValor: null, dspData: null, dspDescricao: null
+      });
+    };
 
     const dpDef = projDef.find(([nome]) => nome === this.state.detalhe) || projDef[0];
     const dp = (() => {
-      const [nome, cc, orcado, realizado, status] = dpDef;
+      const [nome, cc, orcado, realizado, status, vig] = dpDef;
       const [codigo, area] = cc.split(' · ');
       const cats = catsDe(nome);
       const escala = Math.max(...cats.map(([, o, r]) => Math.max(o, r)), 1);
@@ -1108,7 +1360,7 @@ class Component extends DCLogic {
       const lancs = lancDef.filter(([, , projeto]) => projeto === nome).map(analisarLanc);
       return {
         nome, codigo, area, status, tagClass: this.tagFor(status),
-        vigencia: status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026',
+        vigencia: vig || (status === 'Encerrado' ? '01/01 – 30/06/2026' : '01/01 – 31/12/2026'),
         onEditar: () => { go('orcamento-form')(); this.setState({ editando: nome }); },
         kpis: [
           { label: 'Orçado', value: this.brl(orcado), note: cats.length + ' categorias', colStyle: col(0) },
@@ -1130,8 +1382,19 @@ class Component extends DCLogic {
       onMotivoRej: (e) => this.setState({ motivoRej: e.target.value, erroMotivo: '' }),
       iniciarRejeicao: () => this.setState({ rejeitando: true }),
       cancelarRejeicao: () => this.setState({ rejeitando: false, motivoRej: '', erroMotivo: '' }),
-      isPhone: s === 'despesa-mobile',
-      isDesktop: s !== 'despesa-mobile',
+      isPhone: phoneTelas.indexOf(s) >= 0,
+      isDesktop: phoneTelas.indexOf(s) < 0,
+      phoneHome: s === 'despesas-home', phoneForm: s === 'despesa-mobile', phoneDetalhe: s === 'despesa-detalhe', phoneAuditoria: s === 'auditoria-mobile',
+      phoneTitulo: s === 'despesas-home' ? 'Meus lançamentos' : s === 'despesa-detalhe' ? 'Lançamento' : s === 'auditoria-mobile' ? 'Auditoria' : 'Lançar despesa',
+      meusChips, meusBusca, meusProjeto, ds, goMeusLancamentos, enviarDespesa,
+      onMeusBusca: (e) => this.setState({ meusBusca: e.target.value }),
+      onMeusProjeto: (e) => this.setState({ meusProjeto: e.target.value }),
+      meusLancamentos: meusFiltrados.map((l) => ({ ...resumoLanc(l), onAbrir: () => { go('despesa-detalhe')(); this.setState({ despesaSel: l[0] }); } })),
+      semMeusLancamentos: meusFiltrados.length === 0,
+      meusContagem: meusFiltrados.length + (meusFiltrados.length === 1 ? ' lançamento' : ' lançamentos'),
+      dspProjeto, dspCategoria, dspValor, dspData, dspDescricao, dspErro: this.state.dspErro || '', dspOk: this.state.dspOk || '',
+      onDspProjeto: dspCampo('dspProjeto'), onDspCategoria: dspCampo('dspCategoria'), onDspValor: dspCampo('dspValor'),
+      onDspData: dspCampo('dspData'), onDspDescricao: dspCampo('dspDescricao'),
       w: 1240, h: 780,
       url: ok ? (M[2] || 'mdca.org.br/financas') : 'mdca.org.br/acesso-restrito',
       tabs: [{ title: 'MDCA · Plataforma' }, { title: 'Extrato — Banco' }],
@@ -1140,7 +1403,8 @@ class Component extends DCLogic {
       breadcrumbGroup: s === 'orcamento-form' || s === 'projeto-detalhe' ? 'Orçamento' : grupoDe(s),
       escreve: P.editaOrcamento === true,
       podeVerValores: P.telas.indexOf('orcamentos') >= 0,
-      podeRefazer: this.per() === 'educador' || this.per() === 'coordenacao',
+      podeRefazer: P.telas.indexOf('despesa-mobile') >= 0,
+      podeVerProjetos: P.telas.indexOf('projetos') >= 0,
       naoEscreve: P.editaOrcamento !== true,
       tituloLancamentos: P.tituloLancamentos || 'Todos os lançamentos',
       escopoLancamentos: P.projetos ? 'Somente os projetos aos quais você está vinculado'
@@ -1159,8 +1423,11 @@ class Component extends DCLogic {
         const termo = norm((this.state.selBusca || '').trim());
         const escolhido = this.state.selProjeto;
         const lista = todosProjetos.filter((p) => !termo || escolhido === p.nome || norm(p.nome + ' ' + p.codigo).indexOf(termo) >= 0);
-        const escolher = (p) => (e) => { e.preventDefault(); this.setState({ selProjeto: p.nome, selBusca: p.nome + ' (' + p.codigo + ')', selAberto: false }); };
+        const escolher = (p) => (e) => { e.preventDefault(); this.setState({ selProjeto: p.nome, selBusca: p.nome + ' (' + p.codigo + ')', selAberto: false, orcErro: '' }); };
+        const prest = todosProjetos.find((p) => p.nome === escolhido);
         return {
+          prestProjetoPrevia: prest ? prest.nome : '—',
+          prestProjetoTitulo: prest ? prest.nome + ' · ' + prest.codigo : 'Semear — Contraturno Escolar · CC-101',
           selBusca: this.state.selBusca || '', selAberto: !!this.state.selAberto, selVazio: lista.length === 0,
           onSelBusca: (e) => this.setState({ selBusca: e.target.value, selProjeto: null, selAberto: true }),
           abrirSel: () => this.setState({ selAberto: true }),
@@ -1180,11 +1447,15 @@ class Component extends DCLogic {
       npErro: this.state.npErro || '', npOk: this.state.npOk || '',
       onNpNome: npCampo('npNome'), onNpArea: npCampo('npArea'), onNpInicio: npCampo('npInicio'), onNpFim: npCampo('npFim'),
       formProjeto: editado ? editado[0] + ' (' + editado[1].split(' · ')[0] + ')' : '',
-      formValor: editado ? this.brl(editado[2]).replace('R$', '').trim() : '184.000,00',
-      formInicio: '01/01/2026',
-      formFim: editado && editado[4] === 'Encerrado' ? '30/06/2026' : '31/12/2026',
-      buscaProjeto: busca, onBuscaProjeto, projetosFiltrados, filtroStatus, onFiltroStatus, filtroStatusLanc, onFiltroStatusLanc, dataDe, dataAte, onDataDe, onDataAte,
+      formValor, formInicio, formFim, salvarOrcamento,
+      orcErro: this.state.orcErro || '', orcOk: this.state.orcOk || '',
+      onOrcValor: (e) => this.setState({ orcValor: e.target.value, orcErro: '' }),
+      onOrcInicio: (e) => this.setState({ orcInicio: e.target.value, orcErro: '' }),
+      onOrcFim: (e) => this.setState({ orcFim: e.target.value, orcErro: '' }),
+      buscaProjeto: busca, onBuscaProjeto, projetosFiltrados, filtroStatus, onFiltroStatus, filtroAlerta, onFiltroAlerta, filtroStatusLanc, onFiltroStatusLanc, dataDe, dataAte, onDataDe, onDataAte,
       audBusca, audAcao, audDe, audAte, semAuditoria: auditoria.length === 0,
+      audContagem: auditoria.length + (auditoria.length === 1 ? ' registro' : ' registros'),
+      goAuditoriaMobile: go('auditoria-mobile'),
       onAudBusca: campo('audBusca'), onAudAcao: campo('audAcao'), onAudDe: campo('audDe'), onAudAte: campo('audAte'),
       semProjetos: projetosFiltrados.length === 0, semLancamentos: lancamentos.length === 0,
       contagemOrcamentos: projetosFiltrados.length + (projetosFiltrados.length === 1 ? ' orçamento' : ' orçamentos') + ' · 2026',
@@ -1214,16 +1485,11 @@ class Component extends DCLogic {
       prestacaoGerada: this.state.relatorioGerado === true,
       prestacaoNaoGerada: this.state.relatorioGerado !== true,
       sDetalheDrawer: this.state.detalheOpen === true,
-      podeGerenciarUsuarios, tabUsuarios, tabAuditoria,
-      tabUsuariosBtnClass: tabUsuarios ? 'btn btn-primary' : 'btn btn-secondary',
-      tabAuditoriaBtnClass: tabAuditoria ? 'btn btn-primary' : 'btn btn-secondary',
-      papeisAuditoriaNota: tabUsuarios
-        ? 'Educador vê só os seus projetos · consolidado restrito a Coordenação e Direção'
-        : 'Registro transversal · leitura de Coordenação e Direção',
-      irTabUsuarios, irTabAuditoria,
+      tabAuditoria: true,
       projetos, lancamentos,
       goDespesa: go('despesa-mobile'),
       abrirDetalhe, fecharDetalhe, abrirPrestacao, fecharPrestacao,
+      verOrcamentoLanc: () => { const nome = this.state.lancProjeto || 'Semear — Contraturno Escolar'; go('projeto-detalhe')(); this.setState({ detalhe: nome }); },
       historico: [
         { quando: '10/09 · 09:14', quem: 'Marcos Vieira', oque: 'criou o lançamento com foto de comprovante (status pendente).' },
         { quando: '10/09 · 14:02', quem: 'Luana Ferraz', oque: 'abriu o lançamento para análise.' },
@@ -1245,24 +1511,43 @@ class Component extends DCLogic {
         { data: '03/09', historico: 'TARIFA — PACOTE DE SERVIÇOS', valor: this.brl(78.00), rowStyle: {} }
       ],
       relatorioLinhas: [
-        { id: 'L-0912', data: '28/06/2026', categoria: 'Alimentação', descricao: 'Gêneros alimentícios — junho', valor: this.brl(6480.00) },
-        { id: 'L-0898', data: '20/06/2026', categoria: 'Material didático', descricao: 'Kits de leitura (120 un.)', valor: this.brl(9240.00) },
-        { id: 'L-0871', data: '12/06/2026', categoria: 'Serviços de terceiros', descricao: 'Oficina de contação de histórias', valor: this.brl(3200.00) },
-        { id: 'L-0844', data: '05/06/2026', categoria: 'Transporte', descricao: 'Fretamento — saída pedagógica', valor: this.brl(2150.00) },
-        { id: 'L-0820', data: '31/05/2026', categoria: 'Recursos humanos', descricao: 'Equipe de educadores — maio', valor: this.brl(28400.00) }
-      ],
-      usuarios: [
-        { nome: 'Luana Ferraz', email: 'luana.ferraz@mdca.org.br', papel: 'Coordenação', tagClass: 'tag-accent', projetos: 'Todos (consolidado)', situacao: 'Ativo' },
-        { nome: 'Jane Almeida', email: 'jane.almeida@mdca.org.br', papel: 'Direção', tagClass: 'tag-accent', projetos: 'Todos (leitura)', situacao: 'Ativo' },
-        { nome: 'Marcos Vieira', email: 'marcos.vieira@mdca.org.br', papel: 'Educador', tagClass: 'tag-outline', projetos: 'Semear · Casa de Convivência', situacao: 'Ativo' },
-        { nome: 'Rita Souza', email: 'rita.souza@mdca.org.br', papel: 'Educadora', tagClass: 'tag-outline', projetos: 'Arte e Cultura · Plantão Jurídico', situacao: 'Ativo' },
-        { nome: 'Lucas Prado', email: 'lucas.prado@voluntario.org', papel: 'Voluntário Financeiro', tagClass: 'tag-neutral', projetos: 'Conciliação — todos', situacao: 'Ativo' },
-        { nome: 'Ana Ribeiro', email: 'ana.ribeiro@mdca.org.br', papel: 'Administradora', tagClass: 'tag-neutral', projetos: '—', situacao: 'Ativo' }
+        { id: 'L-0912', data: '28/06/2026', categoria: 'Alimentação', descricao: 'Gêneros alimentícios — junho', valor: this.brl(6480.00), fornecedor: 'ATACADÃO BOM PREÇO LTDA', cnpj: '12.345.678/0001-90', nf: '004.218', arquivo: 'nf-004218.pdf' },
+        { id: 'L-0898', data: '20/06/2026', categoria: 'Material didático', descricao: 'Kits de leitura (120 un.)', valor: this.brl(9240.00), fornecedor: 'LIVRARIA LER MAIS', cnpj: '23.456.789/0001-01', nf: '001.937', arquivo: 'IMG_1937.jpg' },
+        { id: 'L-0871', data: '12/06/2026', categoria: 'Serviços de terceiros', descricao: 'Oficina de contação de histórias', valor: this.brl(3200.00), fornecedor: 'CIA. CONTA COMIGO', cnpj: '34.567.890/0001-12', nf: '000.512', arquivo: 'nfs-000512.pdf' },
+        { id: 'L-0844', data: '05/06/2026', categoria: 'Transporte', descricao: 'Fretamento — saída pedagógica', valor: this.brl(2150.00), fornecedor: 'TRANSLESTE FRETAMENTO', cnpj: '45.678.901/0001-23', nf: '008.064', arquivo: 'IMG_8064.jpg' },
+        { id: 'L-0820', data: '31/05/2026', categoria: 'Recursos humanos', descricao: 'Equipe de educadores — maio', valor: this.brl(28400.00), fornecedor: 'FOLHA DE PAGAMENTO · MDCA', cnpj: '04.512.887/0001-36', nf: '05/2026', arquivo: 'folha-05-2026.pdf' }
       ],
       auditoria,
-      categorias: (this.categoriasDef()[editado ? editado[0] : 'Semear — Contraturno Escolar'] || []).map(([nome, limite]) => ({ nome, limite: this.brl(limite) })),
+      categorias: catsForm.map(([nome, limite]) => ({
+        nome, limite: this.brl(limite), rotuloRemover: 'Remover ' + nome,
+        onRemover: () => this.setState({ formCats: catsForm.filter(([c]) => c !== nome), orcErro: '' })
+      })),
+      semCategorias: catsForm.length === 0, somaCategorias: this.brl(catsForm.reduce((a, [, o]) => a + o, 0)),
+      catAberto: !!this.state.catAberto, catBusca,
+      onCatBusca: (e) => this.setState({ catBusca: e.target.value, catEscolhida: '', catListaAberta: true }),
+      catListaAberta: !!this.state.catListaAberta,
+      abrirCatLista: () => this.setState({ catListaAberta: true }),
+      fecharCatLista: () => this.setState({ catListaAberta: false }),
+      onCatBuscaTecla: (e) => {
+        if (e.key === 'Escape' && this.state.catListaAberta) { e.stopPropagation(); this.setState({ catListaAberta: false }); }
+        if (e.key === 'Enter' && catsConhecidas.length) {
+          e.preventDefault();
+          this.setState({ catEscolhida: catsConhecidas[0], catBusca: catsConhecidas[0], catListaAberta: false, catErro: '' });
+        }
+      },
+      catDisponiveis: catsConhecidas.map((nome) => {
+        const sel = this.state.catEscolhida === nome;
+        return { nome, selecionada: sel, onEscolher: (e) => { e.preventDefault(); this.setState({ catEscolhida: nome, catBusca: nome, catListaAberta: false, catErro: '' }); },
+          style: { display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', border: 0, cursor: 'pointer', font: 'inherit', fontSize: 14, color: 'var(--color-text)', background: sel ? 'var(--color-accent-100)' : 'transparent' } };
+      }), catSemDisponiveis: catsConhecidas.length === 0,
+      catEscolhida: this.state.catEscolhida || '', catLimite: this.state.catLimite || '', catErro: this.state.catErro || '',
+      onCatLimite: (e) => this.setState({ catLimite: e.target.value, catErro: '' }),
+      abrirCat: () => this.setState({ catAberto: true, catBusca: '', catEscolhida: '', catListaAberta: false, catLimite: '', catErro: '' }),
+      fecharCat, adicionarCat,
+      fecharCatFundo: (e) => { if (e.target === e.currentTarget) fecharCat(); },
+      onCatTecla: (e) => { if (e.key === 'Escape') fecharCat(); if (e.key === 'Enter' && e.target.id === 'cat-limite') adicionarCat(); },
       kpis: [
-        { label: 'Orçado — todos os projetos', value: this.k(totOrc), note: '5 centros de custo · exercício 2026', colStyle: { padding: '18px 24px 18px 0' } },
+        { label: 'Orçado — todos os projetos', value: this.k(totOrc), note: orcDef.length + ' centros de custo · exercício 2026', colStyle: { padding: '18px 24px 18px 0' } },
         { label: 'Realizado (aprovado)', value: this.k(totReal), note: Math.round(totReal / totOrc * 100) + '% do orçado consumido', colStyle: { padding: '18px 24px', borderLeft: '1px solid var(--color-divider)' } },
         { label: 'Saldo disponível', value: this.k(totOrc - totReal), note: '1 projeto acima de 100%', colStyle: { padding: '18px 0 18px 24px', borderLeft: '1px solid var(--color-divider)' } }
       ],
