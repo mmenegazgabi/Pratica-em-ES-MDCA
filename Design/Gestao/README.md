@@ -18,6 +18,8 @@ Edite `style.css` para alterar o visual. Para manter Gestão e Finanças iguais,
 
 Os botões de perfil no menu lateral permitem explorar os acessos simulados. O guia contém percursos de demonstração e a opção de reiniciar os dados de exemplo.
 
+A opção **Prévia para celular** no menu lateral abre uma moldura de 390 × 844 px com atalhos para a visão geral, lista e detalhe de atividades, cadastro e auditoria. A prévia usa os dados fictícios do protótipo sem gravar alterações no armazenamento local.
+
 Os dados são fictícios e ficam no navegador. Login, permissões, auditoria e sincronização são simulações. Não há API, banco remoto, autenticação real ou infraestrutura implantada. Os anexos guardam apenas metadados; a importação CSV lê o arquivo local. A exportação PDF usa a impressão do navegador e a exportação XLSX gera uma planilha local.
 
 O link Finanças abre o protótipo da pasta vizinha, sem compartilhar sessão ou dados. As funcionalidades próprias de Gestão foram preservadas, com navegação hierárquica e indicadores atualizados ao padrão visual financeiro.
