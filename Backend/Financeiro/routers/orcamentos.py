@@ -1,13 +1,25 @@
 import uuid
 from datetime import date
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 if __package__ == "routers":
+    from alerta_saldo import (
+        NivelAlerta,
+        calcular_percentual_consumido,
+        calcular_realizado,
+        classificar_nivel_alerta,
+    )
     from orcamento import Orcamento
 else:
+    from ..alerta_saldo import (
+        NivelAlerta,
+        calcular_percentual_consumido,
+        calcular_realizado,
+        classificar_nivel_alerta,
+    )
     from ..orcamento import Orcamento
 
 router = APIRouter(tags=["orcamentos"])
@@ -33,6 +45,24 @@ class OrcamentoDetalhe(BaseModel):
     data_fim: date
     categorias_despesa: List[str]
     saldo: float
+
+    # T-08 · US-02: indicador de consumo com alerta em 80% e 100%.
+    # Calculados a partir de valor_total e saldo para que as telas não
+    # precisem repetir a regra dos limiares.
+    @computed_field
+    @property
+    def realizado(self) -> float:
+        return calcular_realizado(self.valor_total, self.saldo)
+
+    @computed_field
+    @property
+    def percentual_consumido(self) -> Optional[float]:
+        return calcular_percentual_consumido(self.valor_total, self.realizado)
+
+    @computed_field
+    @property
+    def nivel_alerta(self) -> NivelAlerta:
+        return classificar_nivel_alerta(self.valor_total, self.realizado)
 
 
 class OrcamentosPaginados(BaseModel):

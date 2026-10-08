@@ -1,0 +1,79 @@
+/* T-08 · US-02 — Indicador de saldo.
+   Faixas: < 80% verde (neutra) · 80–99% amarelo (alerta) · ≥ 100% vermelho (crítica).
+   As cores vêm do JS (indicador-saldo.js → CORES) nas variáveis
+   --indicador-cor, --indicador-cor-texto e --indicador-cor-fundo. */
+
+.indicador-saldo {
+  --indicador-trilho: var(--color-neutral-200, #efeeeb);
+  --indicador-borda: var(--color-divider, #e4e2de);
+
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+  font-family: var(--font-body, system-ui, sans-serif);
+  font-variant-numeric: tabular-nums;
+}
+
+.indicador-saldo__valores {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.indicador-saldo__saldo {
+  font-weight: 600;
+}
+
+.indicador-saldo__percentual {
+  color: var(--color-neutral-700, #524f4b);
+}
+
+.indicador-saldo__barra {
+  position: relative;
+  height: 10px;
+  background: var(--indicador-trilho);
+  border: 1px solid var(--indicador-borda);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.indicador-saldo__preenchimento {
+  height: 100%;
+  background: var(--indicador-cor);
+  border-right: 2px solid var(--indicador-cor-texto);
+  transition: width 0.2s ease;
+}
+
+/* Linha de referência fixa em 80% */
+.indicador-saldo__marca {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 80%;
+  width: 1px;
+  background: var(--color-neutral-800, #3a3835);
+}
+
+.indicador-saldo__alerta {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--indicador-cor-texto);
+  background: var(--indicador-cor-fundo);
+}
+
+.indicador-saldo__icone {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.indicador-saldo--estourado .indicador-saldo__saldo {
+  color: var(--indicador-cor-texto);
+}
