@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Indicador de saldo · demo</title>
+  <link rel="stylesheet" href="./indicador-saldo.css">
+  <style>
+    body { margin: 0; padding: 32px 16px; background: #fff; color: #201f1d; font-family: system-ui, sans-serif; }
+    main { max-width: 560px; margin: 0 auto; display: grid; gap: 24px; }
+    h1 { font-size: 20px; margin: 0; }
+    p { margin: 0; color: #524f4b; font-size: 14px; }
+    .caso { display: grid; gap: 8px; padding: 16px; border: 1px solid #e4e2de; border-radius: 8px; }
+    .caso h2 { font-size: 14px; margin: 0; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Indicador de saldo — T-08 · US-02</h1>
+    <p>Exemplos com o mesmo formato que a API devolve em <code>GET /orcamentos/{id}</code>.
+       Sirva a pasta com <code>python3 -m http.server</code> para abrir esta página.</p>
+    <div id="casos"></div>
+  </main>
+  <script type="module">
+    import { criarIndicadorSaldo } from "./indicador-saldo.js";
+
+    const casos = [
+      ["50% consumido", { saldo: 500, percentual_consumido: 50, nivel_alerta: "normal" }],
+      ["79,99% consumido", { saldo: 200.1, percentual_consumido: 79.99, nivel_alerta: "normal" }],
+      ["Exatamente 80%", { saldo: 200, percentual_consumido: 80, nivel_alerta: "atencao" }],
+      ["95% consumido", { saldo: 50, percentual_consumido: 95, nivel_alerta: "atencao" }],
+      ["Exatamente 100%", { saldo: 0, percentual_consumido: 100, nivel_alerta: "estourado" }],
+      ["120% consumido", { saldo: -200, percentual_consumido: 120, nivel_alerta: "estourado" }],
+    ];
+
+    const destino = document.getElementById("casos");
+    destino.style.display = "grid";
+    destino.style.gap = "12px";
+    for (const [titulo, orcamento] of casos) {
+      const caso = document.createElement("section");
+      caso.className = "caso";
+      const h2 = document.createElement("h2");
+      h2.textContent = titulo;
+      caso.append(h2, criarIndicadorSaldo(orcamento));
+      destino.append(caso);
+    }
+  </script>
+</body>
+</html>
