@@ -1,16 +1,9 @@
-/* T-08 · US-02 — Indicador de saldo com alerta em 80% (amarelo) e 100% (vermelho).
-   Cores seguem os tokens de status do design system MDCA; os valores após a
-   vírgula são o fallback quando a página não carrega o design system. */
+/* T-08 · US-02 — Indicador de saldo.
+   Faixas: < 80% verde (neutra) · 80–99% amarelo (alerta) · ≥ 100% vermelho (crítica).
+   As cores vêm do JS (indicador-saldo.js → CORES) nas variáveis
+   --indicador-cor, --indicador-cor-texto e --indicador-cor-fundo. */
 
 .indicador-saldo {
-  --indicador-normal: var(--color-neutral-600, #6b6864);
-  --indicador-normal-fundo: var(--color-neutral-300, #e2e0dc);
-  --indicador-atencao: var(--status-pending, #fde118);
-  --indicador-atencao-texto: #6b5a00;
-  --indicador-atencao-fundo: #fdf6c4;
-  --indicador-estourado: var(--status-rejected, #f02d34);
-  --indicador-estourado-texto: #b3261e;
-  --indicador-estourado-fundo: #fdeaea;
   --indicador-trilho: var(--color-neutral-200, #efeeeb);
   --indicador-borda: var(--color-divider, #e4e2de);
 
@@ -48,8 +41,8 @@
 
 .indicador-saldo__preenchimento {
   height: 100%;
-  background: var(--indicador-normal-fundo);
-  border-right: 2px solid var(--indicador-normal);
+  background: var(--indicador-cor);
+  border-right: 2px solid var(--indicador-cor-texto);
   transition: width 0.2s ease;
 }
 
@@ -72,8 +65,8 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--indicador-normal);
-  background: var(--indicador-trilho);
+  color: var(--indicador-cor-texto);
+  background: var(--indicador-cor-fundo);
 }
 
 .indicador-saldo__icone {
@@ -81,28 +74,6 @@
   line-height: 1;
 }
 
-/* — Atenção: 80% ou mais — */
-.indicador-saldo--atencao .indicador-saldo__preenchimento {
-  background: var(--indicador-atencao);
-  border-right-color: var(--indicador-atencao-texto);
-}
-
-.indicador-saldo--atencao .indicador-saldo__alerta {
-  color: var(--indicador-atencao-texto);
-  background: var(--indicador-atencao-fundo);
-}
-
-/* — Estourado: 100% ou mais — */
-.indicador-saldo--estourado .indicador-saldo__preenchimento {
-  background: var(--indicador-estourado);
-  border-right-color: var(--indicador-estourado-texto);
-}
-
-.indicador-saldo--estourado .indicador-saldo__alerta {
-  color: var(--indicador-estourado-texto);
-  background: var(--indicador-estourado-fundo);
-}
-
 .indicador-saldo--estourado .indicador-saldo__saldo {
-  color: var(--indicador-estourado-texto);
+  color: var(--indicador-cor-texto);
 }
