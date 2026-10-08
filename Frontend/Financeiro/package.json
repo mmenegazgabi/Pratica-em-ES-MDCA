@@ -1,0 +1,8 @@
+{
+  "name": "mdca-frontend-financeiro",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
