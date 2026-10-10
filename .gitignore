@@ -3,6 +3,10 @@ __pycache__/
 .venv/
 .pytest_cache/
 .DS_Store
+.idea/
+.vscode/
+.claude/
+.github/
 venv/
 .env
 .env.*

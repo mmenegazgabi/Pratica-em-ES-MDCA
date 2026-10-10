@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 if __package__ == "routers":
-    from orcamento import Orcamento
+    from orcamento import AprovacaoInvalida, LancamentoNaoEncontrado, Orcamento
 else:
-    from ..orcamento import Orcamento
+    from ..orcamento import AprovacaoInvalida, LancamentoNaoEncontrado, Orcamento
 
 router = APIRouter(tags=["orcamentos"])
 
@@ -99,3 +99,33 @@ def listar_orcamentos_do_projeto(
 @router.get("/orcamentos/{orcamento_id}", response_model=OrcamentoDetalhe)
 def obter_orcamento(orcamento_id: str) -> Orcamento:
     return _buscar_orcamento(orcamento_id)
+
+
+@router.post(
+    "/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/aprovar",
+    response_model=OrcamentoDetalhe,
+)
+def aprovar_lancamento(orcamento_id: str, lancamento_id: str) -> Orcamento:
+    orcamento = _buscar_orcamento(orcamento_id)
+    try:
+        orcamento.aprovar_lancamento(lancamento_id)
+    except LancamentoNaoEncontrado as erro:
+        raise HTTPException(status_code=404, detail=str(erro)) from erro
+    except AprovacaoInvalida as erro:
+        raise HTTPException(status_code=409, detail=str(erro)) from erro
+    return orcamento
+
+
+@router.post(
+    "/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/reverter-aprovacao",
+    response_model=OrcamentoDetalhe,
+)
+def reverter_aprovacao(orcamento_id: str, lancamento_id: str) -> Orcamento:
+    orcamento = _buscar_orcamento(orcamento_id)
+    try:
+        orcamento.reverter_aprovacao(lancamento_id)
+    except LancamentoNaoEncontrado as erro:
+        raise HTTPException(status_code=404, detail=str(erro)) from erro
+    except AprovacaoInvalida as erro:
+        raise HTTPException(status_code=409, detail=str(erro)) from erro
+    return orcamento
