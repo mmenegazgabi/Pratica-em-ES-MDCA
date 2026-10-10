@@ -11,6 +11,14 @@ class StatusLancamento(Enum):
     REJEITADO = "rejeitado"
 
 
+class LancamentoNaoEncontrado(ValueError):
+    pass
+
+
+class AprovacaoInvalida(ValueError):
+    pass
+
+
 @dataclass
 class Lancamento:
     valor: float
@@ -47,7 +55,7 @@ class Orcamento:
             (l for l in self.lancamentos if l.id == lancamento_id), None
         )
         if lancamento is None:
-            raise ValueError("Lançamento não encontrado")
+            raise LancamentoNaoEncontrado("Lançamento não encontrado")
         return lancamento
 
     def aprovar_lancamento(self, lancamento_id: str) -> None:
@@ -55,6 +63,10 @@ class Orcamento:
             lancamento = self._buscar_lancamento(lancamento_id)
             if lancamento.status == StatusLancamento.APROVADO:
                 return
+            if lancamento.status == StatusLancamento.REJEITADO:
+                raise AprovacaoInvalida(
+                    "Lançamento rejeitado não pode ser aprovado"
+                )
 
             lancamento.status = StatusLancamento.APROVADO
             self.saldo_atual -= lancamento.valor
@@ -63,7 +75,7 @@ class Orcamento:
         with self._lock:
             lancamento = self._buscar_lancamento(lancamento_id)
             if lancamento.status != StatusLancamento.APROVADO:
-                raise ValueError("Lançamento não está aprovado")
+                raise AprovacaoInvalida("Lançamento não está aprovado")
 
             lancamento.status = StatusLancamento.PENDENTE
             self.saldo_atual += lancamento.valor
