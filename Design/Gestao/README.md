@@ -7,16 +7,18 @@ Abra `index.html` para usar os arquivos separados ou `MDCA_Gestao_E2.html` para 
 ## Arquivos para editar
 
 - `index.html`: entrada das telas.
-- `style.css`: estilos Classical, fontes locais, layout e adaptação mobile.
+- `style.css`: tokens e componentes do design system MDCA (os mesmos do Financeiro, em `../Financeiro/_ds/mdca-…/styles.css`), fontes locais, layout e adaptação mobile.
 - `app.js`: telas, navegação e interações com dados fictícios.
-- `assets/`: fontes locais.
+- `assets/`: fontes locais (Bitter e General Sans, em woff2), embutidas no HTML portátil pelo `build.mjs`.
 - `build.mjs`: gera o HTML portátil. Execute `node build.mjs` nesta pasta após editar os arquivos acima. Não exige instalação de pacotes.
 
-Os arquivos antigos `classical.css`, `layout.css` e `fonts.css` foram preservados como referência; não são carregados pela versão atual. Edite `style.css` para alterar o visual.
+Edite `style.css` para alterar o visual. Para manter Gestão e Finanças iguais, mudanças no design system devem ser feitas no `styles.css` do Financeiro e copiadas para o bloco MDCA no topo do `style.css`.
 
 ## Uso e limites
 
 Os botões de perfil no menu lateral permitem explorar os acessos simulados. O guia contém percursos de demonstração e a opção de reiniciar os dados de exemplo.
+
+A opção **Prévia para celular** no menu lateral abre uma moldura de 390 × 844 px com atalhos para a visão geral, lista e detalhe de atividades, cadastro e auditoria. A prévia usa os dados fictícios do protótipo sem gravar alterações no armazenamento local.
 
 Os dados são fictícios e ficam no navegador. Login, permissões, auditoria e sincronização são simulações. Não há API, banco remoto, autenticação real ou infraestrutura implantada. Os anexos guardam apenas metadados; a importação CSV lê o arquivo local. A exportação PDF usa a impressão do navegador e a exportação XLSX gera uma planilha local.
 

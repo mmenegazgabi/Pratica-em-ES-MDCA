@@ -3,9 +3,9 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app
-from orcamento import Lancamento, Orcamento, StatusLancamento
-from routers.orcamentos import _orcamentos
+from Financeiro.main import app
+from Financeiro.orcamento import Lancamento, Orcamento, StatusLancamento
+from Financeiro.routers.orcamentos import _orcamentos
 
 client = TestClient(app)
 
@@ -363,3 +363,61 @@ def test_post_aprovar_lancamento_rejeitado_retorna_409_sem_alterar_saldo():
     assert response.status_code == 409
     assert lancamento.status == StatusLancamento.REJEITADO
     assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 1000
+
+
+def test_get_orcamentos_do_projeto_retorna_valor_vigencia_e_categorias():
+    _orcamentos.append(
+        orcamento_de_teste(
+            id="orcamento-1",
+            projeto_id="projeto-1",
+            categorias_despesa=["materiais", "transporte"],
+        )
+    )
+    _orcamentos.append(orcamento_de_teste(id="orcamento-2", projeto_id="projeto-2"))
+
+    response = client.get("/orcamentos/projeto/projeto-1")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    item = body["itens"][0]
+    assert item["id"] == "orcamento-1"
+    assert item["valor_total"] == 1000
+    assert item["data_inicio"] == "2026-01-01"
+    assert item["data_fim"] == "2026-12-31"
+    assert item["categorias_despesa"] == ["materiais", "transporte"]
+
+
+def test_get_orcamentos_de_projeto_sem_orcamento_retorna_lista_vazia():
+    response = client.get("/orcamentos/projeto/projeto-sem-orcamento")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["itens"] == []
+    assert body["total"] == 0
+
+
+def test_get_orcamentos_do_projeto_pagina_historico_mais_recente_primeiro():
+    for ano in (2024, 2025, 2026):
+        _orcamentos.append(
+            orcamento_de_teste(
+                id=f"orcamento-{ano}",
+                data_inicio=date(ano, 1, 1),
+                data_fim=date(ano, 12, 31),
+            )
+        )
+
+    primeira = client.get("/orcamentos/projeto/projeto-1?pagina=1&tamanho=2").json()
+    segunda = client.get("/orcamentos/projeto/projeto-1?pagina=2&tamanho=2").json()
+
+    assert primeira["total"] == 3
+    assert [o["id"] for o in primeira["itens"]] == ["orcamento-2026", "orcamento-2025"]
+    assert [o["id"] for o in segunda["itens"]] == ["orcamento-2024"]
+    assert segunda["pagina"] == 2
+    assert segunda["tamanho"] == 2
+
+
+def test_get_orcamentos_do_projeto_com_pagina_invalida_retorna_422():
+    response = client.get("/orcamentos/projeto/projeto-1?pagina=0")
+
+    assert response.status_code == 422

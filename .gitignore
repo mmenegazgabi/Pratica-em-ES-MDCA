@@ -7,3 +7,10 @@ __pycache__/
 .vscode/
 .claude/
 .github/
+venv/
+.env
+.env.*
+!.env.example
+env-vars.yaml
+.local/
+gha-creds-*.json

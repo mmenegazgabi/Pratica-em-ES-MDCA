@@ -2,10 +2,13 @@ import uuid
 from datetime import date
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
-from orcamento import AprovacaoInvalida, LancamentoNaoEncontrado, Orcamento
+if __package__ == "routers":
+    from orcamento import AprovacaoInvalida, LancamentoNaoEncontrado, Orcamento
+else:
+    from ..orcamento import AprovacaoInvalida, LancamentoNaoEncontrado, Orcamento
 
 router = APIRouter(tags=["orcamentos"])
 
@@ -32,6 +35,19 @@ class OrcamentoDetalhe(BaseModel):
     saldo: float
 
 
+class OrcamentosPaginados(BaseModel):
+    itens: List[OrcamentoDetalhe]
+    total: int
+    pagina: int
+    tamanho: int
+
+
+def autorizar_leitura_projeto(projeto_id: str) -> str:
+    # Ponto de integração com o RBAC da US-08: quando implementado,
+    # deve levantar 403 se o usuário não puder ver o projeto.
+    return projeto_id
+
+
 def _buscar_orcamento(orcamento_id: str) -> Orcamento:
     for orcamento in _orcamentos:
         if orcamento.id == orcamento_id:
@@ -55,6 +71,29 @@ def criar_orcamento(payload: OrcamentoCreate) -> Orcamento:
     orcamento = Orcamento(id=str(uuid.uuid4()), **payload.model_dump())
     _orcamentos.append(orcamento)
     return orcamento
+
+
+@router.get("/orcamentos/projeto/{projeto_id}", response_model=OrcamentosPaginados)
+def listar_orcamentos_do_projeto(
+    projeto_id: str = Depends(autorizar_leitura_projeto),
+    pagina: int = Query(1, ge=1),
+    tamanho: int = Query(10, ge=1, le=100),
+) -> OrcamentosPaginados:
+    do_projeto = sorted(
+        (o for o in _orcamentos if o.projeto_id == projeto_id),
+        key=lambda o: o.data_inicio,
+        reverse=True,
+    )
+    inicio = (pagina - 1) * tamanho
+    return OrcamentosPaginados(
+        itens=[
+            OrcamentoDetalhe.model_validate(o)
+            for o in do_projeto[inicio : inicio + tamanho]
+        ],
+        total=len(do_projeto),
+        pagina=pagina,
+        tamanho=tamanho,
+    )
 
 
 @router.get("/orcamentos/{orcamento_id}", response_model=OrcamentoDetalhe)
