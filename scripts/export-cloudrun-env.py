@@ -6,7 +6,7 @@ from pathlib import Path
 from dotenv import dotenv_values
 
 REQUIRED = ("DATABASE_URL", "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME", "CORS_ORIGINS")
-OPTIONAL = ("APP_NAME", "R2_PUBLIC_URL")
+OPTIONAL = ("APP_NAME", "R2_PUBLIC_URL", "FINANCEIRO_API_TOKEN")
 values = dotenv_values(sys.argv[1])
 missing = [key for key in REQUIRED if not values.get(key)]
 if missing:
