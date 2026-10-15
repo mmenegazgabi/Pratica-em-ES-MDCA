@@ -34,6 +34,9 @@ python3 -m venv .venv
 Endpoints: `/health` verifica a API; `/db/health` verifica PostgreSQL;
 `/storage/health` verifica o R2; `POST /files` recebe `arquivo` e `pasta`
 como multipart; `/orcamentos` e `/orcamentos/{id}` expõem o domínio Financeiro.
+`POST /comprovantes` e `GET /comprovantes/{ano}/{mes}/{arquivo}` guardam e
+devolvem comprovantes do bucket privado, com autenticação obrigatória; veja
+[armazenamento-comprovantes.md](armazenamento-comprovantes.md).
 O banco é consultado sob demanda, permitindo que a API inicie mesmo quando
 uma dependência estiver indisponível. A antiga tabela de teste `app_metadata`
 não é criada automaticamente durante o início do serviço.
