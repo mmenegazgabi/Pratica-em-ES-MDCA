@@ -37,6 +37,8 @@ como multipart; `/orcamentos` e `/orcamentos/{id}` expõem o domínio Financeiro
 `POST /comprovantes` e `GET /comprovantes/{ano}/{mes}/{arquivo}` guardam e
 devolvem comprovantes do bucket privado, com autenticação obrigatória; veja
 [armazenamento-comprovantes.md](armazenamento-comprovantes.md).
+`POST /lancamentos` cria uma despesa pendente de aprovação com o comprovante
+anexado no mesmo envio (mesmo documento).
 O banco é consultado sob demanda, permitindo que a API inicie mesmo quando
 uma dependência estiver indisponível. A antiga tabela de teste `app_metadata`
 não é criada automaticamente durante o início do serviço.
