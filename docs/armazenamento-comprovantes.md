@@ -29,6 +29,37 @@ Regras do upload:
 - A leitura só aceita chaves nesse formato, então a rota não lê arquivos de
   outras pastas do bucket (como os documentos da Gestão).
 
+## Lançamento com comprovante (T-12)
+
+`POST /lancamentos` cria a despesa e envia o comprovante no mesmo pedido
+(`multipart/form-data`), com autenticação obrigatória:
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `orcamento_id` | texto | orçamento existente (senão 404) |
+| `valor` | número | maior que zero |
+| `descricao` | texto | 1 a 200 caracteres |
+| `categoria` | texto | uma das `categorias_despesa` do orçamento |
+| `data_despesa` | data (AAAA-MM-DD) | dentro da vigência do orçamento |
+| `comprovante` | arquivo | **obrigatório**; mesmas regras de tipo e tamanho acima |
+
+- Sem comprovante: HTTP 400 `"Comprovante obrigatório."`.
+- Lançamento válido: HTTP 201 com `status: "pendente"` e
+  `status_descricao: "Pendente de aprovação"`. Pendente não altera o saldo;
+  só a aprovação (T-07) debita.
+- Os dados são validados **antes** do envio ao R2, para não deixar arquivo
+  sem lançamento no bucket.
+
+Exemplo:
+
+```bash
+curl -X POST https://<api>/lancamentos \
+  -H "Authorization: Bearer $FINANCEIRO_API_TOKEN" \
+  -F orcamento_id=<id> -F valor=150.75 -F descricao="Lanche da oficina" \
+  -F categoria=materiais -F data_despesa=2026-10-10 \
+  -F comprovante=@nota.jpg
+```
+
 ## Autenticação (provisória até a US-08)
 
 Enquanto não existe login de usuários, as rotas exigem um token de serviço:

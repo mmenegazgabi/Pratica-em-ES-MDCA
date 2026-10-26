@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from Financeiro.routers.comprovantes import router as comprovantes_router
+from Financeiro.routers.lancamentos import router as lancamentos_router
 from Financeiro.routers.orcamentos import router as orcamentos_router
 from Shared.infra_api import router as infra_router
 
@@ -12,6 +13,7 @@ app = FastAPI(title="API — Plataforma MDCA")
 app.include_router(infra_router)
 app.include_router(orcamentos_router)
 app.include_router(comprovantes_router)
+app.include_router(lancamentos_router)
 origins = [origin.strip() for origin in os.getenv(
     "CORS_ORIGINS", "http://localhost:8080,http://127.0.0.1:8080"
 ).split(",") if origin.strip()]

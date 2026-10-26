@@ -1,8 +1,10 @@
+import math
 import threading
 import uuid
 from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum
+from typing import Optional
 
 
 class StatusLancamento(Enum):
@@ -19,11 +21,20 @@ class AprovacaoInvalida(ValueError):
     pass
 
 
+class LancamentoInvalido(ValueError):
+    """Dados do lançamento não batem com o orçamento (T-12)."""
+
+
 @dataclass
 class Lancamento:
     valor: float
     status: StatusLancamento
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    # T-12 · US-03: dados da despesa e chave do comprovante no R2.
+    descricao: str = ""
+    categoria: str = ""
+    data_despesa: Optional[date] = None
+    comprovante_chave: Optional[str] = None
 
 
 @dataclass
@@ -79,3 +90,33 @@ class Orcamento:
 
             lancamento.status = StatusLancamento.PENDENTE
             self.saldo_atual += lancamento.valor
+
+    def registrar_lancamento(self, lancamento: Lancamento) -> Lancamento:
+        """Adiciona um lançamento novo, sempre como pendente de aprovação.
+
+        Lançamento pendente não altera o saldo; só a aprovação (T-07) debita.
+        """
+        self.validar_lancamento(
+            lancamento.valor, lancamento.categoria, lancamento.data_despesa
+        )
+        with self._lock:
+            lancamento.status = StatusLancamento.PENDENTE
+            self.lancamentos.append(lancamento)
+        return lancamento
+
+    def validar_lancamento(
+        self, valor: float, categoria: str, data_despesa: Optional[date]
+    ) -> None:
+        if not math.isfinite(valor) or valor <= 0:
+            raise LancamentoInvalido("O valor do lançamento deve ser maior que zero.")
+        if categoria not in self.categorias_despesa:
+            raise LancamentoInvalido(
+                "Categoria não pertence ao orçamento. Categorias válidas: "
+                + ", ".join(self.categorias_despesa)
+            )
+        if data_despesa is not None and not (
+            self.data_inicio <= data_despesa <= self.data_fim
+        ):
+            raise LancamentoInvalido(
+                "A data da despesa está fora da vigência do orçamento."
+            )
