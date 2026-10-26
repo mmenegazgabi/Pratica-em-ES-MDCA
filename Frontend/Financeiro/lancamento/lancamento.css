@@ -1,0 +1,250 @@
+/* T-13 · US-03 — Lançamento de despesa no celular.
+   Cores e tipografia do design system MDCA (Design/Financeiro/_ds/mdca-*),
+   mesma referência da Tela 3 do protótipo. Mobile-first: tudo cabe a partir
+   de 320 px de largura, sem zoom nem rolagem horizontal. */
+
+:root {
+  --cor-fundo: #fffdf1;
+  --cor-superficie: #f6efd7;
+  --cor-texto: #1e1e1e;
+  --cor-texto-suave: #5c5c5c;
+  --cor-borda: rgba(0, 0, 0, 0.16);
+  --cor-destaque: #6aba60;
+  --cor-destaque-forte: #436d43;
+  --cor-destaque-claro: #e6f3e3;
+  --cor-erro: #b3261e;
+  --cor-erro-fundo: #fdeaea;
+  --cor-pendente-fundo: #fdf6c4;
+  --cor-pendente-texto: #6b5a00;
+  --fonte-titulo: "Bitter", Georgia, serif;
+  --fonte-corpo: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --raio: 10px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-family: var(--fonte-corpo);
+  font-size: 16px;
+  line-height: 1.45;
+  overflow-x: hidden;
+}
+
+[hidden] { display: none !important; }
+
+:focus-visible { outline: 3px solid var(--cor-destaque-forte); outline-offset: 2px; }
+
+/* — Topo — */
+.topo {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  padding: max(8px, env(safe-area-inset-top)) 8px 8px;
+  background: var(--cor-destaque-forte);
+  color: #fff;
+}
+.topo__titulo {
+  margin: 0;
+  text-align: center;
+  font-family: var(--fonte-titulo);
+  font-size: 18px;
+  font-weight: 600;
+}
+.topo__voltar, .topo__acesso {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 24px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.topo__acesso { font-size: 20px; }
+
+/* — Conteúdo — */
+.conteudo {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+}
+
+.campos { display: grid; gap: 16px; }
+
+.linha {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.campo { display: grid; gap: 6px; align-content: start; min-width: 0; margin: 0; padding: 0; border: 0; }
+.campo > label, .campo > legend {
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cor-texto);
+}
+
+/* 16px evita o zoom automático do iPhone ao tocar no campo */
+.entrada {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: #fff;
+  color: var(--cor-texto);
+  font: inherit;
+  font-size: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+select.entrada {
+  padding-right: 36px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--cor-texto-suave) 50%),
+    linear-gradient(135deg, var(--cor-texto-suave) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+}
+select.entrada:disabled { background-color: var(--cor-superficie); color: var(--cor-texto-suave); }
+.entrada--valor { font-family: var(--fonte-titulo); font-size: 20px; font-variant-numeric: tabular-nums; }
+.entrada--texto { min-height: 88px; resize: vertical; }
+.entrada[aria-invalid="true"] { border-color: var(--cor-erro); box-shadow: 0 0 0 1px var(--cor-erro); }
+
+.erro { margin: 0; font-size: 14px; color: var(--cor-erro); }
+.aviso {
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--raio);
+  background: var(--cor-erro-fundo);
+  color: var(--cor-erro);
+  font-size: 15px;
+}
+.ajuda { margin: 0; font-size: 14px; color: var(--cor-texto-suave); }
+
+/* — Botões — */
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+.botao--primario { background: var(--cor-destaque-forte); color: #fff; }
+.botao--primario:disabled { opacity: 0.6; cursor: progress; }
+.botao--secundario { background: transparent; border-color: var(--cor-destaque-forte); color: var(--cor-destaque-forte); }
+.botao--link { width: auto; min-height: 44px; border: 0; background: none; color: var(--cor-destaque-forte); text-decoration: underline; }
+
+/* — Comprovante — */
+.comprovante__vazio {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1.5px dashed var(--cor-destaque);
+  border-radius: var(--raio);
+  background: var(--cor-destaque-claro);
+}
+.botao--camera { background: var(--cor-destaque-forte); color: #fff; min-height: 56px; }
+.botao__icone { font-size: 20px; }
+
+/* Escondido visualmente, mas ainda acessível e acionável pelos <label> */
+.arquivo-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.comprovante__escolhido {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: #fff;
+}
+.comprovante__previa, .comprovante__pdf {
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--cor-superficie);
+}
+.comprovante__pdf { display: grid; place-items: center; font-weight: 600; color: var(--cor-erro); }
+.comprovante__info { display: grid; min-width: 0; }
+.comprovante__nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+.comprovante__tamanho { font-size: 13px; color: var(--cor-texto-suave); }
+
+/* — Cartões (acesso e confirmação) — */
+.cartao {
+  display: grid;
+  gap: 14px;
+  padding: 20px 16px;
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+}
+.cartao__titulo { margin: 0; font-family: var(--fonte-titulo); font-size: 20px; font-weight: 600; }
+
+.avancado summary { min-height: 44px; display: flex; align-items: center; font-size: 14px; color: var(--cor-texto-suave); cursor: pointer; }
+
+.sucesso { text-align: center; justify-items: center; }
+.sucesso:focus { outline: none; }
+.sucesso__icone {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--cor-destaque);
+  color: #fff;
+  font-size: 34px;
+  font-weight: 700;
+}
+.sucesso__status { margin: 0; }
+.etiqueta {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.etiqueta--pendente { background: var(--cor-pendente-fundo); color: var(--cor-pendente-texto); }
+
+.resumo { width: 100%; margin: 0; display: grid; gap: 8px; text-align: left; }
+.resumo div {
+  display: grid;
+  grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+.resumo dt { color: var(--cor-texto-suave); font-size: 14px; }
+.resumo dd { margin: 0; overflow-wrap: anywhere; text-align: right; font-weight: 500; }
