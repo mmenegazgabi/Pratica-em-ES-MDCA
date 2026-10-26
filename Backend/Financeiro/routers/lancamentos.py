@@ -1,5 +1,10 @@
 """Rotas de lançamentos.
 
+POST  /lancamentos                 -> cria com comprovante (T-12 · US-03)
+GET   /lancamentos/{id}            -> consulta, com o motivo de rejeição (T-16)
+PATCH /lancamentos/{id}/aprovar    -> aprova (T-15 · US-04)
+PATCH /lancamentos/{id}/rejeitar   -> rejeita com motivo obrigatório (T-16 · US-04)
+
 POST /lancamentos com upload de comprovante (T-12 · US-03).
 
 Recebe os dados da despesa e a foto/PDF do comprovante no mesmo envio
@@ -16,7 +21,7 @@ Ordem das verificações, para não deixar arquivo órfão no bucket:
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 if __package__ == "routers":
@@ -200,4 +205,95 @@ def aprovar_lancamento(
         status=lancamento.status.value,
         status_descricao=DESCRICAO_STATUS[lancamento.status],
         saldo_orcamento=orcamento.saldo,
+    )
+
+
+# --- PATCH /lancamentos/{id}/rejeitar e GET /lancamentos/{id} (T-16 · US-04) --
+
+MOTIVO_TAMANHO_MAXIMO = 500
+
+
+class RejeicaoPayload(BaseModel):
+    motivo: Optional[str] = None
+
+
+class LancamentoRejeitado(BaseModel):
+    id: str
+    orcamento_id: str
+    valor: float
+    status: str
+    status_descricao: str
+    motivo_rejeicao: str
+    saldo_orcamento: float
+
+
+class LancamentoDetalhe(BaseModel):
+    id: str
+    orcamento_id: str
+    valor: float
+    descricao: str
+    categoria: str
+    data_despesa: Optional[date]
+    status: str
+    status_descricao: str
+    motivo_rejeicao: Optional[str]
+    comprovante_url: Optional[str]
+
+
+@router.patch("/{lancamento_id}/rejeitar", response_model=LancamentoRejeitado)
+def rejeitar_lancamento(
+    lancamento_id: str,
+    payload: Optional[RejeicaoPayload] = Body(None),
+    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
+) -> LancamentoRejeitado:
+    orcamento = _buscar_orcamento_do_lancamento(lancamento_id)
+
+    motivo = ((payload.motivo if payload else None) or "").strip()
+    if not motivo:
+        raise HTTPException(status_code=400, detail="Motivo da rejeição é obrigatório.")
+    if len(motivo) > MOTIVO_TAMANHO_MAXIMO:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Motivo da rejeição deve ter no máximo {MOTIVO_TAMANHO_MAXIMO} caracteres.",
+        )
+
+    try:
+        lancamento = orcamento.rejeitar_lancamento(lancamento_id, motivo)
+    except AprovacaoInvalida as erro:
+        raise HTTPException(status_code=409, detail=str(erro)) from erro
+    except LancamentoInvalido as erro:
+        raise HTTPException(status_code=400, detail=str(erro)) from erro
+
+    return LancamentoRejeitado(
+        id=lancamento.id,
+        orcamento_id=orcamento.id,
+        valor=lancamento.valor,
+        status=lancamento.status.value,
+        status_descricao=DESCRICAO_STATUS[lancamento.status],
+        motivo_rejeicao=lancamento.motivo_rejeicao,
+        saldo_orcamento=orcamento.saldo,
+    )
+
+
+@router.get("/{lancamento_id}", response_model=LancamentoDetalhe)
+def obter_lancamento(lancamento_id: str) -> LancamentoDetalhe:
+    """Consulta do lançamento por quem lançou: status e motivo da rejeição.
+
+    Exige só autenticação (qualquer papel), porque quem lança é o educador.
+    """
+    orcamento = _buscar_orcamento_do_lancamento(lancamento_id)
+    lancamento = next(l for l in orcamento.lancamentos if l.id == lancamento_id)
+    return LancamentoDetalhe(
+        id=lancamento.id,
+        orcamento_id=orcamento.id,
+        valor=lancamento.valor,
+        descricao=lancamento.descricao,
+        categoria=lancamento.categoria,
+        data_despesa=lancamento.data_despesa,
+        status=lancamento.status.value,
+        status_descricao=DESCRICAO_STATUS[lancamento.status],
+        motivo_rejeicao=lancamento.motivo_rejeicao,
+        comprovante_url=(
+            f"/{lancamento.comprovante_chave}" if lancamento.comprovante_chave else None
+        ),
     )

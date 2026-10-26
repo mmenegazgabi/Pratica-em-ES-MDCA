@@ -35,6 +35,8 @@ class Lancamento:
     categoria: str = ""
     data_despesa: Optional[date] = None
     comprovante_chave: Optional[str] = None
+    # T-16 · US-04: motivo informado por quem rejeitou.
+    motivo_rejeicao: Optional[str] = None
 
 
 @dataclass
@@ -94,6 +96,24 @@ class Orcamento:
 
             lancamento.status = StatusLancamento.PENDENTE
             self.saldo_atual += lancamento.valor
+
+    def rejeitar_lancamento(self, lancamento_id: str, motivo: str) -> Lancamento:
+        # T-16 · US-04: só "pendente -> rejeitado" é transição válida. Como
+        # pendente nunca entrou no saldo, rejeitar não altera o saldo.
+        motivo = (motivo or "").strip()
+        if not motivo:
+            raise LancamentoInvalido("Motivo da rejeição é obrigatório.")
+        with self._lock:
+            lancamento = self._buscar_lancamento(lancamento_id)
+            if lancamento.status == StatusLancamento.REJEITADO:
+                raise AprovacaoInvalida("Lançamento já está rejeitado")
+            if lancamento.status == StatusLancamento.APROVADO:
+                raise AprovacaoInvalida(
+                    "Lançamento aprovado não pode ser rejeitado"
+                )
+            lancamento.status = StatusLancamento.REJEITADO
+            lancamento.motivo_rejeicao = motivo
+            return lancamento
 
     def registrar_lancamento(self, lancamento: Lancamento) -> Lancamento:
         """Adiciona um lançamento novo, sempre como pendente de aprovação.
