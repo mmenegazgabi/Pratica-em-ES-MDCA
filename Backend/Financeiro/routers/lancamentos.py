@@ -1,4 +1,6 @@
-"""POST /lancamentos com upload de comprovante (T-12 · US-03).
+"""Rotas de lançamentos.
+
+POST /lancamentos com upload de comprovante (T-12 · US-03).
 
 Recebe os dados da despesa e a foto/PDF do comprovante no mesmo envio
 (multipart/form-data). O lançamento nasce sempre como "Pendente de aprovação".
@@ -18,7 +20,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 if __package__ == "routers":
-    from autenticacao import exigir_autenticacao
+    from autenticacao import Papel, exigir_autenticacao, exigir_papel
     from comprovantes import (
         TAMANHO_MAXIMO_BYTES,
         ArmazenamentoComprovantes,
@@ -27,11 +29,17 @@ if __package__ == "routers":
         limpar_nome_original,
         validar_comprovante,
     )
-    from orcamento import Lancamento, LancamentoInvalido, StatusLancamento
+    from orcamento import (
+        AprovacaoInvalida,
+        Lancamento,
+        LancamentoInvalido,
+        Orcamento,
+        StatusLancamento,
+    )
     from routers.comprovantes import obter_armazenamento
-    from routers.orcamentos import _buscar_orcamento
+    from routers.orcamentos import _buscar_orcamento, _orcamentos
 else:
-    from ..autenticacao import exigir_autenticacao
+    from ..autenticacao import Papel, exigir_autenticacao, exigir_papel
     from ..comprovantes import (
         TAMANHO_MAXIMO_BYTES,
         ArmazenamentoComprovantes,
@@ -40,9 +48,15 @@ else:
         limpar_nome_original,
         validar_comprovante,
     )
-    from ..orcamento import Lancamento, LancamentoInvalido, StatusLancamento
+    from ..orcamento import (
+        AprovacaoInvalida,
+        Lancamento,
+        LancamentoInvalido,
+        Orcamento,
+        StatusLancamento,
+    )
     from .comprovantes import obter_armazenamento
-    from .orcamentos import _buscar_orcamento
+    from .orcamentos import _buscar_orcamento, _orcamentos
 
 router = APIRouter(
     prefix="/lancamentos",
@@ -146,4 +160,44 @@ async def criar_lancamento(
             content_type=tipo.content_type,
             tamanho=len(conteudo),
         ),
+    )
+
+
+# --- PATCH /lancamentos/{id}/aprovar (T-15 · US-04) --------------------------
+
+
+class LancamentoAprovado(BaseModel):
+    id: str
+    orcamento_id: str
+    valor: float
+    status: str
+    status_descricao: str
+    saldo_orcamento: float
+
+
+def _buscar_orcamento_do_lancamento(lancamento_id: str) -> Orcamento:
+    for orcamento in _orcamentos:
+        if any(l.id == lancamento_id for l in orcamento.lancamentos):
+            return orcamento
+    raise HTTPException(status_code=404, detail="Lançamento não encontrado")
+
+
+@router.patch("/{lancamento_id}/aprovar", response_model=LancamentoAprovado)
+def aprovar_lancamento(
+    lancamento_id: str,
+    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
+) -> LancamentoAprovado:
+    orcamento = _buscar_orcamento_do_lancamento(lancamento_id)
+    try:
+        lancamento = orcamento.aprovar_lancamento(lancamento_id)
+    except AprovacaoInvalida as erro:
+        raise HTTPException(status_code=409, detail=str(erro)) from erro
+
+    return LancamentoAprovado(
+        id=lancamento.id,
+        orcamento_id=orcamento.id,
+        valor=lancamento.valor,
+        status=lancamento.status.value,
+        status_descricao=DESCRICAO_STATUS[lancamento.status],
+        saldo_orcamento=orcamento.saldo,
     )

@@ -69,11 +69,14 @@ class Orcamento:
             raise LancamentoNaoEncontrado("Lançamento não encontrado")
         return lancamento
 
-    def aprovar_lancamento(self, lancamento_id: str) -> None:
+    def aprovar_lancamento(self, lancamento_id: str) -> Lancamento:
+        # T-15 · US-04: só "pendente -> aprovado" é transição válida; aprovar
+        # de novo é erro (antes era ignorado), e o saldo continua debitado
+        # uma única vez.
         with self._lock:
             lancamento = self._buscar_lancamento(lancamento_id)
             if lancamento.status == StatusLancamento.APROVADO:
-                return
+                raise AprovacaoInvalida("Lançamento já está aprovado")
             if lancamento.status == StatusLancamento.REJEITADO:
                 raise AprovacaoInvalida(
                     "Lançamento rejeitado não pode ser aprovado"
@@ -81,6 +84,7 @@ class Orcamento:
 
             lancamento.status = StatusLancamento.APROVADO
             self.saldo_atual -= lancamento.valor
+            return lancamento
 
     def reverter_aprovacao(self, lancamento_id: str) -> None:
         with self._lock:
