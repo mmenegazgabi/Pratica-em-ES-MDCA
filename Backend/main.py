@@ -20,8 +20,8 @@ origins = [origin.strip() for origin in os.getenv(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Papel-Usuario"],
 )
 
 if __name__ == "__main__":

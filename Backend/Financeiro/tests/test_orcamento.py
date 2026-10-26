@@ -4,7 +4,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from Financeiro.main import app
-from Financeiro.orcamento import Lancamento, Orcamento, StatusLancamento
+from Financeiro.orcamento import (
+    AprovacaoInvalida,
+    Lancamento,
+    Orcamento,
+    StatusLancamento,
+)
 from Financeiro.routers.orcamentos import _orcamentos
 
 client = TestClient(app)
@@ -127,11 +132,12 @@ def test_aprovar_lancamento_debita_saldo_no_mesmo_instante():
     assert orcamento.saldo == 800
 
 
-def test_aprovar_lancamento_ja_aprovado_nao_debita_novamente():
+def test_aprovar_lancamento_ja_aprovado_levanta_erro_e_nao_debita_novamente():
     lancamento = Lancamento(valor=200, status=StatusLancamento.APROVADO)
     orcamento = orcamento_de_teste(valor_total=1000, lancamentos=[lancamento])
 
-    orcamento.aprovar_lancamento(lancamento.id)
+    with pytest.raises(AprovacaoInvalida):
+        orcamento.aprovar_lancamento(lancamento.id)
 
     assert orcamento.saldo == 800
 
@@ -275,8 +281,8 @@ def test_post_aprovar_duas_vezes_debita_saldo_uma_unica_vez():
     client.post(url_aprovar("orcamento-1", lancamento.id))
     response = client.post(url_aprovar("orcamento-1", lancamento.id))
 
-    assert response.status_code == 200
-    assert response.json()["saldo"] == 800
+    assert response.status_code == 409
+    assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 800
 
 
 def test_post_reverter_aprovacao_recredita_saldo_e_volta_para_pendente():
@@ -350,7 +356,7 @@ def test_aprovacoes_simultaneas_do_mesmo_lancamento_debitam_uma_unica_vez():
             )
         )
 
-    assert all(r.status_code == 200 for r in respostas)
+    assert sorted(r.status_code for r in respostas) == [200] + [409] * 9
     assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 800
 
 

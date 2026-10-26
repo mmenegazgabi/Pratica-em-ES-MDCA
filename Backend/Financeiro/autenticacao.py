@@ -15,9 +15,10 @@ requisição é aceita.
 
 import hmac
 import os
+from enum import Enum
 from typing import Optional
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, Header, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 VARIAVEL_TOKEN = "FINANCEIRO_API_TOKEN"
@@ -49,3 +50,38 @@ def exigir_autenticacao(
         )
 
     return "servico-financeiro"
+
+
+# --- Papel do usuário (T-15 · US-04) ----------------------------------------
+#
+# Provisório até a US-08: o papel chega no cabeçalho ``X-Papel-Usuario`` e só
+# é aceito junto com o token de serviço (quem tem o token é o frontend, que já
+# sabe quem está logado). Na US-08 o papel passa a vir do usuário autenticado;
+# as rotas continuam usando ``exigir_papel`` do mesmo jeito.
+
+CABECALHO_PAPEL = "X-Papel-Usuario"
+
+
+class Papel(str, Enum):
+    COORDENACAO = "coordenacao"
+    DIRECAO = "direcao"
+    EDUCADOR = "educador"
+    VOLUNTARIO_FINANCEIRO = "voluntario_financeiro"
+
+
+def exigir_papel(*permitidos: Papel):
+    def verificar(
+        _servico: str = Depends(exigir_autenticacao),
+        papel: Optional[str] = Header(None, alias=CABECALHO_PAPEL),
+    ) -> Papel:
+        papel_normalizado = (papel or "").strip().lower()
+        if papel_normalizado not in {p.value for p in permitidos}:
+            raise HTTPException(
+                status_code=403,
+                detail="Ação permitida apenas para: "
+                + ", ".join(p.value for p in permitidos)
+                + ".",
+            )
+        return Papel(papel_normalizado)
+
+    return verificar
