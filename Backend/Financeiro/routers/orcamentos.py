@@ -20,6 +20,7 @@ if __package__ == "routers":
         LancamentoNaoEncontrado,
         Orcamento,
     )
+    from projetos import buscar_projeto
 else:
     from ..autenticacao import Papel, exigir_papel
     from ..alerta_saldo import (
@@ -34,6 +35,7 @@ else:
         LancamentoNaoEncontrado,
         Orcamento,
     )
+    from ..projetos import buscar_projeto
 
 router = APIRouter(tags=["orcamentos"])
 
@@ -65,6 +67,13 @@ class OrcamentoDetalhe(BaseModel):
     data_fim: date
     categorias_despesa: List[str]
     saldo: float
+
+    # Nome vem do cadastro de projetos; None se o projeto não existir mais.
+    @computed_field
+    @property
+    def projeto_nome(self) -> Optional[str]:
+        projeto = buscar_projeto(self.projeto_id)
+        return projeto.nome if projeto else None
 
     # T-08 · US-02: indicador de consumo com alerta em 80% e 100%.
     # Calculados a partir de valor_total e saldo para que as telas não
@@ -134,6 +143,12 @@ def criar_orcamento(payload: OrcamentoCreate) -> Orcamento:
         raise HTTPException(
             status_code=400,
             detail="data_fim não pode ser anterior a data_inicio",
+        )
+
+    if buscar_projeto(payload.projeto_id) is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Projeto não encontrado. Cadastre o projeto antes de criar o orçamento.",
         )
 
     orcamento = Orcamento(id=str(uuid.uuid4()), **payload.model_dump())

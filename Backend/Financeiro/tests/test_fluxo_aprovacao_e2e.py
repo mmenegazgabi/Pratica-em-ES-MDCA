@@ -16,6 +16,7 @@ from Financeiro.comprovantes import ArmazenamentoEmMemoria
 from Financeiro.main import app
 from Financeiro.notificacoes import caixa_de_notificacoes
 from Financeiro.routers.comprovantes import obter_armazenamento
+from Financeiro.projetos import _projetos, registrar_projeto
 from Financeiro.routers.orcamentos import _orcamentos
 
 TOKEN = "token-de-teste-123"
@@ -38,11 +39,13 @@ COORDENACAO = como("coordenacao", "coordenadora-luana")
 def ambiente(monkeypatch):
     monkeypatch.setenv("FINANCEIRO_API_TOKEN", TOKEN)
     _orcamentos.clear()
+    _projetos.clear()
     caixa_de_notificacoes.limpar()
     app.dependency_overrides[obter_armazenamento] = lambda: ArmazenamentoEmMemoria()
     yield
     app.dependency_overrides.clear()
     _orcamentos.clear()
+    _projetos.clear()
     caixa_de_notificacoes.limpar()
 
 
@@ -50,10 +53,11 @@ def ambiente(monkeypatch):
 
 
 def criar_orcamento(valor_total=1000):
+    projeto = registrar_projeto(f"Oficina de Arte {len(_projetos)}")
     resposta = client.post(
         "/orcamentos",
         json={
-            "projeto_id": "oficina-de-arte",
+            "projeto_id": projeto.id,
             "valor_total": valor_total,
             "data_inicio": "2026-01-01",
             "data_fim": "2026-12-31",

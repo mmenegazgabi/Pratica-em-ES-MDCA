@@ -10,6 +10,7 @@ from Financeiro.orcamento import (
     Orcamento,
     StatusLancamento,
 )
+from Financeiro.projetos import _projetos, registrar_projeto
 from Financeiro.routers.orcamentos import _orcamentos
 
 client = TestClient(app)
@@ -17,6 +18,13 @@ client = TestClient(app)
 
 def setup_function():
     _orcamentos.clear()
+    _projetos.clear()
+    registrar_projeto("Projeto 1").id = "projeto-1"
+
+
+def teardown_function():
+    _orcamentos.clear()
+    _projetos.clear()
 
 
 def payload(**overrides):
