@@ -261,8 +261,8 @@ def test_fila_com_varios_autores_e_decisoes():
     do_joao = lancar(orcamento_id, 200, autor="educador-joao", descricao="Lanche")
     da_ana_2 = lancar(orcamento_id, 450, autor="educadora-ana", descricao="Pincéis")
 
-    # Mais recentes primeiro
-    assert fila_de_pendentes() == [da_ana_2, do_joao, da_ana]
+    # Mais antigos primeiro
+    assert fila_de_pendentes() == [da_ana, do_joao, da_ana_2]
 
     aprovar(da_ana)
     rejeitar(do_joao, {"motivo": "Fora da categoria."})

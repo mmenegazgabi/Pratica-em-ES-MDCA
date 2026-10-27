@@ -73,14 +73,14 @@ def ids(resposta):
 # --- Ordem e filtros ----------------------------------------------------------
 
 
-def test_lista_todos_mais_recentes_primeiro():
+def test_lista_todos_mais_antigos_primeiro():
     velho, novo, meio = lancamento(48), lancamento(1), lancamento(5)
     criar_orcamento(velho, novo, meio)
 
     resposta = listar()
 
     assert resposta.status_code == 200
-    assert ids(resposta) == [novo.id, meio.id, velho.id]
+    assert ids(resposta) == [velho.id, meio.id, novo.id]
 
 
 def test_junta_lancamentos_de_todos_os_orcamentos():
@@ -91,8 +91,8 @@ def test_junta_lancamentos_de_todos_os_orcamentos():
     corpo = listar().json()
 
     assert [(i["id"], i["orcamento_id"], i["projeto_id"]) for i in corpo] == [
-        (do_a.id, "orcamento-a", "projeto-a"),
         (do_b.id, "orcamento-b", "projeto-b"),
+        (do_a.id, "orcamento-a", "projeto-a"),
     ]
 
 
@@ -163,6 +163,23 @@ def test_meus_true_filtra_pelo_usuario_em_qualquer_papel():
 def test_outros_papeis_veem_todos(papel):
     criar_orcamento(lancamento(1, autor_id="ana"), lancamento(2, autor_id="marcos"))
     assert len(listar(papel=papel).json()) == 2
+
+
+@pytest.mark.parametrize("papel", [None, "", "admin"])
+def test_papel_ausente_ou_desconhecido_recebe_403(papel):
+    criar_orcamento(lancamento(1))
+    assert listar(papel=papel).status_code == 403
+
+
+def test_reverter_aprovacao_limpa_aprovado_em():
+    pendente = lancamento(1)
+    orcamento = criar_orcamento(pendente)
+    orcamento.aprovar_lancamento(pendente.id)
+    assert pendente.aprovado_em is not None
+
+    orcamento.reverter_aprovacao(pendente.id)
+
+    assert pendente.aprovado_em is None
 
 
 def test_sem_token_retorna_401():

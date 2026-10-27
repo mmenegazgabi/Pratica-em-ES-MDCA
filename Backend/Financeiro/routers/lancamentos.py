@@ -1,6 +1,6 @@
 """Rotas de lançamentos.
 
-GET   /lancamentos                 -> lista com filtros, mais recentes primeiro
+GET   /lancamentos                 -> lista com filtros, mais antigos primeiro
 POST  /lancamentos                 -> cria com comprovante (T-12 · US-03)
 GET   /lancamentos/{id}            -> consulta, com o motivo de rejeição (T-16)
 PATCH /lancamentos/{id}/aprovar    -> aprova (T-15 · US-04)
@@ -31,7 +31,6 @@ from fastapi import (
     Depends,
     File,
     Form,
-    Header,
     HTTPException,
     Query,
     UploadFile,
@@ -40,7 +39,6 @@ from pydantic import BaseModel
 
 if __package__ == "routers":
     from autenticacao import (
-        CABECALHO_PAPEL,
         Papel,
         exigir_autenticacao,
         exigir_papel,
@@ -67,7 +65,6 @@ if __package__ == "routers":
     from routers.orcamentos import _buscar_orcamento, _orcamentos
 else:
     from ..autenticacao import (
-        CABECALHO_PAPEL,
         Papel,
         exigir_autenticacao,
         exigir_papel,
@@ -341,14 +338,23 @@ def listar_lancamentos(
     orcamento_id: Optional[str] = Query(None),
     conciliado: Optional[bool] = Query(None),
     meus: bool = Query(False, description="Só os lançamentos do usuário informado."),
-    papel: Optional[str] = Header(None, alias=CABECALHO_PAPEL),
+    papel: Papel = Depends(
+        exigir_papel(
+            Papel.COORDENACAO,
+            Papel.DIRECAO,
+            Papel.VOLUNTARIO_FINANCEIRO,
+            Papel.EDUCADOR,
+        )
+    ),
     usuario: Optional[str] = Depends(obter_usuario),
 ) -> List[LancamentoResumo]:
-    """Lançamentos de todos os orçamentos, dos mais recentes para os mais antigos.
+    """Lançamentos de todos os orçamentos, dos mais antigos para os mais novos.
+
+    Ordem da fila de aprovação: quem espera há mais tempo vem primeiro.
 
     Educador só enxerga os próprios; `meus=true` aplica o mesmo a qualquer papel.
     """
-    so_do_usuario = meus or (papel or "").strip().lower() == Papel.EDUCADOR.value
+    so_do_usuario = meus or papel == Papel.EDUCADOR
     if so_do_usuario and usuario is None:
         raise HTTPException(
             status_code=400, detail="Identificação do usuário obrigatória."
@@ -363,7 +369,7 @@ def listar_lancamentos(
         and (conciliado is None or lancamento.conciliado == conciliado)
         and (not so_do_usuario or lancamento.autor_id == usuario)
     ]
-    itens.sort(key=lambda item: item[1].criado_em, reverse=True)
+    itens.sort(key=lambda item: item[1].criado_em)
     return [
         LancamentoResumo(
             id=lancamento.id,
