@@ -435,3 +435,15 @@ def test_get_orcamentos_do_projeto_com_pagina_invalida_retorna_422():
     response = client.get("/orcamentos/projeto/projeto-1?pagina=0")
 
     assert response.status_code == 422
+
+
+def test_valor_total_nan_no_corpo_bruto_retorna_422():
+    import json
+
+    corpo = json.dumps(payload()).replace(
+        json.dumps(payload()["valor_total"]), "NaN", 1
+    )
+    response = client.post(
+        "/orcamentos", content=corpo, headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == 422

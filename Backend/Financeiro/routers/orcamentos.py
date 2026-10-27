@@ -44,14 +44,14 @@ _orcamentos: List[Orcamento] = []
 
 class OrcamentoCreate(BaseModel):
     projeto_id: str
-    valor_total: float
+    valor_total: float = Field(allow_inf_nan=False)
     data_inicio: date
     data_fim: date
     categorias_despesa: List[str] = Field(min_length=1)
 
 
 class OrcamentoEdicao(BaseModel):
-    valor_total: float
+    valor_total: float = Field(gt=0, allow_inf_nan=False)
     data_inicio: date
     data_fim: date
     categorias_despesa: List[str]
@@ -62,7 +62,7 @@ class OrcamentoDetalhe(BaseModel):
 
     id: str
     projeto_id: str
-    valor_total: float
+    valor_total: float = Field(allow_inf_nan=False)
     data_inicio: date
     data_fim: date
     categorias_despesa: List[str]

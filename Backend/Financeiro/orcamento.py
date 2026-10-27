@@ -3,12 +3,15 @@ import threading
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
 if __package__:
+    from .alerta_saldo import _em_centavos
     from .moeda import formatar_reais
 else:
+    from alerta_saldo import _em_centavos
     from moeda import formatar_reais
 
 
@@ -125,11 +128,20 @@ class Orcamento:
         if data_fim < data_inicio:
             raise LancamentoInvalido("data_fim não pode ser anterior a data_inicio")
         with self._lock:
-            realizado = self.valor_total - self.saldo_atual
-            if valor_total < realizado:
+            # Em centavos (Decimal) para não acumular erro de ponto flutuante.
+            realizado = sum(
+                (
+                    _em_centavos(l.valor)
+                    for l in self.lancamentos
+                    if l.status == StatusLancamento.APROVADO
+                ),
+                Decimal("0"),
+            )
+            novo_total = _em_centavos(valor_total)
+            if novo_total < realizado:
                 raise LancamentoInvalido(
                     "O valor total não pode ser menor que o já gasto "
-                    f"({formatar_reais(realizado)})."
+                    f"({formatar_reais(float(realizado))})."
                 )
             for categoria in self.categorias_despesa:
                 if categoria in categorias_despesa:
@@ -146,7 +158,7 @@ class Orcamento:
             self.data_inicio = data_inicio
             self.data_fim = data_fim
             self.categorias_despesa = list(categorias_despesa)
-            self.saldo_atual = valor_total - realizado
+            self.saldo_atual = float(novo_total - realizado)
 
     def reverter_aprovacao(self, lancamento_id: str) -> None:
         with self._lock:

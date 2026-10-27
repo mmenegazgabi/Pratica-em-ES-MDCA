@@ -134,3 +134,42 @@ def test_orcamento_inexistente_404():
     resposta = editar(corpo(), orcamento_id="nao-existe")
     assert resposta.status_code == 404
     assert resposta.json()["detail"] == "Orçamento não encontrado"
+
+
+def test_valor_igual_ao_gasto_com_centavos_e_aceito():
+    criar_orcamento(
+        lancamento(420.50, StatusLancamento.APROVADO),
+        lancamento(180.10, StatusLancamento.APROVADO),
+        lancamento(0.70, StatusLancamento.APROVADO),
+        valor_total=2000,
+    )
+    resposta = editar(corpo(valor_total=601.30))
+    assert resposta.status_code == 200
+    assert resposta.json()["saldo"] == 0
+    assert resposta.json()["realizado"] == 601.30
+
+
+def test_edicao_recusada_nao_altera_o_orcamento():
+    orcamento = criar_orcamento(lancamento(300, StatusLancamento.APROVADO))
+    resposta = editar(corpo(valor_total=250, categorias_despesa=["obras"]))
+    assert resposta.status_code == 400
+    assert orcamento.valor_total == 1000
+    assert orcamento.saldo_atual == 700
+    assert orcamento.categorias_despesa == ["materiais", "transporte"]
+
+
+@pytest.mark.parametrize("valor", ["NaN", "Infinity", "-Infinity", "0", "-5"])
+def test_valor_total_invalido_e_rejeitado_e_nada_muda(valor):
+    orcamento = criar_orcamento(lancamento(300, StatusLancamento.APROVADO))
+    corpo_bruto = (
+        '{"valor_total": %s, "data_inicio": "2026-01-01", "data_fim": "2026-12-31",'
+        ' "categorias_despesa": ["materiais"]}' % valor
+    )
+    resposta = client.patch(
+        "/orcamentos/orcamento-1",
+        content=corpo_bruto,
+        headers={**cabecalhos(), "Content-Type": "application/json"},
+    )
+    assert resposta.status_code in (400, 422)
+    assert orcamento.valor_total == 1000
+    assert orcamento.saldo_atual == 700
