@@ -41,6 +41,8 @@ class Lancamento:
     comprovante_chave: Optional[str] = None
     # T-16 · US-04: motivo informado por quem rejeitou.
     motivo_rejeicao: Optional[str] = None
+    # Redesign Financeiro: motivos de rejeições já corrigidas e reenviadas.
+    motivos_rejeicao_anteriores: list[str] = field(default_factory=list)
     # T-17 · US-04: quem lançou, para receber a notificação do resultado.
     autor_id: Optional[str] = None
     # T-18 · US-04: quando foi lançado, para a fila de aprovação mostrar
@@ -129,6 +131,36 @@ class Orcamento:
                 )
             lancamento.status = StatusLancamento.REJEITADO
             lancamento.motivo_rejeicao = motivo
+            return lancamento
+
+    def reenviar_lancamento(
+        self,
+        lancamento_id: str,
+        *,
+        valor: float,
+        descricao: str,
+        categoria: str,
+        data_despesa: date,
+        comprovante_chave: Optional[str],
+    ) -> Lancamento:
+        # Redesign Financeiro: corrige uma despesa rejeitada e a devolve para
+        # a fila. Não mexe no saldo (rejeitada nunca entrou nele).
+        with self._lock:
+            lancamento = self._buscar_lancamento(lancamento_id)
+            if lancamento.status != StatusLancamento.REJEITADO:
+                raise AprovacaoInvalida("Só despesas rejeitadas podem ser reenviadas")
+            self.validar_lancamento(valor, categoria, data_despesa)
+            if lancamento.motivo_rejeicao:
+                lancamento.motivos_rejeicao_anteriores.append(lancamento.motivo_rejeicao)
+            lancamento.motivo_rejeicao = None
+            lancamento.valor = valor
+            lancamento.descricao = descricao
+            lancamento.categoria = categoria
+            lancamento.data_despesa = data_despesa
+            if comprovante_chave is not None:
+                lancamento.comprovante_chave = comprovante_chave
+            lancamento.status = StatusLancamento.PENDENTE
+            lancamento.criado_em = datetime.now(timezone.utc)
             return lancamento
 
     def conciliar_lancamento(

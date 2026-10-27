@@ -5,6 +5,7 @@ POST  /lancamentos                 -> cria com comprovante (T-12 · US-03)
 GET   /lancamentos/{id}            -> consulta, com o motivo de rejeição (T-16)
 PATCH /lancamentos/{id}/aprovar    -> aprova (T-15 · US-04)
 PATCH /lancamentos/{id}/rejeitar   -> rejeita com motivo obrigatório (T-16 · US-04)
+PATCH /lancamentos/{id}/reenviar   -> corrige e reenvia despesa rejeitada
 PATCH /lancamentos/{id}/conciliar  -> vincula a um item do extrato (T-21 · US-05)
 
 Aprovar e rejeitar notificam o autor do lançamento in-app (T-17 · US-04).
@@ -42,6 +43,7 @@ if __package__ == "routers":
         Papel,
         exigir_autenticacao,
         exigir_papel,
+        exigir_usuario,
         obter_usuario,
     )
     from comprovantes import (
@@ -68,6 +70,7 @@ else:
         Papel,
         exigir_autenticacao,
         exigir_papel,
+        exigir_usuario,
         obter_usuario,
     )
     from ..comprovantes import (
@@ -321,6 +324,7 @@ class LancamentoDetalhe(BaseModel):
     status: str
     status_descricao: str
     motivo_rejeicao: Optional[str]
+    motivos_rejeicao_anteriores: List[str]
     comprovante_url: Optional[str]
     conciliado: bool
     referencia_extrato: Optional[str]
@@ -466,12 +470,58 @@ def obter_lancamento(lancamento_id: str) -> LancamentoDetalhe:
         status=lancamento.status.value,
         status_descricao=DESCRICAO_STATUS[lancamento.status],
         motivo_rejeicao=lancamento.motivo_rejeicao,
+        motivos_rejeicao_anteriores=list(lancamento.motivos_rejeicao_anteriores),
         comprovante_url=(
             f"/{lancamento.comprovante_chave}" if lancamento.comprovante_chave else None
         ),
         conciliado=lancamento.conciliado,
         referencia_extrato=lancamento.referencia_extrato,
     )
+
+
+# --- PATCH /lancamentos/{id}/reenviar (redesign Financeiro) -----------------
+
+
+@router.patch("/{lancamento_id}/reenviar", response_model=LancamentoDetalhe)
+async def reenviar_lancamento(
+    lancamento_id: str,
+    valor: float = Form(...),
+    descricao: str = Form(..., min_length=1, max_length=200),
+    categoria: str = Form(...),
+    data_despesa: date = Form(...),
+    comprovante: Optional[UploadFile] = File(None),
+    armazenamento: ArmazenamentoComprovantes = Depends(obter_armazenamento),
+    autor_id: str = Depends(exigir_usuario),
+) -> LancamentoDetalhe:
+    orcamento = _buscar_orcamento_do_lancamento(lancamento_id)
+    lancamento = next(l for l in orcamento.lancamentos if l.id == lancamento_id)
+    if lancamento.autor_id != autor_id:
+        raise HTTPException(status_code=404, detail="Lançamento não encontrado")
+    if lancamento.status != StatusLancamento.REJEITADO:
+        raise HTTPException(
+            status_code=409, detail="Só despesas rejeitadas podem ser reenviadas"
+        )
+    # Valida tudo antes de salvar a foto nova, para não deixar arquivo órfão.
+    descricao = _validar_dados_da_despesa(
+        orcamento, valor, descricao, categoria, data_despesa
+    )
+    chave = None
+    if comprovante is not None:
+        chave, *_ = await _receber_comprovante(comprovante, armazenamento)
+    try:
+        orcamento.reenviar_lancamento(
+            lancamento_id,
+            valor=valor,
+            descricao=descricao,
+            categoria=categoria,
+            data_despesa=data_despesa,
+            comprovante_chave=chave,
+        )
+    except AprovacaoInvalida as erro:
+        raise HTTPException(status_code=409, detail=str(erro)) from erro
+    except LancamentoInvalido as erro:
+        raise HTTPException(status_code=400, detail=str(erro)) from erro
+    return obter_lancamento(lancamento_id)
 
 
 # --- PATCH /lancamentos/{id}/conciliar (T-21 · US-05) ------------------------
