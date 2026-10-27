@@ -1,0 +1,141 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Telas do celular</title></head><body style="margin:0;background:#f4f4f5;padding:28px 20px 60px"><div style="max-width:1100px;margin:0 auto"><style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+.B{font-family:'Inter',sans-serif;color:#18181b;-webkit-font-smoothing:antialiased}
+.flow{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;padding:6px 0 10px}
+.step{display:flex;flex-direction:column;align-items:center;gap:8px}
+.cap{font-family:'Inter',sans-serif;font-size:12px;color:#52525b;max-width:220px;text-align:center;line-height:1.4}
+.cap b{color:#18181b;display:block;margin-bottom:2px}
+.ph{width:230px;height:480px;border:8px solid #1b1b1b;border-radius:30px;overflow:hidden;box-sizing:border-box;display:flex;flex-direction:column;background:#fff;position:relative}
+.sb{height:22px;display:flex;justify-content:space-between;padding:4px 14px 0;font-size:9px;font-weight:600}
+.hdr{display:flex;align-items:center;gap:8px;padding:6px 14px 10px;font-size:13px;font-weight:600}
+.bd{flex:1;padding:4px 14px 12px;overflow:hidden}
+.tb{display:flex;justify-content:space-around;padding:7px 0 12px;border-top:1px solid #e4e4e7;font-size:9px;color:#71717a}
+.tb span{display:flex;flex-direction:column;align-items:center;gap:2px}
+.tb .on{color:#1f4d1c;font-weight:600}
+.ico{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ico.lg{width:18px;height:18px}
+h4{font-size:17px;font-weight:600;letter-spacing:-.015em;margin:2px 0 12px}
+.act{display:flex;align-items:center;justify-content:center;gap:7px;background:#3f8a3a;color:#fff;border-radius:8px;padding:11px;font-weight:500;font-size:12px}
+.act.sec{background:#fff;color:#18181b;border:1px solid #d4d4d8}
+.k{font-size:10px;font-weight:500;color:#71717a;margin:14px 0 6px;display:flex;justify-content:space-between}
+.card{border:1px solid #e4e4e7;border-radius:8px}
+.it{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-bottom:1px solid #f0f0f2;font-size:11.5px;gap:8px}
+.it:last-child{border-bottom:0}
+.it small{display:block;color:#71717a;font-size:10px;margin-top:1px}
+.thumb{width:28px;height:34px;background:linear-gradient(#f4f4f5,#e9e9ec);border:1px solid #e4e4e7;border-radius:4px;margin-right:9px;flex:none;position:relative}
+.thumb:after{content:"";position:absolute;left:5px;right:5px;top:7px;height:16px;background:repeating-linear-gradient(#cfcfd4 0 1px,transparent 1px 4px)}
+.num{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.st{display:inline-block;font-size:9.5px;font-weight:500;border-radius:4px;padding:1px 6px;margin-top:2px}
+.pen{color:#854d0e;background:#fef9c3}.ok{color:#1f4d1c;background:#ecf5ea}.rej{color:#991b1b;background:#fee2e2}
+.alert{border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:9px 10px;font-size:11px;color:#7f1d1d;margin-top:10px}
+.alert b{color:#991b1b}
+.lbl{font-size:10.5px;font-weight:500;color:#3f3f46;margin:10px 0 4px}
+.inp{border:1px solid #d4d4d8;border-radius:6px;padding:8px 9px;font-size:12px;display:flex;justify-content:space-between;align-items:center}
+.inp.focus{border-color:#3f8a3a;box-shadow:0 0 0 3px #ecf5ea}
+.inp .ph-t{color:#a1a1aa}
+.seg{display:flex;flex-wrap:wrap;gap:5px}
+.seg span{border:1px solid #d4d4d8;border-radius:6px;padding:5px 8px;font-size:10.5px}
+.seg .on{border-color:#3f8a3a;background:#ecf5ea;color:#1f4d1c;font-weight:500}
+.photo{height:110px;border-radius:8px;background:#f4f4f5;border:1px solid #e4e4e7;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.paper{width:80px;height:96px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-3deg);padding:8px 7px;box-sizing:border-box}
+.paper i{display:block;height:2px;background:#d4d4d8;margin:5px 0}
+.paper i.s{width:55%}
+.cam{flex:1;background:#18181b;display:flex;flex-direction:column}
+.cam .view{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
+.cam .frame{position:absolute;inset:40px 26px 50px;border:1.5px solid rgba(255,255,255,.7);border-radius:6px}
+.cam .tip{position:absolute;top:14px;width:100%;text-align:center;color:#e4e4e7;font-size:10.5px}
+.cam .bar{height:100px;display:flex;align-items:center;justify-content:space-around;color:#e4e4e7;font-size:10px}
+.shutter{width:54px;height:54px;border-radius:50%;border:3px solid #fff;display:flex;align-items:center;justify-content:center}
+.shutter i{width:44px;height:44px;border-radius:50%;background:#fff}
+.toast{position:absolute;left:12px;right:12px;bottom:62px;background:#18181b;color:#fff;border-radius:8px;padding:9px 11px;font-size:11px;display:flex;justify-content:space-between}
+.toast u{color:#a7d7a1;text-decoration:none;font-weight:500}
+</style>
+
+<h2 style="font:600 22px Inter,sans-serif;margin:0 0 4px">Celular — como o Marcos lança despesas</h2>
+<p style="font:13px Inter,sans-serif;color:#52525b;margin:0 0 16px">Linha visual B. Da esquerda para a direita: a tela principal, a câmera, completar uma despesa e uma despesa rejeitada.</p>
+
+<div class="flow B">
+
+<!-- 1. Minhas despesas -->
+<div class="step"><div class="ph">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="bd">
+    <h4>Minhas despesas</h4>
+    <div class="act"><svg class="ico" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg>Fotografar comprovante</div>
+
+    <div class="k"><span>Precisa de ajuste (1)</span></div>
+    <div class="card" style="border-color:#fecaca">
+      <div class="it"><span>Alimentação<small>Esporte · 23/10</small></span><span style="text-align:right"><span class="num">R$ 64,00</span><br><span class="st rej">Rejeitada</span></span></div>
+    </div>
+
+    <div class="k"><span>A completar (2)</span></div>
+    <div class="card">
+      <div class="it"><span style="display:flex;align-items:center"><span class="thumb"></span><span>Comprovante<small>Hoje, 10:42</small></span></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div>
+      <div class="it"><span style="display:flex;align-items:center"><span class="thumb"></span><span>Comprovante<small>Hoje, 10:15</small></span></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div>
+    </div>
+
+    <div class="k"><span>Enviadas</span><span style="color:#3f8a3a">Ver todas</span></div>
+    <div class="card">
+      <div class="it"><span>Transporte<small>Leitura · 24/10</small></span><span style="text-align:right"><span class="num">R$ 45,00</span><br><span class="st pen">Em análise</span></span></div>
+      <div class="it"><span>Materiais<small>Leitura · 22/10</small></span><span style="text-align:right"><span class="num">R$ 180,00</span><br><span class="st ok">Aprovada</span></span></div>
+    </div>
+  </div>
+  <div class="tb">
+    <span class="on"><svg class="ico lg" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6M16 12h-6M13 16h-3"/></svg>Despesas</span>
+    <span><svg class="ico lg" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Avisos</span>
+    <span><svg class="ico lg" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Perfil</span>
+  </div>
+</div><div class="cap"><b>1 · Minhas despesas</b>O que precisa de ajuste fica no topo, depois as fotos a completar e por último as já enviadas.</div></div>
+
+<!-- 2. Câmera -->
+<div class="step"><div class="ph">
+  <div class="cam">
+    <div class="sb" style="color:#fff"><span>9:41</span><span>●●●</span></div>
+    <div class="view">
+      <div class="tip">Enquadre o comprovante inteiro</div>
+      <div class="frame"></div>
+      <div class="paper" style="transform:rotate(-2deg) scale(1.35)"><i></i><i class="s"></i><i></i><i></i><i class="s"></i><i></i><i></i></div>
+    </div>
+    <div class="bar">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px"><svg class="ico lg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>Galeria</span>
+      <div class="shutter"><i></i></div>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px"><svg class="ico lg" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>Fechar</span>
+    </div>
+  </div>
+  <div class="toast"><span>Foto salva em "A completar"</span><u>Completar agora</u></div>
+</div><div class="cap"><b>2 · Câmera</b>Tirou, salvou. Ele pode fechar e completar depois, ou tocar em "Completar agora".</div></div>
+
+<!-- 3. Completar -->
+<div class="step"><div class="ph">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="hdr"><svg class="ico lg" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>Completar despesa</div>
+  <div class="bd" style="padding-top:0">
+    <div class="photo"><div class="paper"><i></i><i class="s"></i><i></i><i></i><i class="s"></i><i></i></div>
+      <span style="position:absolute;right:7px;bottom:6px;font-size:9.5px;color:#52525b;background:#fff;border:1px solid #e4e4e7;border-radius:4px;padding:2px 5px">Trocar foto</span></div>
+    <div class="lbl">Valor</div><div class="inp focus"><span class="num" style="font-weight:500">R$ 180,00</span></div>
+    <div class="lbl">Projeto</div><div class="inp"><span>Leitura</span><svg class="ico" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+    <div class="lbl">Categoria</div><div class="seg"><span class="on">Materiais</span><span>Alimentação</span><span>Transporte</span></div>
+    <div class="lbl">O que foi comprado</div><div class="inp"><span class="ph-t">Ex.: livros para a oficina</span></div>
+    <div class="lbl" style="display:flex;justify-content:space-between">Data <span style="color:#71717a;font-weight:400">27/10/2026</span></div>
+    <div class="act" style="margin-top:12px">Enviar para aprovação</div>
+  </div>
+</div><div class="cap"><b>3 · Completar</b>Uma tela só. Data já vem como a da foto, projeto lembra o último usado.</div></div>
+
+<!-- 4. Rejeitada -->
+<div class="step"><div class="ph">
+  <div class="sb"><span>9:41</span><span>●●●</span></div>
+  <div class="hdr"><svg class="ico lg" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>Despesa</div>
+  <div class="bd" style="padding-top:0">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><div style="font-size:12px;color:#71717a">Alimentação · Esporte</div><div class="num" style="font-size:22px;text-align:left;margin-top:2px">R$ 64,00</div></div>
+      <span class="st rej" style="margin-top:4px">Rejeitada</span>
+    </div>
+    <div class="alert"><b>Motivo informado pela coordenação</b><br>A nota está cortada e não dá para ler o CNPJ. Envie uma foto do comprovante inteiro.<div style="color:#991b1b;font-size:9.5px;margin-top:4px">Luana Ferraz · 25/10</div></div>
+    <div class="photo" style="margin-top:12px;height:96px"><div class="paper" style="height:80px"><i></i><i class="s"></i><i></i></div></div>
+    <div style="font-size:11px;margin-top:10px;color:#52525b">Lanche do treino de sábado · 23/10/2026</div>
+    <div class="act" style="margin-top:16px">Corrigir e reenviar</div>
+  </div>
+</div><div class="cap"><b>4 · Rejeitada</b>O motivo aparece em destaque e há um único caminho: corrigir e reenviar.</div></div>
+
+</div>
+</div></body></html>
