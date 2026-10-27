@@ -1,6 +1,6 @@
 """Rotas de lançamentos.
 
-GET   /lancamentos?status=pendente -> fila de aprovação (T-18 · US-04)
+GET   /lancamentos                 -> lista com filtros, mais recentes primeiro
 POST  /lancamentos                 -> cria com comprovante (T-12 · US-03)
 GET   /lancamentos/{id}            -> consulta, com o motivo de rejeição (T-16)
 PATCH /lancamentos/{id}/aprovar    -> aprova (T-15 · US-04)
@@ -25,11 +25,27 @@ Ordem das verificações, para não deixar arquivo órfão no bucket:
 from datetime import date, datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Query,
+    UploadFile,
+)
 from pydantic import BaseModel
 
 if __package__ == "routers":
-    from autenticacao import Papel, exigir_autenticacao, exigir_papel, obter_usuario
+    from autenticacao import (
+        CABECALHO_PAPEL,
+        Papel,
+        exigir_autenticacao,
+        exigir_papel,
+        obter_usuario,
+    )
     from comprovantes import (
         TAMANHO_MAXIMO_BYTES,
         ArmazenamentoComprovantes,
@@ -50,7 +66,13 @@ if __package__ == "routers":
     from routers.comprovantes import obter_armazenamento
     from routers.orcamentos import _buscar_orcamento, _orcamentos
 else:
-    from ..autenticacao import Papel, exigir_autenticacao, exigir_papel, obter_usuario
+    from ..autenticacao import (
+        CABECALHO_PAPEL,
+        Papel,
+        exigir_autenticacao,
+        exigir_papel,
+        obter_usuario,
+    )
     from ..comprovantes import (
         TAMANHO_MAXIMO_BYTES,
         ArmazenamentoComprovantes,
@@ -291,6 +313,82 @@ def rejeitar_lancamento(
     )
 
 
+class LancamentoResumo(BaseModel):
+    id: str
+    orcamento_id: str
+    projeto_id: str
+    valor: float
+    descricao: str
+    categoria: str
+    data_despesa: Optional[date]
+    status: str
+    status_descricao: str
+    autor_id: Optional[str]
+    motivo_rejeicao: Optional[str]
+    conciliado: bool
+    referencia_extrato: Optional[str]
+    comprovante_url: Optional[str]
+    criado_em: datetime
+    aprovado_em: Optional[datetime]
+
+
+# GET /lancamentos precisa vir antes de GET /lancamentos/{id}.
+@router.get("", response_model=List[LancamentoResumo])
+def listar_lancamentos(
+    status: Optional[StatusLancamento] = Query(
+        None, description="Filtra pelo status, ex.: pendente."
+    ),
+    orcamento_id: Optional[str] = Query(None),
+    conciliado: Optional[bool] = Query(None),
+    meus: bool = Query(False, description="Só os lançamentos do usuário informado."),
+    papel: Optional[str] = Header(None, alias=CABECALHO_PAPEL),
+    usuario: Optional[str] = Depends(obter_usuario),
+) -> List[LancamentoResumo]:
+    """Lançamentos de todos os orçamentos, dos mais recentes para os mais antigos.
+
+    Educador só enxerga os próprios; `meus=true` aplica o mesmo a qualquer papel.
+    """
+    so_do_usuario = meus or (papel or "").strip().lower() == Papel.EDUCADOR.value
+    if so_do_usuario and usuario is None:
+        raise HTTPException(
+            status_code=400, detail="Identificação do usuário obrigatória."
+        )
+
+    itens = [
+        (orcamento, lancamento)
+        for orcamento in _orcamentos
+        if orcamento_id is None or orcamento.id == orcamento_id
+        for lancamento in orcamento.lancamentos
+        if (status is None or lancamento.status == status)
+        and (conciliado is None or lancamento.conciliado == conciliado)
+        and (not so_do_usuario or lancamento.autor_id == usuario)
+    ]
+    itens.sort(key=lambda item: item[1].criado_em, reverse=True)
+    return [
+        LancamentoResumo(
+            id=lancamento.id,
+            orcamento_id=orcamento.id,
+            projeto_id=orcamento.projeto_id,
+            valor=lancamento.valor,
+            descricao=lancamento.descricao,
+            categoria=lancamento.categoria,
+            data_despesa=lancamento.data_despesa,
+            status=lancamento.status.value,
+            status_descricao=DESCRICAO_STATUS[lancamento.status],
+            autor_id=lancamento.autor_id,
+            motivo_rejeicao=lancamento.motivo_rejeicao,
+            conciliado=lancamento.conciliado,
+            referencia_extrato=lancamento.referencia_extrato,
+            comprovante_url=(
+                f"/{lancamento.comprovante_chave}" if lancamento.comprovante_chave else None
+            ),
+            criado_em=lancamento.criado_em,
+            aprovado_em=lancamento.aprovado_em,
+        )
+        for orcamento, lancamento in itens
+    ]
+
+
 @router.get("/{lancamento_id}", response_model=LancamentoDetalhe)
 def obter_lancamento(lancamento_id: str) -> LancamentoDetalhe:
     """Consulta do lançamento por quem lançou: status e motivo da rejeição.
@@ -374,61 +472,3 @@ def conciliar_lancamento(
         conciliado=lancamento.conciliado,
         referencia_extrato=lancamento.referencia_extrato,
     )
-
-
-# --- GET /lancamentos (T-18 · US-04) -----------------------------------------
-
-
-class LancamentoNaFila(BaseModel):
-    id: str
-    orcamento_id: str
-    projeto_id: str
-    valor: float
-    descricao: str
-    categoria: str
-    data_despesa: Optional[date]
-    status: str
-    status_descricao: str
-    autor_id: Optional[str]
-    comprovante_url: Optional[str]
-    criado_em: datetime
-
-
-@router.get("", response_model=List[LancamentoNaFila])
-def listar_lancamentos(
-    status: Optional[StatusLancamento] = Query(
-        None, description="Filtra pelo status, ex.: pendente."
-    ),
-    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
-) -> List[LancamentoNaFila]:
-    """Lançamentos de todos os orçamentos, dos mais antigos para os mais novos.
-
-    É a fila do painel de aprovação: só Coordenação e Direção veem os
-    lançamentos de todo mundo.
-    """
-    itens = [
-        (orcamento, lancamento)
-        for orcamento in _orcamentos
-        for lancamento in orcamento.lancamentos
-        if status is None or lancamento.status == status
-    ]
-    itens.sort(key=lambda item: item[1].criado_em)
-    return [
-        LancamentoNaFila(
-            id=lancamento.id,
-            orcamento_id=orcamento.id,
-            projeto_id=orcamento.projeto_id,
-            valor=lancamento.valor,
-            descricao=lancamento.descricao,
-            categoria=lancamento.categoria,
-            data_despesa=lancamento.data_despesa,
-            status=lancamento.status.value,
-            status_descricao=DESCRICAO_STATUS[lancamento.status],
-            autor_id=lancamento.autor_id,
-            comprovante_url=(
-                f"/{lancamento.comprovante_chave}" if lancamento.comprovante_chave else None
-            ),
-            criado_em=lancamento.criado_em,
-        )
-        for orcamento, lancamento in itens
-    ]

@@ -46,6 +46,8 @@ class Lancamento:
     # T-18 · US-04: quando foi lançado, para a fila de aprovação mostrar
     # primeiro o que está esperando há mais tempo.
     criado_em: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    # Redesign Financeiro: quando foi aprovado, para a lista de lançamentos.
+    aprovado_em: Optional[datetime] = None
     # T-21 · US-05: vínculo com o item do extrato bancário.
     conciliado: bool = False
     referencia_extrato: Optional[str] = None
@@ -97,6 +99,7 @@ class Orcamento:
                 )
 
             lancamento.status = StatusLancamento.APROVADO
+            lancamento.aprovado_em = datetime.now(timezone.utc)
             self.saldo_atual -= lancamento.valor
             return lancamento
 
@@ -107,6 +110,7 @@ class Orcamento:
                 raise AprovacaoInvalida("Lançamento não está aprovado")
 
             lancamento.status = StatusLancamento.PENDENTE
+            lancamento.aprovado_em = None
             self.saldo_atual += lancamento.valor
 
     def rejeitar_lancamento(self, lancamento_id: str, motivo: str) -> Lancamento:

@@ -1,4 +1,4 @@
-"""T-18 · US-04 — GET /lancamentos (fila de aprovação da Coordenação)."""
+"""Redesign Financeiro · GET /lancamentos com filtros (substitui a fila da T-18)."""
 
 from datetime import date, datetime, timedelta, timezone
 
@@ -70,72 +70,53 @@ def ids(resposta):
     return [item["id"] for item in resposta.json()]
 
 
-# --- Fila de pendentes, mais antigos primeiro --------------------------------
+# --- Ordem e filtros ----------------------------------------------------------
 
 
-def test_lista_pendentes_do_mais_antigo_para_o_mais_novo():
-    novo, antigo, meio = lancamento(1), lancamento(48), lancamento(5)
-    criar_orcamento(novo, antigo, meio)
+def test_lista_todos_mais_recentes_primeiro():
+    velho, novo, meio = lancamento(48), lancamento(1), lancamento(5)
+    criar_orcamento(velho, novo, meio)
 
-    resposta = listar({"status": "pendente"})
+    resposta = listar()
 
     assert resposta.status_code == 200
-    assert ids(resposta) == [antigo.id, meio.id, novo.id]
+    assert ids(resposta) == [novo.id, meio.id, velho.id]
 
 
-def test_ordena_por_quando_foi_lancado_e_nao_pela_data_da_despesa():
-    # Despesa de janeiro lançada hoje fica depois de despesa de outubro
-    # lançada ontem: a fila é por tempo de espera.
-    retroativo = lancamento(1, data_despesa=date(2026, 1, 5))
-    de_ontem = lancamento(24, data_despesa=date(2026, 10, 20))
-    criar_orcamento(retroativo, de_ontem)
-
-    assert ids(listar({"status": "pendente"})) == [de_ontem.id, retroativo.id]
-
-
-def test_junta_pendentes_de_todos_os_orcamentos():
-    do_a = lancamento(10)
-    do_b = lancamento(20)
+def test_junta_lancamentos_de_todos_os_orcamentos():
+    do_a, do_b = lancamento(10), lancamento(20)
     criar_orcamento(do_a, id="orcamento-a", projeto_id="projeto-a")
     criar_orcamento(do_b, id="orcamento-b", projeto_id="projeto-b")
 
-    corpo = listar({"status": "pendente"}).json()
+    corpo = listar().json()
 
     assert [(i["id"], i["orcamento_id"], i["projeto_id"]) for i in corpo] == [
-        (do_b.id, "orcamento-b", "projeto-b"),
         (do_a.id, "orcamento-a", "projeto-a"),
+        (do_b.id, "orcamento-b", "projeto-b"),
     ]
 
 
-def test_filtro_pendente_deixa_de_fora_aprovados_e_rejeitados():
+def test_filtra_por_status():
     pendente = lancamento(3)
-    criar_orcamento(
-        pendente,
-        lancamento(5, StatusLancamento.APROVADO),
-        lancamento(4, StatusLancamento.REJEITADO, motivo_rejeicao="x"),
-    )
+    aprovado = lancamento(2, StatusLancamento.APROVADO)
+    rejeitado = lancamento(1, StatusLancamento.REJEITADO, motivo_rejeicao="x")
+    criar_orcamento(pendente, aprovado, rejeitado)
 
     assert ids(listar({"status": "pendente"})) == [pendente.id]
+    assert ids(listar({"status": "aprovado"})) == [aprovado.id]
+    assert ids(listar({"status": "rejeitado"})) == [rejeitado.id]
 
 
-def test_sem_filtro_lista_todos_os_status():
-    criar_orcamento(
-        lancamento(3),
-        lancamento(2, StatusLancamento.APROVADO),
-        lancamento(1, StatusLancamento.REJEITADO, motivo_rejeicao="x"),
-    )
+def test_filtra_por_orcamento_e_conciliado():
+    a_conciliado = lancamento(1, StatusLancamento.APROVADO, conciliado=True)
+    a_aberto = lancamento(2, StatusLancamento.APROVADO)
+    b_aberto = lancamento(3, StatusLancamento.APROVADO)
+    criar_orcamento(a_conciliado, a_aberto, id="o1")
+    criar_orcamento(b_aberto, id="o2")
 
-    corpo = listar().json()
-
-    assert [i["status"] for i in corpo] == ["pendente", "aprovado", "rejeitado"]
-
-
-@pytest.mark.parametrize("status", ["aprovado", "rejeitado"])
-def test_filtra_por_outros_status(status):
-    alvo = lancamento(1, StatusLancamento(status), motivo_rejeicao="x")
-    criar_orcamento(alvo, lancamento(2))
-
-    assert ids(listar({"status": status})) == [alvo.id]
+    assert ids(listar({"orcamento_id": "o1", "conciliado": "false"})) == [a_aberto.id]
+    assert ids(listar({"orcamento_id": "o1", "conciliado": "true"})) == [a_conciliado.id]
+    assert ids(listar({"orcamento_id": "o3"})) == []
 
 
 def test_status_invalido_retorna_422():
@@ -143,24 +124,68 @@ def test_status_invalido_retorna_422():
     assert listar({"status": "qualquer"}).status_code == 422
 
 
-def test_sem_pendentes_retorna_lista_vazia():
-    criar_orcamento(lancamento(1, StatusLancamento.APROVADO))
-    assert listar({"status": "pendente"}).json() == []
+# --- Acesso por papel ---------------------------------------------------------
 
 
-def test_lancamento_aprovado_sai_da_fila():
-    primeiro, segundo = lancamento(2), lancamento(1)
-    criar_orcamento(primeiro, segundo)
+def test_educador_ve_so_os_proprios():
+    do_marcos = lancamento(1, autor_id="marcos")
+    criar_orcamento(do_marcos, lancamento(2, autor_id="ana"), lancamento(3))
 
-    client.patch(f"/lancamentos/{primeiro.id}/aprovar", headers=cabecalhos())
+    resposta = listar(papel="educador", usuario="marcos")
 
-    assert ids(listar({"status": "pendente"})) == [segundo.id]
-
-
-# --- Dados que o painel precisa ---------------------------------------------
+    assert ids(resposta) == [do_marcos.id]
 
 
-def test_item_traz_os_dados_para_o_painel():
+def test_educador_sem_usuario_recebe_400():
+    criar_orcamento(lancamento(1, autor_id="marcos"))
+
+    resposta = listar(papel="educador")
+
+    assert resposta.status_code == 400
+    assert resposta.json()["detail"] == "Identificação do usuário obrigatória."
+
+
+def test_educador_nao_escapa_do_filtro_com_meus_false():
+    criar_orcamento(lancamento(1, autor_id="ana"))
+    assert listar({"meus": "false"}, papel="educador", usuario="marcos").json() == []
+
+
+def test_meus_true_filtra_pelo_usuario_em_qualquer_papel():
+    meu = lancamento(1, autor_id="ana")
+    criar_orcamento(meu, lancamento(2, autor_id="marcos"))
+
+    assert ids(listar({"meus": "true"}, papel="coordenacao", usuario="ana")) == [meu.id]
+    sem_usuario = listar({"meus": "true"}, papel="coordenacao")
+    assert sem_usuario.status_code == 400
+
+
+@pytest.mark.parametrize("papel", ["coordenacao", "direcao", "voluntario_financeiro"])
+def test_outros_papeis_veem_todos(papel):
+    criar_orcamento(lancamento(1, autor_id="ana"), lancamento(2, autor_id="marcos"))
+    assert len(listar(papel=papel).json()) == 2
+
+
+def test_sem_token_retorna_401():
+    criar_orcamento(lancamento(1))
+    assert listar(token=None).status_code == 401
+
+
+# --- Dados do resumo ----------------------------------------------------------
+
+
+def test_aprovar_preenche_aprovado_em():
+    pendente = lancamento(1)
+    criar_orcamento(pendente)
+    assert listar().json()[0]["aprovado_em"] is None
+
+    client.patch(f"/lancamentos/{pendente.id}/aprovar", headers=cabecalhos())
+
+    [item] = listar().json()
+    assert item["status"] == "aprovado"
+    assert item["aprovado_em"] is not None
+
+
+def test_resumo_traz_projeto_e_comprovante_url():
     criar_orcamento()
     criado = client.post(
         "/lancamentos",
@@ -175,7 +200,7 @@ def test_item_traz_os_dados_para_o_painel():
         headers=cabecalhos(papel="educador", usuario="educadora-ana"),
     ).json()
 
-    [item] = listar({"status": "pendente"}).json()
+    [item] = listar().json()
 
     assert item.pop("criado_em")
     assert item == {
@@ -189,7 +214,11 @@ def test_item_traz_os_dados_para_o_painel():
         "status": "pendente",
         "status_descricao": "Pendente de aprovação",
         "autor_id": "educadora-ana",
+        "motivo_rejeicao": None,
+        "conciliado": False,
+        "referencia_extrato": None,
         "comprovante_url": criado["comprovante"]["url"],
+        "aprovado_em": None,
     }
 
 
@@ -197,23 +226,3 @@ def test_lancamento_novo_ganha_criado_em_automaticamente():
     antes = datetime.now(timezone.utc)
     novo = Lancamento(valor=10, status=StatusLancamento.PENDENTE)
     assert antes <= novo.criado_em <= datetime.now(timezone.utc)
-
-
-# --- Papéis e autenticação ---------------------------------------------------
-
-
-@pytest.mark.parametrize("papel", ["coordenacao", "direcao"])
-def test_coordenacao_e_direcao_veem_a_fila(papel):
-    criar_orcamento(lancamento(1))
-    assert listar({"status": "pendente"}, papel=papel).status_code == 200
-
-
-@pytest.mark.parametrize("papel", ["educador", "voluntario_financeiro", "", None])
-def test_outros_papeis_recebem_403(papel):
-    criar_orcamento(lancamento(1))
-    assert listar({"status": "pendente"}, papel=papel).status_code == 403
-
-
-def test_sem_token_retorna_401():
-    criar_orcamento(lancamento(1))
-    assert listar({"status": "pendente"}, token=None).status_code == 401
