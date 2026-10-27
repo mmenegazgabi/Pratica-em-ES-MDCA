@@ -25,6 +25,10 @@ class LancamentoInvalido(ValueError):
     """Dados do lançamento não batem com o orçamento (T-12)."""
 
 
+class ConciliacaoInvalida(ValueError):
+    """Lançamento não pode ser conciliado no estado atual (T-21)."""
+
+
 @dataclass
 class Lancamento:
     valor: float
@@ -39,6 +43,9 @@ class Lancamento:
     motivo_rejeicao: Optional[str] = None
     # T-17 · US-04: quem lançou, para receber a notificação do resultado.
     autor_id: Optional[str] = None
+    # T-21 · US-05: vínculo com o item do extrato bancário.
+    conciliado: bool = False
+    referencia_extrato: Optional[str] = None
 
 
 @dataclass
@@ -115,6 +122,31 @@ class Orcamento:
                 )
             lancamento.status = StatusLancamento.REJEITADO
             lancamento.motivo_rejeicao = motivo
+            return lancamento
+
+    def conciliar_lancamento(
+        self, lancamento_id: str, referencia_extrato: str
+    ) -> Lancamento:
+        # T-21 · US-05: só lançamento aprovado pode ser conciliado. Repetir
+        # com a mesma referência é idempotente; com outra referência é erro,
+        # para não trocar o vínculo com o extrato sem querer.
+        referencia_extrato = (referencia_extrato or "").strip()
+        if not referencia_extrato:
+            raise LancamentoInvalido("Referência do extrato é obrigatória.")
+        with self._lock:
+            lancamento = self._buscar_lancamento(lancamento_id)
+            if lancamento.status != StatusLancamento.APROVADO:
+                raise ConciliacaoInvalida(
+                    "Apenas lançamentos aprovados podem ser conciliados"
+                )
+            if lancamento.conciliado:
+                if lancamento.referencia_extrato == referencia_extrato:
+                    return lancamento
+                raise ConciliacaoInvalida(
+                    "Lançamento já está conciliado com outra referência do extrato"
+                )
+            lancamento.conciliado = True
+            lancamento.referencia_extrato = referencia_extrato
             return lancamento
 
     def registrar_lancamento(self, lancamento: Lancamento) -> Lancamento:
