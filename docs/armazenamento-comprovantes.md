@@ -60,6 +60,20 @@ curl -X POST https://<api>/lancamentos \
   -F comprovante=@nota.jpg
 ```
 
+## Consultar e rejeitar lançamento (T-16)
+
+| Rota | Quem pode | O que faz |
+|---|---|---|
+| `GET /lancamentos/{id}` | qualquer usuário autenticado | Devolve `status`, `status_descricao`, `motivo_rejeicao` e `comprovante_url`. É onde quem lançou vê o motivo. |
+| `PATCH /lancamentos/{id}/rejeitar` | `coordenacao` ou `direcao` (cabeçalho `X-Papel-Usuario`, como na T-15) | Corpo JSON `{"motivo": "..."}`. Só lançamento **pendente** pode ser rejeitado. |
+
+- Sem motivo (sem corpo, `{}`, `null`, vazio ou só espaços): HTTP 400
+  `"Motivo da rejeição é obrigatório."`. Máximo de 500 caracteres.
+- Com motivo: HTTP 200 com `status: "rejeitado"`, `status_descricao: "Rejeitado"`,
+  `motivo_rejeicao` e `saldo_orcamento` (mesmo formato da aprovação da T-15).
+- Aprovado ou já rejeitado: HTTP 409; o motivo original é mantido.
+- A rejeição **não altera o saldo**, e um lançamento rejeitado não pode mais ser aprovado.
+
 ## Autenticação (provisória até a US-08)
 
 Enquanto não existe login de usuários, as rotas exigem um token de serviço:
