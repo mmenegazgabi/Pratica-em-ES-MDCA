@@ -37,6 +37,8 @@ class Lancamento:
     comprovante_chave: Optional[str] = None
     # T-16 · US-04: motivo informado por quem rejeitou.
     motivo_rejeicao: Optional[str] = None
+    # T-17 · US-04: quem lançou, para receber a notificação do resultado.
+    autor_id: Optional[str] = None
 
 
 @dataclass

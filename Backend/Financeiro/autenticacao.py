@@ -85,3 +85,40 @@ def exigir_papel(*permitidos: Papel):
         return Papel(papel_normalizado)
 
     return verificar
+
+
+# --- Identificação do usuário (T-17 · US-04) --------------------------------
+#
+# Provisório até a US-08, no mesmo esquema do papel: quem está logado chega no
+# cabeçalho ``X-Usuario-Id``, sempre junto com o token de serviço. Serve para
+# saber quem é o autor de um lançamento e de quem são as notificações.
+
+CABECALHO_USUARIO = "X-Usuario-Id"
+USUARIO_TAMANHO_MAXIMO = 100
+
+
+def obter_usuario(
+    usuario: Optional[str] = Header(None, alias=CABECALHO_USUARIO),
+) -> Optional[str]:
+    """Usuário informado no cabeçalho, ou ``None`` quando ausente."""
+    usuario = (usuario or "").strip()
+    if not usuario:
+        return None
+    if len(usuario) > USUARIO_TAMANHO_MAXIMO:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{CABECALHO_USUARIO} deve ter no máximo {USUARIO_TAMANHO_MAXIMO} caracteres.",
+        )
+    return usuario
+
+
+def exigir_usuario(
+    _servico: str = Depends(exigir_autenticacao),
+    usuario: Optional[str] = Depends(obter_usuario),
+) -> str:
+    if usuario is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Identificação do usuário obrigatória.",
+        )
+    return usuario
