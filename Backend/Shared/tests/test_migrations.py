@@ -209,6 +209,8 @@ def test_migration_cria_tabela_lancamentos_com_colunas_esperadas(migrated_db):
         "comprovante_url",
         "motivo_rejeicao",
         "autor_id",
+        "conciliado",
+        "item_extrato_ref",
     }
 
     fks = {
@@ -330,3 +332,78 @@ def test_downgrade_de_lancamentos_nao_deixa_orfaos(migrated_db):
 
     command.upgrade(config, "head")
     assert "lancamentos" in sa.inspect(engine).get_table_names()
+
+
+# T-20 · US-05: conciliacao fields on lancamentos.
+
+# Revision right before the conciliacao fields; pinned for the same reason as
+# REV_ORCAMENTOS.
+REV_LANCAMENTOS = "14749dd94ab3"
+
+
+def test_lancamento_novo_nasce_nao_conciliado_e_sem_item_do_extrato(migrated_db):
+    engine, _ = migrated_db
+
+    with engine.connect() as conn:
+        _inserir_projeto_e_orcamento(conn)
+        _inserir_lancamento(conn)
+        gravado = conn.execute(
+            sa.text("SELECT conciliado, item_extrato_ref FROM lancamentos")
+        ).one()
+        conn.rollback()
+
+    assert tuple(gravado) == (False, None)
+
+
+def test_lancamento_conciliado_guarda_referencia_do_item_do_extrato(migrated_db):
+    engine, _ = migrated_db
+
+    with engine.connect() as conn:
+        _inserir_projeto_e_orcamento(conn)
+        _inserir_lancamento(conn)
+        conn.execute(
+            sa.text(
+                "UPDATE lancamentos SET conciliado = true, item_extrato_ref = 'ext-42'"
+            )
+        )
+        gravado = conn.execute(
+            sa.text("SELECT conciliado, item_extrato_ref FROM lancamentos")
+        ).one()
+        conn.rollback()
+
+    assert tuple(gravado) == (True, "ext-42")
+
+
+def test_migration_de_conciliacao_preserva_lancamentos_existentes(migrated_db):
+    engine, config = migrated_db
+
+    command.downgrade(config, REV_LANCAMENTOS)
+    with engine.begin() as conn:
+        _inserir_projeto_e_orcamento(conn)
+        _inserir_lancamento(conn)
+
+    command.upgrade(config, "head")
+
+    with engine.connect() as conn:
+        gravado = conn.execute(
+            sa.text(
+                "SELECT id, status, valor, conciliado, item_extrato_ref FROM lancamentos"
+            )
+        ).one()
+
+    assert tuple(gravado) == ("lan-1", "pendente", 100, False, None)
+
+
+def test_downgrade_de_conciliacao_remove_apenas_as_colunas_novas(migrated_db):
+    engine, config = migrated_db
+
+    command.downgrade(config, REV_LANCAMENTOS)
+
+    colunas = {c["name"] for c in sa.inspect(engine).get_columns("lancamentos")}
+    assert "conciliado" not in colunas
+    assert "item_extrato_ref" not in colunas
+    assert "status" in colunas
+
+    command.upgrade(config, "head")
+    colunas = {c["name"] for c in sa.inspect(engine).get_columns("lancamentos")}
+    assert {"conciliado", "item_extrato_ref"} <= colunas
