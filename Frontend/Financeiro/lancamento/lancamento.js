@@ -28,7 +28,7 @@ import {
 import { el, limpar } from "../base/dom.js";
 import { formatarData, formatarMoeda, tempoRelativo } from "../base/formatar.js";
 import { icone } from "../base/icones.js";
-import { encerrarSessao, lerSessao, salvarSessao } from "../base/sessao.js";
+import { CHAVE_SESSAO_CELULAR, encerrarSessao, lerSessao, salvarSessao, usarChaveDeSessao } from "../base/sessao.js";
 import {
   agruparDespesas,
   legendaDaDespesa,
@@ -47,6 +47,8 @@ import {
   montarFormDataDados,
   validarFormulario,
 } from "./formulario.js";
+
+usarChaveDeSessao(CHAVE_SESSAO_CELULAR);
 
 const $ = (id) => document.getElementById(id);
 const tela = $("tela");
@@ -118,6 +120,11 @@ function previa(caminho, minhaVez, classe = "previa") {
   return caixa;
 }
 
+function fecharAviso() {
+  window.clearTimeout(temporizadorDoAviso);
+  avisoFlutuante.hidden = true;
+}
+
 /** Aviso que aparece por cima da barra inferior; `acao` = { texto, href }. */
 function avisar(texto, acao = null) {
   window.clearTimeout(temporizadorDoAviso);
@@ -171,6 +178,7 @@ function mostrarTela() {
   if (precisaPrimeiroAcesso()) return telaPrimeiroAcesso();
   const { nome, id } = rotaAtual();
   const rota = TELAS[nome] || TELAS[""];
+  if (rota.aba && rota.aba !== "despesas") fecharAviso();
   abas.hidden = !rota.aba;
   for (const item of abas.querySelectorAll("[data-aba]")) {
     if (item.dataset.aba === rota.aba) item.setAttribute("aria-current", "page");

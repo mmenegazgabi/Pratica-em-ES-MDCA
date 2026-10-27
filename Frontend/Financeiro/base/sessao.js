@@ -7,7 +7,15 @@ export const PAPEIS = {
   educador: "Educador",
 };
 
-const CHAVE_SESSAO = "mdca.financeiro.sessao";
+export const CHAVE_SESSAO_COMPUTADOR = "mdca.financeiro.sessao";
+export const CHAVE_SESSAO_CELULAR = "mdca.financeiro.sessao.celular";
+
+let CHAVE_SESSAO = CHAVE_SESSAO_COMPUTADOR;
+
+/** O app do celular guarda a sessão à parte, para não trocar a do computador no mesmo navegador. */
+export function usarChaveDeSessao(chave) {
+  CHAVE_SESSAO = chave;
+}
 
 export function lerSessao() {
   try {

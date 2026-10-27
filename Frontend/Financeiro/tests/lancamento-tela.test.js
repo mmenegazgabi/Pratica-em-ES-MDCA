@@ -72,7 +72,7 @@ async function abrirTela({ sessao = SESSAO_EDUCADOR, token = "token-de-teste", h
   window.HTMLElement.prototype.scrollIntoView = () => {};
   window.scrollTo = () => {};
   if (token) window.localStorage.setItem("mdca.financeiro.token", token);
-  if (sessao) window.localStorage.setItem("mdca.financeiro.sessao", sessao);
+  if (sessao) window.localStorage.setItem("mdca.financeiro.sessao.celular", sessao);
 
   globalThis.window = window;
   globalThis.document = window.document;
@@ -160,7 +160,7 @@ describe("primeiro acesso", { skip: SEM_JSDOM }, () => {
     await enviarFormulario(tela, "form-acesso");
     await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
 
-    assert.deepEqual(JSON.parse(tela.window.localStorage.getItem("mdca.financeiro.sessao")), { papel: "educador", nome: "Marcos Vieira" });
+    assert.deepEqual(JSON.parse(tela.window.localStorage.getItem("mdca.financeiro.sessao.celular")), { papel: "educador", nome: "Marcos Vieira" });
     const [chamada] = tela.de("GET", "/lancamentos");
     assert.equal(chamada.headers.Authorization, "Bearer codigo-secreto");
     assert.equal(chamada.headers["X-Papel-Usuario"], "educador");
@@ -173,7 +173,7 @@ describe("primeiro acesso", { skip: SEM_JSDOM }, () => {
     digitar(tela, "campo-token", "codigo");
     await enviarFormulario(tela, "form-acesso");
     assert.equal(tela.$("erro-acesso").textContent, "Informe seu nome.");
-    assert.equal(tela.window.localStorage.getItem("mdca.financeiro.sessao"), null);
+    assert.equal(tela.window.localStorage.getItem("mdca.financeiro.sessao.celular"), null);
   });
 
   test("sessão de outro papel (coordenação) também cai no primeiro acesso", async () => {
@@ -283,6 +283,9 @@ describe("fotografar e completar", { skip: SEM_JSDOM }, () => {
     assert.equal(envio.corpo.get("data_despesa"), esperada);
     assert.equal(envio.corpo.has("comprovante"), false);
     assert.equal(tela.$("aviso-flutuante").textContent, "Despesa enviada para aprovação");
+
+    tela.window.location.hash = "#/avisos";
+    await esperar(() => tela.$("aviso-flutuante").hidden, "aviso some ao trocar de aba");
   });
 
   test("completar sem valor e sem categoria não envia e aponta os campos", async () => {
@@ -387,7 +390,7 @@ describe("avisos e perfil", { skip: SEM_JSDOM }, () => {
 
     tela.$("botao-sair").click();
     await esperar(() => tela.$("form-acesso"), "primeiro acesso");
-    assert.equal(tela.window.localStorage.getItem("mdca.financeiro.sessao"), null);
+    assert.equal(tela.window.localStorage.getItem("mdca.financeiro.sessao.celular"), null);
     assert.equal(tela.window.localStorage.getItem("mdca.financeiro.token"), null);
   });
 });

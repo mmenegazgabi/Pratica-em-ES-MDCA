@@ -1,6 +1,16 @@
 import { beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { encerrarSessao, itensDeMenu, lerSessao, nomeDoAutor, salvarSessao, usuarioId } from "../base/sessao.js";
+import {
+  CHAVE_SESSAO_CELULAR,
+  CHAVE_SESSAO_COMPUTADOR,
+  encerrarSessao,
+  itensDeMenu,
+  lerSessao,
+  nomeDoAutor,
+  salvarSessao,
+  usarChaveDeSessao,
+  usuarioId,
+} from "../base/sessao.js";
 
 beforeEach(() => {
   const dados = new Map();
@@ -44,4 +54,17 @@ test("nomeDoAutor capitaliza o slug e tolera vazio", () => {
   assert.equal(nomeDoAutor("marcos-vieira"), "Marcos Vieira");
   assert.equal(nomeDoAutor(null), "");
   assert.equal(nomeDoAutor(""), "");
+});
+
+test("celular e computador guardam a sessão em chaves separadas", () => {
+  salvarSessao({ papel: "coordenacao", nome: "Luana" });
+  usarChaveDeSessao(CHAVE_SESSAO_CELULAR);
+  try {
+    assert.equal(lerSessao(), null);
+    salvarSessao({ papel: "educador", nome: "Marcos" });
+    assert.deepEqual(lerSessao(), { papel: "educador", nome: "Marcos" });
+  } finally {
+    usarChaveDeSessao(CHAVE_SESSAO_COMPUTADOR);
+  }
+  assert.deepEqual(lerSessao(), { papel: "coordenacao", nome: "Luana" });
 });

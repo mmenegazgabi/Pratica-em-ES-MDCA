@@ -3,7 +3,8 @@ import { el, limpar } from "./base/dom.js";
 import { logo } from "./base/logo.js";
 import { icone } from "./base/icones.js";
 import { lerRota, rotaPermitida } from "./base/rotas.js";
-import { reaplicarContador } from "./base/contador.js";
+import { contadorDefinido, reaplicarContador } from "./base/contador.js";
+import { atualizarContadorDePendencias } from "./telas/inicio.js";
 import { PAPEIS, lerSessao, salvarSessao, encerrarSessao, itensDeMenu } from "./base/sessao.js";
 import { API_PADRAO, esquecerAcesso, salvarAcesso, tokenSalvo, urlDaApi } from "./base/api.js";
 
@@ -135,6 +136,7 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
     const container = el("main", { class: "principal" }, el("p", { class: "carregando", role: "status" }, "Carregando…"));
     limpar(raiz).append(barraLateral(sessao, tela), container);
     reaplicarContador();
+    if (!contadorDefinido() && tela !== "inicio" && tela !== "lancamentos") atualizarContadorDePendencias(sessao.papel);
     return carregarTela(container, tela, parametros, sessao, minhaVez);
   }
 

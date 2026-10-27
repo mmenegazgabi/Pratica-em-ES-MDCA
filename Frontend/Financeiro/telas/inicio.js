@@ -60,12 +60,23 @@ function tabelaDaSecao(secao, navegar) {
   );
 }
 
+function carregarDados(papel) {
+  return Promise.all([
+    COM_LANCAMENTOS.includes(papel) ? listarLancamentos() : { status: 200, corpo: [] },
+    COM_ORCAMENTOS.includes(papel) ? listarOrcamentos() : { status: 200, corpo: [] },
+  ]);
+}
+
+/** Preenche o contador do Início quando a primeira tela aberta é outra (ex.: #/projetos). */
+export async function atualizarContadorDePendencias(papel) {
+  const [lancamentos, orcamentos] = await carregarDados(papel);
+  if (falhou(lancamentos) || falhou(orcamentos)) return;
+  definirContador(montarPendencias(papel, { lancamentos: lancamentos.corpo, orcamentos: orcamentos.corpo }, new Date()).total);
+}
+
 export async function mostrar(container, { sessao, navegar }) {
   limpar(container).append(el("p", { class: "carregando" }, "Carregando…"));
-  const [lancamentos, orcamentos] = await Promise.all([
-    COM_LANCAMENTOS.includes(sessao.papel) ? listarLancamentos() : { status: 200, corpo: [] },
-    COM_ORCAMENTOS.includes(sessao.papel) ? listarOrcamentos() : { status: 200, corpo: [] },
-  ]);
+  const [lancamentos, orcamentos] = await carregarDados(sessao.papel);
 
   const agora = new Date();
   const primeiroNome = String(sessao.nome || "").trim().split(/\s+/)[0];

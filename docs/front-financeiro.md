@@ -31,7 +31,9 @@ de acesso** do Financeiro (`FINANCEIRO_API_TOKEN`). Tudo fica só neste navegado
 `Authorization: Bearer <código>`, `X-Papel-Usuario` e `X-Usuario-Id` (o nome em
 minúsculas e com hífens, ex.: `marcos-vieira`). "Trocar perfil" na barra lateral
 apaga a sessão e o código. Quem entra como educador é levado ao app do celular
-(`lancamento/`). A sessão do computador e a do celular usam a mesma chave.
+(`lancamento/`). O celular guarda a sessão em outra chave
+(`mdca.financeiro.sessao.celular`), então entrar no celular não troca a sessão do
+computador no mesmo navegador.
 
 ## Telas por papel
 
