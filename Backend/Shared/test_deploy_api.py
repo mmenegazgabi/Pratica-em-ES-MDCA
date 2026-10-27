@@ -17,8 +17,12 @@ def load_deploy_app():
 
 def test_financial_routes_are_served_by_deploy_app():
     client = TestClient(load_deploy_app())
+    headers = {"Authorization": "Bearer token-deploy", "X-Papel-Usuario": "coordenacao"}
+    with patch.dict(os.environ, {"FINANCEIRO_API_TOKEN": "token-deploy"}):
+        projeto = client.post("/projetos", json={"nome": "Infra Integration"}, headers=headers)
+    assert projeto.status_code == 201
     response = client.post("/orcamentos", json={
-        "projeto_id": "infra-integration",
+        "projeto_id": projeto.json()["id"],
         "valor_total": 1000,
         "data_inicio": "2026-01-01",
         "data_fim": "2026-12-31",
