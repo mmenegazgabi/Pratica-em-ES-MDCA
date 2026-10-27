@@ -1,6 +1,6 @@
 import { beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { encerrarSessao, itensDeMenu, lerSessao, salvarSessao, usuarioId } from "../base/sessao.js";
+import { encerrarSessao, itensDeMenu, lerSessao, nomeDoAutor, salvarSessao, usuarioId } from "../base/sessao.js";
 
 beforeEach(() => {
   const dados = new Map();
@@ -38,4 +38,10 @@ test("itensDeMenu por papel", () => {
   assert.deepEqual(ids("voluntario_financeiro"), ["inicio", "lancamentos"]);
   assert.deepEqual(ids("educador"), []);
   for (const item of itensDeMenu("coordenacao")) assert.ok(item.rotulo && item.icone && item.rota);
+});
+
+test("nomeDoAutor capitaliza o slug e tolera vazio", () => {
+  assert.equal(nomeDoAutor("marcos-vieira"), "Marcos Vieira");
+  assert.equal(nomeDoAutor(null), "");
+  assert.equal(nomeDoAutor(""), "");
 });

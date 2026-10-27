@@ -37,6 +37,15 @@ export function encerrarSessao() {
   }
 }
 
+/** "marcos-vieira" → "Marcos Vieira"; vazio → "". */
+export function nomeDoAutor(autorId) {
+  return String(autorId || "")
+    .split("-")
+    .filter(Boolean)
+    .map((p) => p[0].toUpperCase() + p.slice(1))
+    .join(" ");
+}
+
 /** " Marcos Vieira " → "marcos-vieira". */
 export function usuarioId(nome) {
   return String(nome)
