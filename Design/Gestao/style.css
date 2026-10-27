@@ -361,12 +361,12 @@ h1[tabindex="-1"]:focus{outline:none}
 @media(max-width:580px){.topbar{flex-wrap:wrap}.header-context{flex-basis:calc(100% - 42px)}.top-actions{margin-left:auto}.breadcrumbs [aria-current]{overflow-wrap:anywhere}}
 
 /* Barra lateral: mesmas medidas e estados do protótipo financeiro. */
-.sidebar{width:246px}.sidebar .nav{min-height:0}.sidebar .brand,.sidebar .workspace,.sidebar .side-bottom{flex-shrink:0}.sidebar .nav a,.sidebar .nav-action{font-size:13.5px;line-height:1.6}.sidebar .nav a.active{font-size:13.5px}.nav-action{display:block;width:100%;text-align:left;border:0;border-left:2px solid transparent;background:transparent;padding:7px 20px;font-family:var(--font-body);color:color-mix(in srgb,var(--color-text) 78%,transparent)}.nav-action:hover{background:color-mix(in srgb,var(--color-text) 4%,transparent);color:var(--color-accent-700)}.sidebar .workspace .seg .selected{box-shadow:none;color:var(--color-text)}.sidebar .workspace .seg a,.sidebar .workspace .seg button{color:var(--color-text);font-size:14px}.footer-prototype{display:flex;gap:14px;flex-wrap:wrap}.footer-prototype a{color:var(--color-accent-700)}.module-overview{display:grid;grid-template-columns:1.4fr 1fr;border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden;max-width:860px}.module-overview section{padding:34px 36px}.module-overview section+section{border-left:1px solid var(--line);background:var(--paper)}.module-overview h2{margin:10px 0}.module-overview p{font-size:14px;line-height:1.7;margin-bottom:22px}
+.sidebar{width:246px}.sidebar .nav{min-height:0}.sidebar .brand,.sidebar .workspace,.sidebar .side-bottom{flex-shrink:0}.sidebar .nav a{font-size:13.5px;line-height:1.6}.sidebar .nav a.active{font-size:13.5px}.sidebar .workspace .seg .selected{box-shadow:none;color:var(--color-text)}.sidebar .workspace .seg a,.sidebar .workspace .seg button{color:var(--color-text);font-size:14px}.footer-prototype{display:flex;gap:14px;flex-wrap:wrap}.footer-prototype a{color:var(--color-accent-700)}.module-overview{display:grid;grid-template-columns:1.4fr 1fr;border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden;max-width:860px}.module-overview section{padding:34px 36px}.module-overview section+section{border-left:1px solid var(--line);background:var(--paper)}.module-overview h2{margin:10px 0}.module-overview p{font-size:14px;line-height:1.7;margin-bottom:22px}
 @media(min-width:761px){.shell{margin-left:246px}}@media(max-width:760px){.module-overview{grid-template-columns:1fr}.module-overview section+section{border-left:0;border-top:1px solid var(--line)}.footer .footer-prototype{max-width:none}}
 /* Mapa editorial independente do shell da plataforma. */
 .map-canvas{max-width:1800px;margin:0 auto;padding:42px 36px 80px}.map-canvas .map-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:38px 30px}.map-canvas .map-intro{max-width:72ch}.map-sections-nav{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 38px}.map-sections-nav a{border:1.5px solid var(--color-accent-600);border-radius:var(--radius-pill);padding:9px 18px;color:var(--color-accent-700);font-family:var(--font-heading);font-weight:500;font-size:14px}.map-sections-nav a:hover{background:var(--color-accent-100)}.map-section{margin-top:42px;scroll-margin-top:24px}.map-section+.map-section{border-top:1px solid var(--line);padding-top:34px;margin-top:64px}.map-section-heading{margin-bottom:26px}.map-section-heading h2{font-size:30px;margin-top:8px}.map-section-heading p{font-size:13px;color:var(--muted);max-width:85ch;line-height:1.7}.map-return{position:fixed;bottom:18px;right:20px;z-index:24;background:var(--paper);border:1px solid var(--gold);box-shadow:var(--shadow-sm);padding:12px 18px;color:var(--pine);font-size:13px;border-radius:var(--radius-pill)}.map-return:hover{background:var(--mint)}.map-canvas .map-caption-head{flex-wrap:wrap}.map-canvas .map-caption-head small{white-space:nowrap}
 @media(max-width:760px){.map-canvas{padding:26px 18px 70px}.map-canvas .map-grid{grid-template-columns:1fr}.map-return{bottom:12px;right:12px;padding:10px 14px;font-size:12px}.map-section-heading h2{font-size:27px}}
-.profile-menu{position:relative}.profile-menu .profile{background:transparent;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}.user-menu{position:absolute;top:calc(100% + 10px);right:0;z-index:40;width:280px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--paper);box-shadow:var(--shadow-sm)}
+.profile-menu{position:relative}.profile-menu .profile{background:transparent;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}.user-menu{position:absolute;top:calc(100% + 10px);right:0;z-index:40;width:280px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--paper);box-shadow:var(--shadow-sm)}.user-menu-footer{font-size:11px;color:var(--color-neutral-600);margin-top:10px;padding-top:10px;border-top:1px solid var(--color-divider)}.user-menu-footer a{color:var(--color-accent-700)}
 /* Shell no padrão do Financeiro: logo colorido, notificações em pílula e contador do menu. */
 .brand-logo{display:block;width:92px;height:34px}.brand small{margin-top:6px}
 .notification-button{font:inherit;font-size:12px;font-weight:500;padding:7px 12px;background:transparent;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}.notification-button:hover{background:var(--color-accent-100)}
@@ -379,21 +379,21 @@ h1[tabindex="-1"]:focus{outline:none}
 .login-story .brand-logo{width:120px;height:44px}.report-preview .report-brand .brand-logo{width:92px;height:34px;margin-bottom:8px}
 
 /* Mobile preview for the Gestão flows, matching the Financeiro phone presentation. */
-.mobile-preview-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);align-items:start;gap:32px;max-width:1020px;margin:0 auto}
+.mobile-preview-layout{display:grid;justify-items:center;max-width:1020px;margin:0 auto}
 .mobile-preview-device-wrap{display:grid;justify-items:center;gap:12px}
 .mobile-preview-device-wrap>small{font-size:11px;color:var(--color-neutral-600)}
 .mobile-device{width:min(100%,418px);padding:14px;background:#201f1d;border-radius:42px;box-shadow:0 18px 40px rgba(20,24,20,.2)}
 .mobile-device-screen{position:relative;overflow:hidden;width:100%;aspect-ratio:390/844;border-radius:30px;background:var(--color-bg)}
 .mobile-device-screen iframe{display:block;width:100%;height:100%;border:0;background:var(--color-bg)}
 .mobile-device-notch{position:absolute;top:0;left:50%;z-index:5;width:120px;height:25px;transform:translateX(-50%);border-radius:0 0 16px 16px;background:#201f1d;pointer-events:none}
-.mobile-preview-controls{padding:24px;border:1px solid var(--color-divider);border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-sm)}
-.mobile-preview-controls h2{margin:0 0 8px;font-family:var(--font-heading);font-size:25px}
-.mobile-preview-controls>p{font-size:13px;line-height:1.65;color:var(--color-neutral-700)}
-.mobile-screen-options{display:grid;gap:8px;margin:20px 0}
-.mobile-screen-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 14px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-bg);color:var(--color-text);font:inherit;text-align:left;cursor:pointer}
-.mobile-screen-option:hover,.mobile-screen-option.active{border-color:var(--color-accent-600);background:var(--color-accent-100);color:var(--color-accent-800)}
-.mobile-screen-option>span:last-child{font-size:20px;line-height:1}
-.mobile-preview-controls .mobile-preview-note{padding-top:14px;border-top:1px solid var(--color-divider);font-size:11px;color:var(--color-neutral-600)}
+
+
+
+
+
+
+
+
 .phone-record-count{margin:0 0 10px;font-size:12px;color:var(--color-neutral-600)}
 .phone-record-list,.phone-audit-list{display:grid;gap:10px}
 .phone-record,.phone-audit-entry{display:grid;gap:7px;min-width:0;padding:14px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-neutral-100);color:var(--color-text);text-decoration:none}
@@ -407,7 +407,7 @@ h1[tabindex="-1"]:focus{outline:none}
 .phone-audit-filters .filter-control{width:100%;background:var(--color-surface)}
 .phone-date-range{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:7px;font-size:12px;color:var(--color-neutral-700)}
 .phone-audit-entry .btn{justify-self:start}
-.phone-mode .mobile-toggle{display:none}
+
 .phone-mode .topbar{padding-top:28px}
 .phone-mode .card-head{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;align-items:start}
 .phone-mode .card-head>.text-link{justify-self:start;margin-top:6px;padding:7px 13px;border:1px solid var(--color-accent-600);border-radius:var(--radius-pill);color:var(--color-accent-700);font-family:var(--font-heading);font-weight:500;text-decoration:none}
@@ -422,4 +422,14 @@ h1[tabindex="-1"]:focus{outline:none}
 .phone-agenda-title{min-width:0;overflow-wrap:anywhere;font-family:var(--font-heading);font-size:16px;line-height:1.3}
 .phone-agenda-title small{margin-top:4px}
 .phone-agenda-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-left:60px}
-@media(max-width:760px){.mobile-preview-layout{grid-template-columns:1fr;gap:22px}.mobile-device{width:min(100%,418px)}.mobile-preview-controls{max-width:430px;width:100%;margin:0 auto}}
+
+/* Valores definidos pelo perfil: visíveis, mas não editáveis. */
+.field input[readonly],:is(.card,dialog) .field input[readonly]{background:var(--color-neutral-100);color:var(--color-neutral-700);border-color:var(--color-divider);cursor:default}
+/* Saída no rodapé do menu lateral. */
+.side-logout{display:flex;align-items:center;gap:8px;font-size:13.5px;color:color-mix(in srgb,var(--color-text) 78%,transparent);text-decoration:none}.side-logout:hover{color:var(--color-accent-700)}.side-logout .icon{width:16px;height:16px}
+/* Indicação de conteúdo restrito, sem ação de abrir. */
+.restricted-note{display:inline-flex;align-items:center;gap:6px;max-width:190px;font-family:var(--font-body);font-size:12px;font-weight:400;line-height:1.4;color:var(--color-neutral-600);white-space:normal}.restricted-note .icon{flex:none;width:14px;height:14px}
+/* Na prévia para celular, o topo do menu lateral fica abaixo do entalhe da moldura. */
+.phone-mode .sidebar{padding-top:26px}
+/* Cards empilhados direto no conteúdo da página mantêm o mesmo respiro dos demais blocos. */
+.main>.card+.card{margin-top:24px}
