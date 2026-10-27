@@ -13,6 +13,7 @@ import {
   hojeISO,
   mensagemDeErro,
   montarFormData,
+  montarFormDataDados,
   validarFormulario,
 } from "../lancamento/formulario.js";
 
@@ -82,6 +83,16 @@ describe("campos obrigatórios (projeto, categoria, valor, data, descrição, co
   test("descrição só com espaços é recusada", () => {
     assert.ok(validarFormulario(dadosValidos({ descricao: "   " })).descricao);
   });
+
+  test("validarFormulario sem exigir arquivo aceita dados sem foto", () => {
+    // Completar um rascunho ou reenviar: a foto já está no servidor.
+    assert.deepEqual(validarFormulario(dadosValidos({ arquivo: null }), { exigirArquivo: false }), {});
+  });
+
+  test("sem exigir arquivo, uma foto nova ainda passa pelas regras", () => {
+    const erros = validarFormulario(dadosValidos({ arquivo: arquivo({ nome: "nota.docx", tipo: "application/msword" }) }), { exigirArquivo: false });
+    assert.match(erros.comprovante, /foto|PDF/);
+  });
 });
 
 describe("comprovante (foto ou PDF, até 5 MB)", () => {
@@ -134,6 +145,17 @@ describe("envio para o POST /lancamentos", () => {
     assert.equal(dados.get("categoria"), "alimentacao");
     assert.equal(dados.get("data_despesa"), "2026-10-12");
     assert.equal(dados.get("comprovante").name, "nota.jpg");
+  });
+
+  test("montarFormDataDados manda só os dados, sem a foto (completar e reenviar)", () => {
+    const dados = montarFormDataDados(dadosValidos({ descricao: "  Lanche  " }));
+
+    assert.equal(dados.get("orcamento_id"), "orc-1");
+    assert.equal(dados.get("valor"), "486.90");
+    assert.equal(dados.get("descricao"), "Lanche");
+    assert.equal(dados.get("categoria"), "alimentacao");
+    assert.equal(dados.get("data_despesa"), "2026-10-12");
+    assert.equal(dados.has("comprovante"), false);
   });
 
   test("mensagens de erro da API viram texto para o educador", () => {

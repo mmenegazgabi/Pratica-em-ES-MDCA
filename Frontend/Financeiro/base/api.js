@@ -87,6 +87,16 @@ export async function requisitar(caminho, opcoes = {}) {
   return { status: resposta.status, corpo };
 }
 
+/** Arquivo protegido (ex.: comprovante_url) como Blob: a rota exige o código de acesso. */
+export async function baixarArquivo(caminho) {
+  try {
+    const resposta = await fetch(urlDaApi() + caminho, { headers: cabecalhos() });
+    return { status: resposta.status, blob: resposta.ok ? await resposta.blob() : null };
+  } catch {
+    return { status: 0, blob: null };
+  }
+}
+
 function comJson(metodo, dados) {
   return { method: metodo, headers: { "Content-Type": "application/json" }, body: JSON.stringify(dados) };
 }

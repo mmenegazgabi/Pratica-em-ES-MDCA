@@ -48,11 +48,19 @@ export function dimensoesReduzidas(largura, altura, ladoMaximo = LADO_MAXIMO_PX)
   return { largura: Math.round(largura * escala), altura: Math.round(altura * escala) };
 }
 
+/** Regras do arquivo do comprovante; devolve a mensagem de erro ou "". */
+export function erroDoComprovante(arquivo) {
+  if (!ehArquivoAceito(arquivo)) return "Envie uma foto (JPG, PNG, WEBP, HEIC) ou um PDF.";
+  if (arquivo.size > TAMANHO_MAXIMO_BYTES) return "O arquivo passa de 5 MB. Tire outra foto ou escolha um arquivo menor.";
+  return "";
+}
+
 /**
  * Valida os campos. Devolve um objeto { campo: mensagem }; vazio = tudo certo.
  * `orcamento` é o item de GET /orcamentos escolhido (ou undefined).
+ * `exigirArquivo: false` vale para completar e reenviar: a foto já está no servidor.
  */
-export function validarFormulario({ orcamento, categoria, valor, data, descricao, arquivo }) {
+export function validarFormulario({ orcamento, categoria, valor, data, descricao, arquivo }, { exigirArquivo = true } = {}) {
   const erros = {};
 
   if (!orcamento) erros.projeto = "Escolha o projeto.";
@@ -75,22 +83,31 @@ export function validarFormulario({ orcamento, categoria, valor, data, descricao
   if (!texto) erros.descricao = "Descreva a despesa.";
   else if (texto.length > DESCRICAO_MAXIMA) erros.descricao = `Use no máximo ${DESCRICAO_MAXIMA} caracteres.`;
 
-  if (!arquivo) erros.comprovante = "Anexe a foto ou o PDF do comprovante.";
-  else if (!ehArquivoAceito(arquivo)) erros.comprovante = "Envie uma foto (JPG, PNG, WEBP, HEIC) ou um PDF.";
-  else if (arquivo.size > TAMANHO_MAXIMO_BYTES) erros.comprovante = "O arquivo passa de 5 MB. Tire outra foto ou escolha um arquivo menor.";
+  if (!arquivo) {
+    if (exigirArquivo) erros.comprovante = "Anexe a foto ou o PDF do comprovante.";
+  } else {
+    const erro = erroDoComprovante(arquivo);
+    if (erro) erros.comprovante = erro;
+  }
 
   return erros;
 }
 
-/** Monta o multipart exatamente como o POST /lancamentos (T-12) espera. */
-export function montarFormData({ orcamento, categoria, valor, data, descricao, arquivo }) {
+/** Multipart só com os dados, sem a foto: POST /rascunhos/{id}/completar e PATCH /lancamentos/{id}/reenviar. */
+export function montarFormDataDados({ orcamento, categoria, valor, data, descricao }) {
   const dados = new FormData();
   dados.append("orcamento_id", orcamento.id);
   dados.append("valor", converterValor(valor).toFixed(2));
   dados.append("descricao", descricao.trim());
   dados.append("categoria", categoria);
   dados.append("data_despesa", data);
-  dados.append("comprovante", arquivo, arquivo.name || "comprovante.jpg");
+  return dados;
+}
+
+/** Monta o multipart exatamente como o POST /lancamentos (T-12) espera. */
+export function montarFormData(campos) {
+  const dados = montarFormDataDados(campos);
+  dados.append("comprovante", campos.arquivo, campos.arquivo.name || "comprovante.jpg");
   return dados;
 }
 
