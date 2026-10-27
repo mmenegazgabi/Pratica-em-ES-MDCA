@@ -2,8 +2,9 @@
 .app { display: flex; min-height: 100vh; font-size: 12px; }
 
 .lateral { width: 170px; flex: none; box-sizing: border-box; background: var(--fundo-suave); border-right: 1px solid var(--borda); padding: 16px 12px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
-.lateral__marca { font-weight: 700; font-size: 14px; margin: 0 6px 20px; }
-.lateral__marca span { color: var(--verde); font-weight: 600; }
+.lateral__marca { margin: 0 6px 20px; display: flex; flex-direction: column; gap: 6px; }
+.lateral__marca .logo { display: block; max-width: 100%; height: auto; }
+.lateral__marca span { color: var(--verde); font-weight: 600; font-size: 13px; }
 .lateral__menu { display: flex; flex-direction: column; gap: 2px; }
 .lateral__item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--raio); color: #52525b; text-decoration: none; }
 .lateral__item:hover { background: var(--linha); }

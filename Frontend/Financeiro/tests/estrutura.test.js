@@ -55,6 +55,10 @@ test("rota fora do menu volta ao Início", async () => {
   assert.equal(raiz.querySelector('[aria-current="page"]').textContent.replace(/\d+$/, ""), "Início");
 });
 
+test("a barra lateral traz o logo do MDCA", () => {
+  assert.ok(raiz.querySelector(".lateral__marca svg.logo"));
+});
+
 test("detalhe do projeto marca Projetos como ativo", async () => {
   await irPara("#/projetos/o1");
   assert.equal(raiz.querySelector('[aria-current="page"]').textContent, "Projetos");
@@ -82,5 +86,5 @@ test("educador é encaminhado ao app do celular", async () => {
   entrarComo("educador", "Marcos");
   await irPara("#/inicio");
   await irPara("#/projetos");
-  assert.ok(redirecionamentos.includes("../lancamento/"));
+  assert.ok(redirecionamentos.includes("lancamento/"));
 });

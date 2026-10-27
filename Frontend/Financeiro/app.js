@@ -1,5 +1,6 @@
 // Computador: barra lateral por papel, rotas por hash e carga de cada tela em telas/<tela>.js.
 import { el, limpar } from "./base/dom.js";
+import { logo } from "./base/logo.js";
 import { icone } from "./base/icones.js";
 import { lerRota, rotaPermitida } from "./base/rotas.js";
 import { reaplicarContador } from "./base/contador.js";
@@ -43,7 +44,7 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
     return el(
       "aside",
       { class: "lateral" },
-      el("div", { class: "lateral__marca" }, "MDCA ", el("span", {}, "Finanças")),
+      el("div", { class: "lateral__marca" }, logo(), el("span", {}, "Finanças")),
       el("nav", { class: "lateral__menu", "aria-label": "Seções" }, itens),
       el(
         "div",
@@ -104,7 +105,6 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
       el(
         "form",
         { id: "form-entrar", class: "entrar", novalidate: true, onsubmit: entrar },
-        el("div", { class: "lateral__marca" }, "MDCA ", el("span", {}, "Finanças")),
         el("h1", {}, "Entrar"),
         el("p", { class: "ajuda" }, "Informe seu nome, seu papel e o código de acesso do Financeiro. Eles ficam salvos só neste computador."),
         campo("Seu nome", nome),
@@ -124,7 +124,7 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
     const sessao = lerSessao();
     const { tela, parametros } = lerRota(window.location.hash);
 
-    if (sessao?.papel === "educador") return redirecionar("../lancamento/");
+    if (sessao?.papel === "educador") return redirecionar("lancamento/");
     if (!sessao || !tokenSalvo()) {
       if (tela !== "entrar") return navegar("#/entrar");
       return telaEntrar();
