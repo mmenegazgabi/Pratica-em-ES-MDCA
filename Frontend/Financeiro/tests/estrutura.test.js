@@ -38,7 +38,7 @@ test("Entrar sem nome ou código mostra o erro e não cria sessão", async () =>
   assert.equal(localStorage.getItem("mdca.financeiro.sessao"), null);
 });
 
-test("Entrar preenchido abre o menu do papel e a tela ausente vira aviso", async () => {
+test("Entrar preenchido abre o menu do papel e Projetos carrega a tela", async () => {
   raiz.querySelector("#campo-nome").value = "Jane";
   raiz.querySelector("#campo-papel").value = "direcao";
   raiz.querySelector("#campo-token").value = "abc";
@@ -46,7 +46,7 @@ test("Entrar preenchido abre o menu do papel e a tela ausente vira aviso", async
   await esperar();
   assert.deepEqual(rotulos(), ["Início", "Projetos"]);
   await irPara("#/projetos");
-  assert.match(raiz.querySelector(".principal").textContent, /ainda não está disponível/);
+  assert.match(raiz.querySelector(".principal").textContent, /Projetos/);
   assert.match(raiz.querySelector(".lateral__usuario").textContent, /Jane/);
   assert.match(raiz.querySelector(".lateral__usuario").textContent, /Diretoria/);
 });
