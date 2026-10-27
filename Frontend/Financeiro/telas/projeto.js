@@ -64,7 +64,7 @@ export async function mostrar(container, { parametros = {}, sessao, navegar }) {
         : el(
             "div",
             { style: "padding:12px;display:grid;grid-template-columns:1fr auto;gap:10px 12px;align-items:end" },
-            itens.map((i) => [
+            itens.flatMap((i) => [
               el("div", { style: "font-size:12px" }, i.categoria, el("div", { class: "barra-uso", style: "width:100%;margin-top:4px" }, el("i", { style: `width:${maior > 0 ? (i.gasto / maior) * 100 : 0}%` }))),
               el("span", { class: "num", style: "font-size:11px" }, formatarMoeda(i.gasto)),
             ]),

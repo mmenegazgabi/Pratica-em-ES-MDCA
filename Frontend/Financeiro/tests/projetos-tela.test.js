@@ -61,6 +61,7 @@ test("detalhe: números, categorias com 0, últimos lançamentos e Disponível e
   assert.match(t, /Esporte/);
   assert.match(t, /85% usado/);
   assert.match(t, /Uniformes/);
+  assert.doesNotMatch(t, /object HTML/);
   assert.match(t, /Conciliado/);
   assert.match(t, /Aguardando/);
   assert.match(t, /Editar orçamento/);
