@@ -86,6 +86,24 @@ def _buscar_orcamento(orcamento_id: str) -> Orcamento:
     raise HTTPException(status_code=404, detail="Orçamento não encontrado")
 
 
+@router.get("/orcamentos", response_model=List[OrcamentoDetalhe])
+def listar_orcamentos(
+    vigentes_em: Optional[date] = Query(
+        None,
+        description="Se informado, devolve só os orçamentos vigentes nessa data (AAAA-MM-DD).",
+    ),
+) -> List[OrcamentoDetalhe]:
+    # T-13 · US-03: o formulário de lançamento precisa listar projetos e
+    # categorias para o educador escolher.
+    orcamentos = [
+        o
+        for o in _orcamentos
+        if vigentes_em is None or o.data_inicio <= vigentes_em <= o.data_fim
+    ]
+    orcamentos.sort(key=lambda o: (o.projeto_id, o.data_inicio))
+    return [OrcamentoDetalhe.model_validate(o) for o in orcamentos]
+
+
 @router.post("/orcamentos", response_model=Orcamento, status_code=201)
 def criar_orcamento(payload: OrcamentoCreate) -> Orcamento:
     if payload.valor_total < 0:
