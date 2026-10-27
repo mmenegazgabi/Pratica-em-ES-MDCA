@@ -239,7 +239,7 @@ export async function mostrar(container, { parametros = {}, sessao, navegar }) {
     return el(
       "table",
       { class: "tabela" },
-      el("thead", {}, el("tr", {}, el("th", {}, "Despesa"), el("th", {}, "Data"), el("th", { class: "num" }, "Valor"))),
+      el("thead", {}, el("tr", {}, el("th", {}, "Despesa"), el("th", { class: "num" }, "Data"), el("th", { class: "num" }, "Valor"))),
       el(
         "tbody",
         {},
@@ -294,7 +294,7 @@ export async function mostrar(container, { parametros = {}, sessao, navegar }) {
         el(
           "div",
           { style: "position:relative;min-height:440px" },
-          el("div", { class: "caixa", style: painel ? "width:calc(100% - 320px)" : "" }, montarTabela(visiveis)),
+          el("div", { class: "caixa", style: painel ? "width:calc(100% - 316px)" : "" }, montarTabela(visiveis)),
           painel ? montarPainel() : null,
         ),
       ),

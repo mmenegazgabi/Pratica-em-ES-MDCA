@@ -194,3 +194,19 @@ test("falha da API mostra mensagem", async () => {
   await mostrar(container(), { parametros: {}, sessao: coord, navegar() {} });
   assert.match(container().textContent, /Não foi possível carregar os lançamentos/);
 });
+
+test("cabeçalhos Data e Valor alinhados à direita como as células", async () => {
+  preparar();
+  simular({});
+  await mostrar(container(), { parametros: {}, sessao: coord, navegar() {} });
+  await esperar();
+  const ths = [...container().querySelectorAll("thead th")];
+  assert.ok(ths.find((th) => th.textContent === "Data").classList.contains("num"));
+  assert.ok(ths.find((th) => th.textContent === "Valor").classList.contains("num"));
+});
+
+test("painel lateral usa border-box para caber na largura reservada à tabela", async () => {
+  const { readFileSync } = await import("node:fs");
+  const css = readFileSync(new URL("../base/componentes.css", import.meta.url), "utf8");
+  assert.match(css.split("\n").find((l) => l.startsWith(".painel-lateral {")), /box-sizing:\s*border-box/);
+});
