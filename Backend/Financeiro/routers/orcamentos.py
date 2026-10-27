@@ -7,21 +7,33 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 if __package__ == "routers":
 
+    from autenticacao import Papel, exigir_papel
     from alerta_saldo import (
         NivelAlerta,
         calcular_percentual_consumido,
         calcular_realizado,
         classificar_nivel_alerta,
     )
-    from orcamento import AprovacaoInvalida, LancamentoNaoEncontrado, Orcamento
+    from orcamento import (
+        AprovacaoInvalida,
+        LancamentoInvalido,
+        LancamentoNaoEncontrado,
+        Orcamento,
+    )
 else:
+    from ..autenticacao import Papel, exigir_papel
     from ..alerta_saldo import (
         NivelAlerta,
         calcular_percentual_consumido,
         calcular_realizado,
         classificar_nivel_alerta,
     )
-    from ..orcamento import AprovacaoInvalida, LancamentoNaoEncontrado, Orcamento
+    from ..orcamento import (
+        AprovacaoInvalida,
+        LancamentoInvalido,
+        LancamentoNaoEncontrado,
+        Orcamento,
+    )
 
 router = APIRouter(tags=["orcamentos"])
 
@@ -34,6 +46,13 @@ class OrcamentoCreate(BaseModel):
     data_inicio: date
     data_fim: date
     categorias_despesa: List[str] = Field(min_length=1)
+
+
+class OrcamentoEdicao(BaseModel):
+    valor_total: float
+    data_inicio: date
+    data_fim: date
+    categorias_despesa: List[str]
 
 
 class OrcamentoDetalhe(BaseModel):
@@ -148,6 +167,20 @@ def listar_orcamentos_do_projeto(
 @router.get("/orcamentos/{orcamento_id}", response_model=OrcamentoDetalhe)
 def obter_orcamento(orcamento_id: str) -> Orcamento:
     return _buscar_orcamento(orcamento_id)
+
+
+@router.patch("/orcamentos/{orcamento_id}", response_model=OrcamentoDetalhe)
+def editar_orcamento(
+    orcamento_id: str,
+    payload: OrcamentoEdicao,
+    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO)),
+) -> Orcamento:
+    orcamento = _buscar_orcamento(orcamento_id)
+    try:
+        orcamento.editar(**payload.model_dump())
+    except LancamentoInvalido as erro:
+        raise HTTPException(status_code=400, detail=str(erro)) from erro
+    return orcamento
 
 
 @router.post(

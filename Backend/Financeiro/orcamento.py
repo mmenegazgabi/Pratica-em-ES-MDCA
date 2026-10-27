@@ -6,6 +6,11 @@ from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Optional
 
+if __package__:
+    from .moeda import formatar_reais
+else:
+    from moeda import formatar_reais
+
 
 class StatusLancamento(Enum):
     APROVADO = "aprovado"
@@ -104,6 +109,44 @@ class Orcamento:
             lancamento.aprovado_em = datetime.now(timezone.utc)
             self.saldo_atual -= lancamento.valor
             return lancamento
+
+    def editar(
+        self,
+        *,
+        valor_total: float,
+        data_inicio: date,
+        data_fim: date,
+        categorias_despesa: list[str],
+    ) -> None:
+        # Redesign Financeiro: a coordenação ajusta valor, vigência e
+        # categorias; o saldo é recalculado sobre o que já foi aprovado.
+        if not categorias_despesa:
+            raise LancamentoInvalido("Informe ao menos uma categoria.")
+        if data_fim < data_inicio:
+            raise LancamentoInvalido("data_fim não pode ser anterior a data_inicio")
+        with self._lock:
+            realizado = self.valor_total - self.saldo_atual
+            if valor_total < realizado:
+                raise LancamentoInvalido(
+                    "O valor total não pode ser menor que o já gasto "
+                    f"({formatar_reais(realizado)})."
+                )
+            for categoria in self.categorias_despesa:
+                if categoria in categorias_despesa:
+                    continue
+                if any(
+                    l.categoria == categoria
+                    and l.status != StatusLancamento.REJEITADO
+                    for l in self.lancamentos
+                ):
+                    raise LancamentoInvalido(
+                        f'A categoria "{categoria}" tem lançamentos e não pode ser removida.'
+                    )
+            self.valor_total = valor_total
+            self.data_inicio = data_inicio
+            self.data_fim = data_fim
+            self.categorias_despesa = list(categorias_despesa)
+            self.saldo_atual = valor_total - realizado
 
     def reverter_aprovacao(self, lancamento_id: str) -> None:
         with self._lock:
