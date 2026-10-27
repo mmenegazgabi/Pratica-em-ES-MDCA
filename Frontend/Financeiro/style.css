@@ -1,0 +1,35 @@
+/* Estrutura do computador: barra lateral + área principal (esboço telas-computador). */
+.app { display: flex; min-height: 100vh; font-size: 12px; }
+
+.lateral { width: 170px; flex: none; box-sizing: border-box; background: var(--fundo-suave); border-right: 1px solid var(--borda); padding: 16px 12px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.lateral__marca { font-weight: 700; font-size: 14px; margin: 0 6px 20px; }
+.lateral__marca span { color: var(--verde); font-weight: 600; }
+.lateral__menu { display: flex; flex-direction: column; gap: 2px; }
+.lateral__item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--raio); color: #52525b; text-decoration: none; }
+.lateral__item:hover { background: var(--linha); }
+.lateral__item[aria-current="page"] { background: var(--ativo-fundo); color: var(--ativo-texto); font-weight: 500; }
+.lateral__contador { margin-left: auto; font-size: 10px; background: var(--verde); color: #fff; border-radius: 9px; padding: 0 6px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lateral__contador[hidden] { display: none; }
+
+.lateral__usuario { margin-top: auto; border-top: 1px solid var(--borda); padding: 10px 6px 0; display: flex; flex-direction: column; gap: 8px; font-size: 11px; }
+.lateral__pessoa { display: flex; gap: 8px; align-items: center; }
+.lateral__avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--borda); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: var(--texto-medio); flex: none; }
+.lateral__nome { min-width: 0; overflow-wrap: anywhere; }
+.lateral__nome small { display: block; color: var(--texto-suave); font-size: 10px; }
+.lateral__trocar { align-self: flex-start; background: none; border: 0; padding: 4px 0; font: 11px var(--fonte); color: var(--texto-suave); text-decoration: underline; cursor: pointer; }
+.lateral__trocar:hover { color: var(--texto); }
+
+.principal { flex: 1; min-width: 0; padding: 22px 26px; position: relative; }
+.principal h1 { font-size: 19px; font-weight: 600; letter-spacing: -.015em; margin: 0; }
+.principal .sub { color: var(--texto-suave); margin: 3px 0 16px; }
+.principal .carregando, .principal .aviso-tela { color: var(--texto-suave); padding: 24px 0; margin: 0; }
+
+.entrar { margin: 0 auto; align-self: center; width: 100%; max-width: 360px; padding: 24px; box-sizing: border-box; }
+.entrar h1 { font-size: 19px; font-weight: 600; margin: 0 0 4px; }
+.entrar .ajuda { color: var(--texto-suave); margin: 0 0 8px; font-size: 12px; }
+.entrar .avancado { margin-top: 12px; }
+.entrar .avancado summary { cursor: pointer; color: var(--texto-suave); font-size: 11.5px; }
+.entrar .erro { color: var(--perigo-texto); margin: 10px 0 0; }
+.entrar .erro[hidden] { display: none; }
+.entrar .btn { margin-top: 16px; width: 100%; justify-content: center; padding: 9px 12px; font-size: 13px; }
+.entrar select.entrada { appearance: auto; }
