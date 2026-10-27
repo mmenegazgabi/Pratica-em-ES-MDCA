@@ -2,7 +2,7 @@ import math
 import threading
 import uuid
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -39,6 +39,9 @@ class Lancamento:
     motivo_rejeicao: Optional[str] = None
     # T-17 · US-04: quem lançou, para receber a notificação do resultado.
     autor_id: Optional[str] = None
+    # T-18 · US-04: quando foi lançado, para a fila de aprovação mostrar
+    # primeiro o que está esperando há mais tempo.
+    criado_em: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
