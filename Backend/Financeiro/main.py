@@ -1,6 +1,4 @@
-from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 
 if __package__:
     from .routers.comprovantes import router as comprovantes_router
@@ -9,6 +7,7 @@ if __package__:
     from .routers.orcamentos import router as orcamentos_router
     from .routers.projetos import router as projetos_router
     from .routers.rascunhos import router as rascunhos_router
+    from .validacao import registrar_erro_de_validacao
 else:
     from routers.comprovantes import router as comprovantes_router
     from routers.lancamentos import router as lancamentos_router
@@ -16,16 +15,10 @@ else:
     from routers.orcamentos import router as orcamentos_router
     from routers.projetos import router as projetos_router
     from routers.rascunhos import router as rascunhos_router
+    from validacao import registrar_erro_de_validacao
 
 app = FastAPI(title="MDCA — Financeiro")
-
-
-@app.exception_handler(RequestValidationError)
-async def erro_de_validacao(_request: Request, erro: RequestValidationError):
-    # Sem o "input" ecoado: NaN/Infinity não serializam em JSON e davam 500.
-    detalhes = [{k: v for k, v in e.items() if k not in ("input", "ctx")} for e in erro.errors()]
-    return JSONResponse(status_code=422, content={"detail": detalhes})
-
+registrar_erro_de_validacao(app)
 
 app.include_router(orcamentos_router)
 app.include_router(comprovantes_router)

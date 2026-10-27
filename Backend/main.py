@@ -10,9 +10,11 @@ from Financeiro.routers.notificacoes import router as notificacoes_router
 from Financeiro.routers.orcamentos import router as orcamentos_router
 from Financeiro.routers.projetos import router as projetos_router
 from Financeiro.routers.rascunhos import router as rascunhos_router
+from Financeiro.validacao import registrar_erro_de_validacao
 from Shared.infra_api import router as infra_router
 
 app = FastAPI(title="API — Plataforma MDCA")
+registrar_erro_de_validacao(app)
 app.include_router(infra_router)
 app.include_router(orcamentos_router)
 app.include_router(comprovantes_router)
