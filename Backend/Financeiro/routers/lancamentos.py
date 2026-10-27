@@ -5,6 +5,8 @@ GET   /lancamentos/{id}            -> consulta, com o motivo de rejeição (T-16
 PATCH /lancamentos/{id}/aprovar    -> aprova (T-15 · US-04)
 PATCH /lancamentos/{id}/rejeitar   -> rejeita com motivo obrigatório (T-16 · US-04)
 
+Aprovar e rejeitar notificam o autor do lançamento in-app (T-17 · US-04).
+
 POST /lancamentos com upload de comprovante (T-12 · US-03).
 
 Recebe os dados da despesa e a foto/PDF do comprovante no mesmo envio
@@ -25,7 +27,7 @@ from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadF
 from pydantic import BaseModel
 
 if __package__ == "routers":
-    from autenticacao import Papel, exigir_autenticacao, exigir_papel
+    from autenticacao import Papel, exigir_autenticacao, exigir_papel, obter_usuario
     from comprovantes import (
         TAMANHO_MAXIMO_BYTES,
         ArmazenamentoComprovantes,
@@ -34,6 +36,7 @@ if __package__ == "routers":
         limpar_nome_original,
         validar_comprovante,
     )
+    from notificacoes import caixa_de_notificacoes
     from orcamento import (
         AprovacaoInvalida,
         Lancamento,
@@ -44,7 +47,7 @@ if __package__ == "routers":
     from routers.comprovantes import obter_armazenamento
     from routers.orcamentos import _buscar_orcamento, _orcamentos
 else:
-    from ..autenticacao import Papel, exigir_autenticacao, exigir_papel
+    from ..autenticacao import Papel, exigir_autenticacao, exigir_papel, obter_usuario
     from ..comprovantes import (
         TAMANHO_MAXIMO_BYTES,
         ArmazenamentoComprovantes,
@@ -53,6 +56,7 @@ else:
         limpar_nome_original,
         validar_comprovante,
     )
+    from ..notificacoes import caixa_de_notificacoes
     from ..orcamento import (
         AprovacaoInvalida,
         Lancamento,
@@ -105,6 +109,7 @@ async def criar_lancamento(
     data_despesa: date = Form(...),
     comprovante: Optional[UploadFile] = File(None),
     armazenamento: ArmazenamentoComprovantes = Depends(obter_armazenamento),
+    autor_id: Optional[str] = Depends(obter_usuario),
 ) -> LancamentoCriado:
     # 1. Comprovante obrigatório
     conteudo = await comprovante.read(TAMANHO_MAXIMO_BYTES + 1) if comprovante else b""
@@ -146,6 +151,7 @@ async def criar_lancamento(
             categoria=categoria,
             data_despesa=data_despesa,
             comprovante_chave=chave,
+            autor_id=autor_id,
         )
     )
 
@@ -197,6 +203,8 @@ def aprovar_lancamento(
         lancamento = orcamento.aprovar_lancamento(lancamento_id)
     except AprovacaoInvalida as erro:
         raise HTTPException(status_code=409, detail=str(erro)) from erro
+
+    caixa_de_notificacoes.notificar_resultado(lancamento)
 
     return LancamentoAprovado(
         id=lancamento.id,
@@ -263,6 +271,8 @@ def rejeitar_lancamento(
         raise HTTPException(status_code=409, detail=str(erro)) from erro
     except LancamentoInvalido as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
+
+    caixa_de_notificacoes.notificar_resultado(lancamento)
 
     return LancamentoRejeitado(
         id=lancamento.id,
