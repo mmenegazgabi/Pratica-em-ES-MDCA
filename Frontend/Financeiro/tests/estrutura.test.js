@@ -8,6 +8,7 @@ Object.assign(globalThis, { window: dom.window, document: dom.window.document, l
 const { iniciar, definirContador } = await import("../app.js");
 const { salvarAcesso } = await import("../base/api.js");
 
+globalThis.fetch = async () => { throw new Error("sem rede nos testes"); };
 const raiz = document.getElementById("app");
 const esperar = () => new Promise((r) => setTimeout(r, 20));
 const redirecionamentos = [];
@@ -44,6 +45,7 @@ test("Entrar preenchido abre o menu do papel e a tela ausente vira aviso", async
   raiz.querySelector("#form-entrar").dispatchEvent(new window.Event("submit", { cancelable: true }));
   await esperar();
   assert.deepEqual(rotulos(), ["Início", "Projetos"]);
+  await irPara("#/projetos");
   assert.match(raiz.querySelector(".principal").textContent, /ainda não está disponível/);
   assert.match(raiz.querySelector(".lateral__usuario").textContent, /Jane/);
   assert.match(raiz.querySelector(".lateral__usuario").textContent, /Diretoria/);
