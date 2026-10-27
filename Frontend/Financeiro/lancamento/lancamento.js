@@ -4,11 +4,12 @@ import {
   API_PADRAO,
   enviarLancamento,
   esquecerAcesso,
-  listarOrcamentosVigentes,
+  listarOrcamentos,
   salvarAcesso,
   tokenSalvo,
   urlDaApi,
-} from "./api.js";
+} from "../base/api.js";
+import { lerSessao, salvarSessao } from "../base/sessao.js";
 import {
   converterValor,
   deveComprimir,
@@ -19,6 +20,9 @@ import {
   montarFormData,
   validarFormulario,
 } from "./formulario.js";
+
+// Esta tela é do celular do educador: sem sessão ainda, entra como educador.
+if (!lerSessao()) salvarSessao({ papel: "educador", nome: "Educador" });
 
 const $ = (id) => document.getElementById(id);
 
@@ -155,7 +159,7 @@ function preencherCategorias() {
 
 async function carregarProjetos() {
   mostrar(el.carregando);
-  const { status, corpo } = await listarOrcamentosVigentes(hojeISO());
+  const { status, corpo } = await listarOrcamentos(hojeISO());
   if (status === 401) return abrirAcesso("Código de acesso inválido. Informe de novo.");
   mostrar(el.form);
   if (status !== 200) {

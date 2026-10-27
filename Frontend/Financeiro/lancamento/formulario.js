@@ -24,9 +24,7 @@ export function converterValor(texto) {
   return Math.round(Number(t) * 100) / 100;
 }
 
-export function formatarMoeda(valor) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
-}
+export { formatarMoeda } from "../base/formatar.js";
 
 export function ehArquivoAceito(arquivo) {
   if (!arquivo) return false;
