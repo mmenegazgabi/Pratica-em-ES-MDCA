@@ -123,6 +123,103 @@ class LancamentoCriado(BaseModel):
     comprovante: ComprovanteDoLancamento
 
 
+async def _ler_comprovante(comprovante: Optional[UploadFile]) -> bytes:
+    conteudo = await comprovante.read(TAMANHO_MAXIMO_BYTES + 1) if comprovante else b""
+    if not conteudo:
+        raise HTTPException(status_code=400, detail="Comprovante obrigatório.")
+    return conteudo
+
+
+def _guardar_comprovante(
+    conteudo: bytes, filename: Optional[str], armazenamento: ArmazenamentoComprovantes
+) -> tuple[str, str, str, int]:
+    """Valida tipo e tamanho e salva no armazenamento."""
+    try:
+        tipo = validar_comprovante(conteudo)
+    except ComprovanteInvalido as erro:
+        status = 413 if len(conteudo) > TAMANHO_MAXIMO_BYTES else 400
+        raise HTTPException(status_code=status, detail=str(erro)) from erro
+
+    chave = gerar_chave(tipo)
+    nome_original = limpar_nome_original(filename)
+    try:
+        armazenamento.salvar(chave, conteudo, tipo.content_type, nome_original)
+    except Exception as erro:
+        raise HTTPException(
+            status_code=503, detail="Falha ao salvar o comprovante."
+        ) from erro
+    return chave, tipo.content_type, nome_original, len(conteudo)
+
+
+async def _receber_comprovante(
+    comprovante: Optional[UploadFile], armazenamento: ArmazenamentoComprovantes
+) -> tuple[str, str, str, int]:
+    """Lê, valida e salva o comprovante -> (chave, content_type, nome_original, tamanho)."""
+    conteudo = await _ler_comprovante(comprovante)
+    return _guardar_comprovante(conteudo, comprovante.filename, armazenamento)
+
+
+def _validar_dados_da_despesa(
+    orcamento: Orcamento,
+    valor: float,
+    descricao: str,
+    categoria: str,
+    data_despesa: date,
+) -> str:
+    """Devolve a descrição sem espaços sobrando; 400 se algo for inválido."""
+    descricao = descricao.strip()
+    if not descricao:
+        raise HTTPException(status_code=400, detail="Descrição obrigatória.")
+    try:
+        orcamento.validar_lancamento(valor, categoria, data_despesa)
+    except LancamentoInvalido as erro:
+        raise HTTPException(status_code=400, detail=str(erro)) from erro
+    return descricao
+
+
+def _criar_lancamento(
+    orcamento: Orcamento,
+    valor: float,
+    descricao: str,
+    categoria: str,
+    data_despesa: date,
+    comprovante_chave: str,
+    content_type: str,
+    nome_original: str,
+    tamanho: int,
+    autor_id: Optional[str],
+) -> LancamentoCriado:
+    """Registra o lançamento como pendente e monta a resposta."""
+    lancamento = orcamento.registrar_lancamento(
+        Lancamento(
+            valor=valor,
+            status=StatusLancamento.PENDENTE,
+            descricao=descricao,
+            categoria=categoria,
+            data_despesa=data_despesa,
+            comprovante_chave=comprovante_chave,
+            autor_id=autor_id,
+        )
+    )
+    return LancamentoCriado(
+        id=lancamento.id,
+        orcamento_id=orcamento.id,
+        valor=lancamento.valor,
+        descricao=lancamento.descricao,
+        categoria=lancamento.categoria,
+        data_despesa=data_despesa,
+        status=lancamento.status.value,
+        status_descricao=DESCRICAO_STATUS[lancamento.status],
+        comprovante=ComprovanteDoLancamento(
+            chave=comprovante_chave,
+            url=f"/{comprovante_chave}",
+            nome_original=nome_original,
+            content_type=content_type,
+            tamanho=tamanho,
+        ),
+    )
+
+
 @router.post("", response_model=LancamentoCriado, status_code=201)
 async def criar_lancamento(
     orcamento_id: str = Form(...),
@@ -135,65 +232,21 @@ async def criar_lancamento(
     autor_id: Optional[str] = Depends(obter_usuario),
 ) -> LancamentoCriado:
     # 1. Comprovante obrigatório
-    conteudo = await comprovante.read(TAMANHO_MAXIMO_BYTES + 1) if comprovante else b""
-    if not conteudo:
-        raise HTTPException(status_code=400, detail="Comprovante obrigatório.")
+    conteudo = await _ler_comprovante(comprovante)
 
     # 2 e 3. Orçamento e dados da despesa
     orcamento = _buscar_orcamento(orcamento_id)
-    descricao = descricao.strip()
-    if not descricao:
-        raise HTTPException(status_code=400, detail="Descrição obrigatória.")
-    try:
-        orcamento.validar_lancamento(valor, categoria, data_despesa)
-    except LancamentoInvalido as erro:
-        raise HTTPException(status_code=400, detail=str(erro)) from erro
-
-    # 4. Tipo (imagem/PDF) e tamanho máximo do arquivo
-    try:
-        tipo = validar_comprovante(conteudo)
-    except ComprovanteInvalido as erro:
-        status = 413 if len(conteudo) > TAMANHO_MAXIMO_BYTES else 400
-        raise HTTPException(status_code=status, detail=str(erro)) from erro
-
-    # 5. Salva o arquivo e registra o lançamento como pendente
-    chave = gerar_chave(tipo)
-    nome_original = limpar_nome_original(comprovante.filename)
-    try:
-        armazenamento.salvar(chave, conteudo, tipo.content_type, nome_original)
-    except Exception as erro:
-        raise HTTPException(
-            status_code=503, detail="Falha ao salvar o comprovante."
-        ) from erro
-
-    lancamento = orcamento.registrar_lancamento(
-        Lancamento(
-            valor=valor,
-            status=StatusLancamento.PENDENTE,
-            descricao=descricao,
-            categoria=categoria,
-            data_despesa=data_despesa,
-            comprovante_chave=chave,
-            autor_id=autor_id,
-        )
+    descricao = _validar_dados_da_despesa(
+        orcamento, valor, descricao, categoria, data_despesa
     )
 
-    return LancamentoCriado(
-        id=lancamento.id,
-        orcamento_id=orcamento.id,
-        valor=lancamento.valor,
-        descricao=lancamento.descricao,
-        categoria=lancamento.categoria,
-        data_despesa=data_despesa,
-        status=lancamento.status.value,
-        status_descricao=DESCRICAO_STATUS[lancamento.status],
-        comprovante=ComprovanteDoLancamento(
-            chave=chave,
-            url=f"/{chave}",
-            nome_original=nome_original,
-            content_type=tipo.content_type,
-            tamanho=len(conteudo),
-        ),
+    # 4 e 5. Tipo e tamanho do arquivo, salva e registra como pendente
+    chave, content_type, nome_original, tamanho = _guardar_comprovante(
+        conteudo, comprovante.filename, armazenamento
+    )
+    return _criar_lancamento(
+        orcamento, valor, descricao, categoria, data_despesa,
+        chave, content_type, nome_original, tamanho, autor_id,
     )
 
 
