@@ -19,9 +19,9 @@ from enum import Enum
 from typing import Optional
 
 if __package__:
-    from .orcamento import Lancamento, StatusLancamento
+    from .orcamento import Lancamento, StatusLancamento, formatar_reais
 else:
-    from orcamento import Lancamento, StatusLancamento
+    from orcamento import Lancamento, StatusLancamento, formatar_reais
 
 
 class TipoNotificacao(str, Enum):
@@ -43,12 +43,6 @@ class Notificacao:
     lida: bool = False
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     criada_em: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-
-
-def formatar_reais(valor: float) -> str:
-    """1234.5 -> "R$ 1.234,50"."""
-    texto = f"{valor:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
-    return f"R$ {texto}"
 
 
 def montar_mensagem(lancamento: Lancamento) -> str:
