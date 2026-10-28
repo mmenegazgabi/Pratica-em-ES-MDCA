@@ -1,5 +1,5 @@
-"""T-01 orcamentos, T-10 lancamentos and US-01 orcamento_categorias migrations,
-run against a real Postgres.
+"""T-01 orcamentos, T-10 lancamentos, US-01 orcamento_categorias and T-20
+conciliacao migrations, run against a real Postgres.
 
 These tests downgrade the target database to an empty schema, so they only
 run when TEST_DATABASE_URL points at a disposable database.
@@ -457,6 +457,10 @@ def test_downgrade_de_orcamento_categorias_nao_deixa_orfaos(migrated_db):
 
 # T-20 · US-05: conciliacao fields on lancamentos.
 
+# Revision right before the conciliacao fields; pinned for the same reason as
+# REV_ORCAMENTOS.
+REV_ORCAMENTO_CATEGORIAS = "33f66eff68ef"
+
 
 def test_lancamento_novo_nasce_nao_conciliado_e_sem_item_do_extrato(migrated_db):
     engine, _ = migrated_db
@@ -494,7 +498,7 @@ def test_lancamento_conciliado_guarda_referencia_do_item_do_extrato(migrated_db)
 def test_migration_de_conciliacao_preserva_lancamentos_existentes(migrated_db):
     engine, config = migrated_db
 
-    command.downgrade(config, REV_LANCAMENTOS)
+    command.downgrade(config, REV_ORCAMENTO_CATEGORIAS)
     with engine.begin() as conn:
         _inserir_projeto_e_orcamento(conn)
         _inserir_lancamento(conn)
@@ -514,8 +518,10 @@ def test_migration_de_conciliacao_preserva_lancamentos_existentes(migrated_db):
 def test_downgrade_de_conciliacao_remove_apenas_as_colunas_novas(migrated_db):
     engine, config = migrated_db
 
-    command.downgrade(config, REV_LANCAMENTOS)
+    command.downgrade(config, REV_ORCAMENTO_CATEGORIAS)
 
+    # Only the conciliacao step is undone; the previous migration stays applied.
+    assert "orcamento_categorias" in sa.inspect(engine).get_table_names()
     colunas = {c["name"] for c in sa.inspect(engine).get_columns("lancamentos")}
     assert "conciliado" not in colunas
     assert "item_extrato_ref" not in colunas
