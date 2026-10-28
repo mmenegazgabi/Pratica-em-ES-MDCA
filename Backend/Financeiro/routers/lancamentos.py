@@ -5,6 +5,7 @@ POST  /lancamentos                 -> cria com comprovante (T-12 · US-03)
 GET   /lancamentos/{id}            -> consulta, com o motivo de rejeição (T-16)
 PATCH /lancamentos/{id}/aprovar    -> aprova (T-15 · US-04)
 PATCH /lancamentos/{id}/rejeitar   -> rejeita com motivo obrigatório (T-16 · US-04)
+PATCH /lancamentos/{id}/conciliar  -> vincula a um item do extrato (T-21 · US-05)
 
 Aprovar e rejeitar notificam o autor do lançamento in-app (T-17 · US-04).
 
@@ -40,6 +41,7 @@ if __package__ == "routers":
     from notificacoes import caixa_de_notificacoes
     from orcamento import (
         AprovacaoInvalida,
+        ConciliacaoInvalida,
         Lancamento,
         LancamentoInvalido,
         Orcamento,
@@ -60,6 +62,7 @@ else:
     from ..notificacoes import caixa_de_notificacoes
     from ..orcamento import (
         AprovacaoInvalida,
+        ConciliacaoInvalida,
         Lancamento,
         LancamentoInvalido,
         Orcamento,
@@ -247,6 +250,8 @@ class LancamentoDetalhe(BaseModel):
     status_descricao: str
     motivo_rejeicao: Optional[str]
     comprovante_url: Optional[str]
+    conciliado: bool
+    referencia_extrato: Optional[str]
 
 
 @router.patch("/{lancamento_id}/rejeitar", response_model=LancamentoRejeitado)
@@ -307,6 +312,67 @@ def obter_lancamento(lancamento_id: str) -> LancamentoDetalhe:
         comprovante_url=(
             f"/{lancamento.comprovante_chave}" if lancamento.comprovante_chave else None
         ),
+        conciliado=lancamento.conciliado,
+        referencia_extrato=lancamento.referencia_extrato,
+    )
+
+
+# --- PATCH /lancamentos/{id}/conciliar (T-21 · US-05) ------------------------
+
+REFERENCIA_TAMANHO_MAXIMO = 200
+
+
+class ConciliacaoPayload(BaseModel):
+    referencia_extrato: Optional[str] = None
+
+
+class LancamentoConciliado(BaseModel):
+    id: str
+    orcamento_id: str
+    valor: float
+    status: str
+    status_descricao: str
+    conciliado: bool
+    referencia_extrato: str
+
+
+@router.patch("/{lancamento_id}/conciliar", response_model=LancamentoConciliado)
+def conciliar_lancamento(
+    lancamento_id: str,
+    payload: Optional[ConciliacaoPayload] = Body(None),
+    _papel: Papel = Depends(exigir_papel(Papel.VOLUNTARIO_FINANCEIRO)),
+) -> LancamentoConciliado:
+    """Marca o lançamento como conciliado com um item do extrato bancário.
+
+    Repetir com a mesma referência é idempotente (200, nada muda); com outra
+    referência retorna 409.
+    """
+    orcamento = _buscar_orcamento_do_lancamento(lancamento_id)
+
+    referencia = ((payload.referencia_extrato if payload else None) or "").strip()
+    if not referencia:
+        raise HTTPException(status_code=400, detail="Referência do extrato é obrigatória.")
+    if len(referencia) > REFERENCIA_TAMANHO_MAXIMO:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Referência do extrato deve ter no máximo {REFERENCIA_TAMANHO_MAXIMO} caracteres.",
+        )
+
+    try:
+        lancamento = orcamento.conciliar_lancamento(lancamento_id, referencia)
+    except ConciliacaoInvalida as erro:
+        raise HTTPException(status_code=409, detail=str(erro)) from erro
+    except LancamentoInvalido as erro:
+        raise HTTPException(status_code=400, detail=str(erro)) from erro
+
+    return LancamentoConciliado(
+        id=lancamento.id,
+        orcamento_id=orcamento.id,
+        valor=lancamento.valor,
+        status=lancamento.status.value,
+        status_descricao=DESCRICAO_STATUS[lancamento.status],
+        conciliado=lancamento.conciliado,
+        referencia_extrato=lancamento.referencia_extrato,
     )
 
 

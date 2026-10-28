@@ -1,7 +1,7 @@
 """add conciliacao fields to lancamentos
 
 Revision ID: 768d1bb2ccf2
-Revises: 14749dd94ab3
+Revises: 33f66eff68ef
 Create Date: 2026-10-27 18:30:47.000000
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '768d1bb2ccf2'
-down_revision: Union[str, Sequence[str], None] = '14749dd94ab3'
+down_revision: Union[str, Sequence[str], None] = '33f66eff68ef'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

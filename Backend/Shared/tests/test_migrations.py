@@ -1,4 +1,5 @@
-"""T-01 orcamentos and T-10 lancamentos migrations, run against a real Postgres.
+"""T-01 orcamentos, T-10 lancamentos, US-01 orcamento_categorias and T-20
+conciliacao migrations, run against a real Postgres.
 
 These tests downgrade the target database to an empty schema, so they only
 run when TEST_DATABASE_URL points at a disposable database.
@@ -18,6 +19,7 @@ SHARED_DIR = Path(__file__).resolve().parents[1]
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 
 FOREIGN_KEY_VIOLATION = "23503"
+UNIQUE_VIOLATION = "23505"
 
 pytestmark = pytest.mark.skipif(
     not TEST_DATABASE_URL,
@@ -334,11 +336,130 @@ def test_downgrade_de_lancamentos_nao_deixa_orfaos(migrated_db):
     assert "lancamentos" in sa.inspect(engine).get_table_names()
 
 
+# US-01: orcamento_categorias migration (budgeted amount per category).
+
+REV_LANCAMENTOS = "14749dd94ab3"
+
+
+def _inserir_categoria(conn, nome="materiais", valor_orcado=400, orcamento_id="orc-1"):
+    conn.execute(
+        sa.text(
+            """
+            INSERT INTO orcamento_categorias (orcamento_id, nome, valor_orcado)
+            VALUES (:orcamento_id, :nome, :valor_orcado)
+            """
+        ),
+        {"orcamento_id": orcamento_id, "nome": nome, "valor_orcado": valor_orcado},
+    )
+
+
+def test_migration_cria_tabela_orcamento_categorias(migrated_db):
+    engine, _ = migrated_db
+    inspector = sa.inspect(engine)
+
+    colunas = {c["name"] for c in inspector.get_columns("orcamento_categorias")}
+    assert colunas == {"orcamento_id", "nome", "valor_orcado"}
+    assert inspector.get_pk_constraint("orcamento_categorias")["constrained_columns"] == [
+        "orcamento_id",
+        "nome",
+    ]
+    [fk] = inspector.get_foreign_keys("orcamento_categorias")
+    assert fk["referred_table"] == "orcamentos"
+    assert fk["options"].get("ondelete") == "CASCADE"
+
+
+@pytest.mark.parametrize("valor", [0, 400])
+def test_categoria_com_valor_valido_e_gravada(migrated_db, valor):
+    engine, _ = migrated_db
+
+    with engine.connect() as conn:
+        _inserir_projeto_e_orcamento(conn)
+        _inserir_categoria(conn, valor_orcado=valor)
+        gravado = conn.execute(
+            sa.text("SELECT valor_orcado FROM orcamento_categorias")
+        ).scalar_one()
+        conn.rollback()
+
+    assert gravado == valor
+
+
+def test_check_impede_valor_orcado_negativo(migrated_db):
+    engine, _ = migrated_db
+
+    with engine.connect() as conn:
+        _inserir_projeto_e_orcamento(conn)
+        with pytest.raises(IntegrityError) as erro:
+            _inserir_categoria(conn, valor_orcado=-1)
+        conn.rollback()
+
+    assert erro.value.orig.sqlstate == CHECK_VIOLATION
+
+
+def test_categoria_repetida_no_mesmo_orcamento_e_barrada(migrated_db):
+    engine, _ = migrated_db
+
+    with engine.connect() as conn:
+        _inserir_projeto_e_orcamento(conn)
+        _inserir_categoria(conn)
+        with pytest.raises(IntegrityError) as erro:
+            _inserir_categoria(conn, valor_orcado=100)
+        conn.rollback()
+
+    assert erro.value.orig.sqlstate == UNIQUE_VIOLATION
+
+
+def test_fk_impede_categoria_de_orcamento_inexistente(migrated_db):
+    engine, _ = migrated_db
+
+    with engine.connect() as conn:
+        with pytest.raises(IntegrityError) as erro:
+            _inserir_categoria(conn, orcamento_id="orcamento-fantasma")
+        conn.rollback()
+
+    assert erro.value.orig.sqlstate == FOREIGN_KEY_VIOLATION
+
+
+def test_apagar_orcamento_apaga_as_categorias(migrated_db):
+    engine, _ = migrated_db
+
+    with engine.connect() as conn:
+        _inserir_projeto_e_orcamento(conn)
+        _inserir_categoria(conn)
+        conn.execute(sa.text("DELETE FROM orcamentos WHERE id = 'orc-1'"))
+        restantes = conn.execute(
+            sa.text("SELECT count(*) FROM orcamento_categorias")
+        ).scalar_one()
+        conn.rollback()
+
+    assert restantes == 0
+
+
+def test_downgrade_de_orcamento_categorias_nao_deixa_orfaos(migrated_db):
+    engine, config = migrated_db
+
+    command.downgrade(config, REV_LANCAMENTOS)
+
+    tabelas = set(sa.inspect(engine).get_table_names())
+    assert "orcamento_categorias" not in tabelas
+    assert {"projetos", "orcamentos", "lancamentos"} <= tabelas
+    with engine.connect() as conn:
+        restantes = conn.execute(
+            sa.text(
+                "SELECT count(*) FROM pg_constraint "
+                "WHERE conname LIKE '%orcamento_categorias%'"
+            )
+        ).scalar_one()
+    assert restantes == 0
+
+    command.upgrade(config, "head")
+    assert "orcamento_categorias" in sa.inspect(engine).get_table_names()
+
+
 # T-20 · US-05: conciliacao fields on lancamentos.
 
 # Revision right before the conciliacao fields; pinned for the same reason as
 # REV_ORCAMENTOS.
-REV_LANCAMENTOS = "14749dd94ab3"
+REV_ORCAMENTO_CATEGORIAS = "33f66eff68ef"
 
 
 def test_lancamento_novo_nasce_nao_conciliado_e_sem_item_do_extrato(migrated_db):
@@ -377,7 +498,7 @@ def test_lancamento_conciliado_guarda_referencia_do_item_do_extrato(migrated_db)
 def test_migration_de_conciliacao_preserva_lancamentos_existentes(migrated_db):
     engine, config = migrated_db
 
-    command.downgrade(config, REV_LANCAMENTOS)
+    command.downgrade(config, REV_ORCAMENTO_CATEGORIAS)
     with engine.begin() as conn:
         _inserir_projeto_e_orcamento(conn)
         _inserir_lancamento(conn)
@@ -397,7 +518,7 @@ def test_migration_de_conciliacao_preserva_lancamentos_existentes(migrated_db):
 def test_downgrade_de_conciliacao_remove_apenas_as_colunas_novas(migrated_db):
     engine, config = migrated_db
 
-    command.downgrade(config, REV_LANCAMENTOS)
+    command.downgrade(config, REV_ORCAMENTO_CATEGORIAS)
 
     colunas = {c["name"] for c in sa.inspect(engine).get_columns("lancamentos")}
     assert "conciliado" not in colunas
