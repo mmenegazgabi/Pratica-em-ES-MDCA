@@ -1,14 +1,16 @@
-// T-14 · US-03 — Testes da TELA de lançamento (formulário de verdade).
+// Redesign Financeiro · celular do educador — testes da TELA de verdade.
 //
 // Carrega Frontend/Financeiro/lancamento/index.html + lancamento.js num
-// navegador simulado (jsdom), com a API simulada, e clica em
-// "Enviar para aprovação" como o educador faria.
+// navegador simulado (jsdom), com a API simulada em memória, e percorre o
+// fluxo "fotografa agora, completa depois" como o educador faria.
 //
 // Rodar em Frontend/Financeiro:  npm install  (uma vez)  e  node --test
 
-import { describe, test } from "node:test";
+import { afterEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+
+import { esquecerAcesso } from "../base/api.js";
 
 let JSDOM = null;
 try {
@@ -20,33 +22,36 @@ const SEM_JSDOM = JSDOM ? false : "jsdom não instalado — rode `npm install` e
 
 const HTML = await readFile(new URL("../lancamento/index.html", import.meta.url), "utf8");
 const API = "https://pratica-em-es-mdca-547285598829.southamerica-east1.run.app";
+const SESSAO_EDUCADOR = JSON.stringify({ papel: "educador", nome: "Marcos Vieira" });
 
-const ORCAMENTO = {
-  id: "orc-semear",
-  projeto_id: "semear-contraturno",
-  valor_total: 15000,
-  data_inicio: "2026-01-01",
-  data_fim: "2026-12-31",
-  categorias_despesa: ["alimentacao", "transporte"],
-  saldo: 15000,
-};
+function orcamento(id, projeto_nome, categorias = ["Materiais", "Alimentação", "Transporte"]) {
+  return { id, projeto_id: `p-${id}`, projeto_nome, data_inicio: "2026-01-01", data_fim: "2026-12-31", categorias_despesa: categorias };
+}
 
-const RESPOSTA_CRIADO = {
-  status: 201,
-  corpo: {
-    id: "lanc-1",
-    orcamento_id: "orc-semear",
-    valor: 486.9,
-    descricao: "Lanche da oficina",
-    categoria: "alimentacao",
-    data_despesa: "2026-10-12",
-    status: "pendente",
-    status_descricao: "Pendente de aprovação",
-    comprovante: { chave: "comprovantes/2026/10/x.jpg", url: "/comprovantes/2026/10/x.jpg", nome_original: "nota.jpg" },
-  },
-};
+function dadosIniciais() {
+  return {
+    orcamentos: [orcamento("orc-leitura", "Leitura"), orcamento("orc-esporte", "Esporte")],
+    lancamentos: [
+      { id: "l1", orcamento_id: "orc-leitura", projeto_id: "p-orc-leitura", valor: 180, descricao: "Livros", categoria: "Materiais", data_despesa: "2026-10-22", status: "aprovado", motivo_rejeicao: null, comprovante_url: "/comprovantes/2026/10/a.jpg", criado_em: "2026-10-22T12:00:00Z" },
+      { id: "l2", orcamento_id: "orc-esporte", projeto_id: "p-orc-esporte", valor: 64, descricao: "Lanche do treino", categoria: "Alimentação", data_despesa: "2026-10-23", status: "rejeitado", motivo_rejeicao: "A nota está cortada.", comprovante_url: "/comprovantes/2026/10/b.jpg", criado_em: "2026-10-23T12:00:00Z" },
+      { id: "l3", orcamento_id: "orc-leitura", projeto_id: "p-orc-leitura", valor: 45, descricao: "Ônibus", categoria: "Transporte", data_despesa: "2026-10-24", status: "pendente", motivo_rejeicao: null, comprovante_url: "/comprovantes/2026/10/c.jpg", criado_em: "2026-10-24T12:00:00Z" },
+    ],
+    rascunhos: [
+      { id: "r1", criado_em: "2026-10-20T13:42:00Z", comprovante_url: "/comprovantes/2026/10/r1.jpg", nome_original: "r1.jpg", content_type: "image/jpeg", tamanho: 10 },
+    ],
+    notificacoes: [
+      { id: "n1", lancamento_id: "l2", tipo: "lancamento_rejeitado", mensagem: "Lançamento de R$ 64,00 foi rejeitado. Motivo: A nota está cortada.", motivo: "A nota está cortada.", lida: false, criada_em: "2026-10-25T12:00:00Z" },
+    ],
+  };
+}
 
 let versao = 0;
+let janelaAberta = null;
+
+afterEach(() => {
+  janelaAberta?.close(); // encerra os temporizadores da página
+  janelaAberta = null;
+});
 
 async function esperar(condicao, descricao = "condição", limiteMs = 2000) {
   const inicio = Date.now();
@@ -56,311 +61,336 @@ async function esperar(condicao, descricao = "condição", limiteMs = 2000) {
   }
 }
 
-/** Abre a tela com a API simulada. `responderEnvio` decide a resposta do POST. */
-async function abrirTela({ orcamentos = [ORCAMENTO], responderEnvio = async () => RESPOSTA_CRIADO } = {}) {
-  const dom = new JSDOM(HTML, { url: "https://mdca-sistema.pages.dev/Financeiro/lancamento/" });
+const json = (corpo, status = 200) => new Response(JSON.stringify(corpo), { status });
+
+/** Abre a página com a API simulada. `responder(metodo, caminho)` pode sobrepor uma rota. */
+async function abrirTela({ sessao = SESSAO_EDUCADOR, token = "token-de-teste", hash = "", dados = dadosIniciais(), responder } = {}) {
+  esquecerAcesso();
+  const dom = new JSDOM(HTML, { url: `https://mdca-sistema.pages.dev/Financeiro/lancamento/${hash}` });
   const { window } = dom;
+  janelaAberta = window;
   window.HTMLElement.prototype.scrollIntoView = () => {};
   window.scrollTo = () => {};
-  window.localStorage.setItem("mdca.financeiro.token", "token-de-teste");
+  if (token) window.localStorage.setItem("mdca.financeiro.token", token);
+  if (sessao) window.localStorage.setItem("mdca.financeiro.sessao.celular", sessao);
 
   globalThis.window = window;
   globalThis.document = window.document;
   globalThis.localStorage = window.localStorage;
-  globalThis.Option = window.Option;
 
   const chamadas = [];
   globalThis.fetch = async (url, opcoes = {}) => {
     const metodo = opcoes.method || "GET";
-    chamadas.push({ url, metodo, headers: opcoes.headers || {}, corpo: opcoes.body });
-    if (metodo === "GET" && url.startsWith(`${API}/orcamentos`)) {
-      return new Response(JSON.stringify(orcamentos), { status: 200 });
+    const caminho = url.replace(API, "").split("?")[0];
+    chamadas.push({ url, caminho, metodo, headers: opcoes.headers || {}, corpo: opcoes.body });
+    const sobreposta = await responder?.(metodo, caminho);
+    if (sobreposta) return json(sobreposta.corpo, sobreposta.status);
+
+    if (metodo === "GET" && caminho === "/orcamentos") return json(dados.orcamentos);
+    if (metodo === "GET" && caminho === "/lancamentos") return json(dados.lancamentos);
+    if (metodo === "GET" && caminho === "/rascunhos") return json(dados.rascunhos);
+    if (metodo === "GET" && caminho === "/notificacoes") return json(dados.notificacoes);
+    if (metodo === "GET" && caminho.startsWith("/comprovantes/")) {
+      return new Response(new Blob([new Uint8Array(4)], { type: "image/jpeg" }), { status: 200 });
     }
-    if (metodo === "POST" && url === `${API}/lancamentos`) {
-      const { status, corpo } = await responderEnvio();
-      return new Response(JSON.stringify(corpo), { status });
+    if (metodo === "POST" && caminho === "/rascunhos") {
+      const novo = { id: "r-novo", criado_em: new Date().toISOString(), comprovante_url: "/comprovantes/2026/10/novo.jpg", content_type: "image/jpeg" };
+      dados.rascunhos = [novo, ...dados.rascunhos];
+      return json(novo, 201);
     }
-    return new Response("{}", { status: 404 });
+    let achado = caminho.match(/^\/rascunhos\/([^/]+)\/completar$/);
+    if (metodo === "POST" && achado) {
+      dados.rascunhos = dados.rascunhos.filter((r) => r.id !== achado[1]);
+      return json({ id: "l-novo", status: "pendente" }, 201);
+    }
+    achado = caminho.match(/^\/lancamentos\/([^/]+)$/);
+    if (metodo === "GET" && achado) {
+      const l = dados.lancamentos.find((x) => x.id === achado[1]);
+      return l ? json({ ...l, motivos_rejeicao_anteriores: [] }) : json({ detail: "Lançamento não encontrado" }, 404);
+    }
+    achado = caminho.match(/^\/lancamentos\/([^/]+)\/reenviar$/);
+    if (metodo === "PATCH" && achado) {
+      const l = dados.lancamentos.find((x) => x.id === achado[1]);
+      l.status = "pendente";
+      return json({ ...l, motivos_rejeicao_anteriores: ["A nota está cortada."] });
+    }
+    if (metodo === "PATCH" && /^\/notificacoes\/[^/]+\/lida$/.test(caminho)) return json({});
+    return json({ detail: "rota não simulada" }, 404);
   };
 
   versao += 1;
   await import(`../lancamento/lancamento.js?tela=${versao}`);
 
   const $ = (id) => window.document.getElementById(id);
-  await esperar(() => !$("form-lancamento").hidden && $("campo-projeto").options.length > 0, "formulário carregar");
-
-  const envios = () => chamadas.filter((c) => c.metodo === "POST");
-  return { window, $, chamadas, envios };
+  const texto = () => window.document.getElementById("tela").textContent;
+  return { window, $, texto, chamadas, dados, de: (metodo, caminho) => chamadas.filter((c) => c.metodo === metodo && c.caminho === caminho) };
 }
 
-function definirCampo(tela, id, valor, evento) {
+async function irPara(tela, hash) {
+  tela.window.location.hash = hash;
+  await new Promise((ok) => setTimeout(ok, 0));
+}
+
+function digitar(tela, id, valor) {
   const campo = tela.$(id);
   campo.value = valor;
-  campo.dispatchEvent(new tela.window.Event(evento, { bubbles: true }));
+  campo.dispatchEvent(new tela.window.Event("input", { bubbles: true }));
 }
 
-function preencherTudo(tela, extra = {}) {
-  const dados = {
-    projeto: "orc-semear",
-    categoria: "alimentacao",
-    valor: "486,90",
-    data: "2026-10-12",
-    descricao: "  Lanche da oficina  ",
-    ...extra,
-  };
-  definirCampo(tela, "campo-projeto", dados.projeto, "change");
-  definirCampo(tela, "campo-categoria", dados.categoria, "change");
-  definirCampo(tela, "campo-valor", dados.valor, "input");
-  definirCampo(tela, "campo-data", dados.data, "input");
-  definirCampo(tela, "campo-descricao", dados.descricao, "input");
+function botaoComTexto(tela, texto) {
+  return [...tela.window.document.querySelectorAll("button")].find((b) => b.textContent === texto);
 }
 
-function arquivo({ nome = "nota.jpg", tipo = "image/jpeg", tamanho = 2048 } = {}) {
-  return new File([new Uint8Array(tamanho)], nome, { type: tipo });
-}
-
-async function anexar(tela, arq = arquivo(), entrada = "campo-camera") {
-  const input = tela.$(entrada);
-  Object.defineProperty(input, "files", { value: [arq], configurable: true });
-  input.dispatchEvent(new tela.window.Event("change", { bubbles: true }));
-  await esperar(() => !tela.$("comprovante-escolhido").hidden, "comprovante aparecer");
-}
-
-async function enviar(tela) {
-  tela.$("botao-enviar").click();
+async function enviarFormulario(tela, id) {
+  tela.$(id).dispatchEvent(new tela.window.Event("submit", { bubbles: true, cancelable: true }));
   await new Promise((ok) => setTimeout(ok, 20));
 }
 
-function erroVisivel(tela, campo) {
-  const p = tela.$(`erro-${campo}`);
-  return p.hidden ? null : p.textContent;
-}
+// --- Primeiro acesso ---------------------------------------------------------
 
-// --- Critério 1: envio sem campo obrigatório é bloqueado ---------------------
+describe("primeiro acesso", { skip: SEM_JSDOM }, () => {
+  test("sem sessão: pede nome e código, salva como educador e abre Minhas despesas", async () => {
+    const tela = await abrirTela({ sessao: null, token: null });
+    await esperar(() => tela.$("form-acesso"), "tela de primeiro acesso");
+    assert.equal(tela.$("abas").hidden, true);
+    assert.equal(tela.de("GET", "/lancamentos").length, 0);
 
-describe("Critério 1 · envio sem campo obrigatório é bloqueado", { skip: SEM_JSDOM }, () => {
-  test("formulário em branco: nada é enviado e todos os erros aparecem", async () => {
-    const tela = await abrirTela({ orcamentos: [ORCAMENTO, { ...ORCAMENTO, id: "orc-2", projeto_id: "outro" }] });
-    definirCampo(tela, "campo-data", "", "input");
+    digitar(tela, "campo-nome", " Marcos Vieira ");
+    digitar(tela, "campo-token", "codigo-secreto");
+    await enviarFormulario(tela, "form-acesso");
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
 
-    await enviar(tela);
-
-    assert.equal(tela.envios().length, 0);
-    for (const campo of ["projeto", "categoria", "valor", "data", "descricao", "comprovante"]) {
-      assert.ok(erroVisivel(tela, campo), `esperava erro em ${campo}`);
-    }
-    assert.equal(tela.$("painel-sucesso").hidden, true);
+    assert.deepEqual(JSON.parse(tela.window.localStorage.getItem("mdca.financeiro.sessao.celular")), { papel: "educador", nome: "Marcos Vieira" });
+    const [chamada] = tela.de("GET", "/lancamentos");
+    assert.equal(chamada.headers.Authorization, "Bearer codigo-secreto");
+    assert.equal(chamada.headers["X-Papel-Usuario"], "educador");
+    assert.equal(chamada.headers["X-Usuario-Id"], "marcos-vieira");
   });
 
-  for (const [campo, id, evento] of [
-    ["categoria", "campo-categoria", "change"],
-    ["valor", "campo-valor", "input"],
-    ["data", "campo-data", "input"],
-    ["descricao", "campo-descricao", "input"],
-  ]) {
-    test(`sem ${campo}: bloqueia o envio e aponta só esse campo`, async () => {
-      const tela = await abrirTela();
-      preencherTudo(tela);
-      await anexar(tela);
-      definirCampo(tela, id, "", evento);
-
-      await enviar(tela);
-
-      assert.equal(tela.envios().length, 0, "não pode chamar POST /lancamentos");
-      assert.ok(erroVisivel(tela, campo));
-      assert.equal(tela.$(id).getAttribute("aria-invalid"), "true");
-      for (const outro of ["projeto", "categoria", "valor", "data", "descricao", "comprovante"]) {
-        if (outro !== campo) assert.equal(erroVisivel(tela, outro), null, `erro inesperado em ${outro}`);
-      }
-      assert.equal(tela.$("form-lancamento").hidden, false);
-    });
-  }
-
-  test("sem projeto: bloqueia (com mais de um projeto não há seleção automática)", async () => {
-    const tela = await abrirTela({ orcamentos: [ORCAMENTO, { ...ORCAMENTO, id: "orc-2", projeto_id: "outro" }] });
-    preencherTudo(tela, { projeto: "" });
-    await anexar(tela);
-
-    await enviar(tela);
-
-    assert.equal(tela.envios().length, 0);
-    assert.ok(erroVisivel(tela, "projeto"));
+  test("sem nome não entra", async () => {
+    const tela = await abrirTela({ sessao: null, token: null });
+    await esperar(() => tela.$("form-acesso"), "tela de primeiro acesso");
+    digitar(tela, "campo-token", "codigo");
+    await enviarFormulario(tela, "form-acesso");
+    assert.equal(tela.$("erro-acesso").textContent, "Informe seu nome.");
+    assert.equal(tela.window.localStorage.getItem("mdca.financeiro.sessao.celular"), null);
   });
 
-  test("valor zero ou em formato inválido bloqueia", async () => {
-    for (const valor of ["0,00", "abc", "-5"]) {
-      const tela = await abrirTela();
-      preencherTudo(tela, { valor });
-      await anexar(tela);
-
-      await enviar(tela);
-
-      assert.equal(tela.envios().length, 0, `valor "${valor}" não deveria ser enviado`);
-      assert.ok(erroVisivel(tela, "valor"));
-    }
+  test("sessão de outro papel (coordenação) também cai no primeiro acesso", async () => {
+    const tela = await abrirTela({ sessao: JSON.stringify({ papel: "coordenacao", nome: "Luana" }) });
+    await esperar(() => tela.$("form-acesso"), "tela de primeiro acesso");
+    assert.equal(tela.$("campo-nome").value, "");
   });
 
-  test("ao corrigir o campo, o erro some e o envio passa", async () => {
-    const tela = await abrirTela();
-    preencherTudo(tela, { descricao: "" });
-    await anexar(tela);
-    await enviar(tela);
-    assert.ok(erroVisivel(tela, "descricao"));
-
-    definirCampo(tela, "campo-descricao", "Lanche", "input");
-    assert.equal(erroVisivel(tela, "descricao"), null);
-
-    await enviar(tela);
-    await esperar(() => !tela.$("painel-sucesso").hidden, "confirmação");
-    assert.equal(tela.envios().length, 1);
+  test("código recusado pela API volta ao primeiro acesso com o nome preenchido", async () => {
+    const tela = await abrirTela({ responder: () => ({ status: 401, corpo: { detail: "Autenticação obrigatória." } }) });
+    await esperar(() => tela.$("form-acesso"), "tela de primeiro acesso");
+    assert.match(tela.$("erro-acesso").textContent, /inválido/);
+    assert.equal(tela.$("campo-nome").value, "Marcos Vieira");
   });
 });
 
-// --- Critério 2: envio sem comprovante é bloqueado ---------------------------
+// --- Minhas despesas ---------------------------------------------------------
 
-describe("Critério 2 · envio sem comprovante é bloqueado", { skip: SEM_JSDOM }, () => {
-  test("todos os campos preenchidos, sem comprovante: nada é enviado", async () => {
+describe("Minhas despesas", { skip: SEM_JSDOM }, () => {
+  test("ajuste no topo, depois a completar, depois enviadas (mais recentes primeiro)", async () => {
     const tela = await abrirTela();
-    preencherTudo(tela);
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
 
-    await enviar(tela);
-
-    assert.equal(tela.envios().length, 0);
-    assert.equal(erroVisivel(tela, "comprovante"), "Anexe a foto ou o PDF do comprovante.");
+    const secoes = [...tela.window.document.querySelectorAll("section")].map((s) => s.id);
+    assert.deepEqual(secoes, ["secao-ajuste", "secao-completar", "secao-enviadas"]);
+    assert.match(tela.$("secao-ajuste").textContent, /Precisa de ajuste \(1\)/);
+    assert.match(tela.$("secao-ajuste").textContent, /Alimentação.*Esporte · 23\/10.*R\$\s?64,00.*Rejeitada/);
+    assert.match(tela.$("secao-completar").textContent, /A completar \(1\)/);
+    const enviadas = [...tela.$("secao-enviadas").querySelectorAll(".item")].map((a) => a.textContent);
+    assert.match(enviadas[0], /Transporte.*Leitura · 24\/10.*Em análise/);
+    assert.match(enviadas[1], /Materiais.*Leitura · 22\/10.*Aprovada/);
+    assert.equal(tela.$("abas").hidden, false);
+    assert.equal(tela.window.document.querySelector('[data-aba="despesas"]').getAttribute("aria-current"), "page");
   });
 
-  test("comprovante removido com 'Trocar' volta a bloquear", async () => {
-    const tela = await abrirTela();
-    preencherTudo(tela);
-    await anexar(tela);
-    tela.$("trocar-arquivo").click();
+  test("'Ver todas' só aparece com mais de 5 enviadas e mostra todas", async () => {
+    const dados = dadosIniciais();
+    dados.lancamentos = [1, 2, 3, 4, 5, 6, 7].map((n) => ({ ...dados.lancamentos[0], id: `x${n}`, criado_em: `2026-10-0${n}T10:00:00Z` }));
+    const tela = await abrirTela({ dados });
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
+    assert.equal(tela.$("secao-enviadas").querySelectorAll(".item").length, 5);
 
-    await enviar(tela);
-
-    assert.equal(tela.envios().length, 0);
-    assert.ok(erroVisivel(tela, "comprovante"));
-  });
-
-  test("arquivo que não é foto nem PDF bloqueia", async () => {
-    const tela = await abrirTela();
-    preencherTudo(tela);
-    await anexar(tela, arquivo({ nome: "nota.docx", tipo: "application/msword" }), "campo-galeria");
-
-    await enviar(tela);
-
-    assert.equal(tela.envios().length, 0);
-    assert.match(erroVisivel(tela, "comprovante"), /foto|PDF/);
-  });
-
-  test("arquivo acima de 5 MB bloqueia", async () => {
-    const tela = await abrirTela();
-    preencherTudo(tela);
-    await anexar(tela, arquivo({ nome: "nota.pdf", tipo: "application/pdf", tamanho: 5 * 1024 * 1024 + 1 }), "campo-galeria");
-
-    await enviar(tela);
-
-    assert.equal(tela.envios().length, 0);
-    assert.match(erroVisivel(tela, "comprovante"), /5 MB/);
-  });
-
-  test("se a API recusar por falta de comprovante, a tela mostra o motivo e não confirma", async () => {
-    const tela = await abrirTela({
-      responderEnvio: async () => ({ status: 400, corpo: { detail: "Comprovante obrigatório." } }),
-    });
-    preencherTudo(tela);
-    await anexar(tela);
-
-    await enviar(tela);
-    await esperar(() => !tela.$("aviso-geral").hidden, "aviso de erro");
-
-    assert.equal(tela.$("aviso-geral").textContent, "Comprovante obrigatório.");
-    assert.equal(tela.$("painel-sucesso").hidden, true);
+    botaoComTexto(tela, "Ver todas").click();
+    await esperar(() => tela.$("secao-enviadas")?.querySelectorAll(".item").length === 7, "todas as enviadas");
+    assert.equal(botaoComTexto(tela, "Ver todas"), undefined);
   });
 });
 
-// --- Critério 3: envio válido completo cria lançamento pendente --------------
+// --- Câmera e completar ------------------------------------------------------
 
-describe("Critério 3 · envio válido completo cria lançamento pendente", { skip: SEM_JSDOM }, () => {
-  test("envia uma vez para POST /lancamentos com os campos da API", async () => {
+describe("fotografar e completar", { skip: SEM_JSDOM }, () => {
+  test("a foto vira rascunho e o aviso oferece 'Completar agora'", async () => {
     const tela = await abrirTela();
-    preencherTudo(tela);
-    await anexar(tela, arquivo({ nome: "nota.jpg" }));
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
+    assert.equal(tela.$("campo-camera").getAttribute("capture"), "environment");
+    assert.equal(tela.$("campo-camera").getAttribute("accept"), "image/*,application/pdf");
 
-    await enviar(tela);
-    await esperar(() => !tela.$("painel-sucesso").hidden, "confirmação");
+    const foto = new File([new Uint8Array(2048)], "nota.jpg", { type: "image/jpeg" });
+    Object.defineProperty(tela.$("campo-camera"), "files", { value: [foto], configurable: true });
+    tela.$("campo-camera").dispatchEvent(new tela.window.Event("change"));
+    await esperar(() => /A completar/.test(tela.$("aviso-flutuante").textContent), "aviso da foto");
 
-    const [envio] = tela.envios();
-    assert.equal(tela.envios().length, 1);
-    assert.equal(envio.url, `${API}/lancamentos`);
-    assert.equal(envio.headers.Authorization, "Bearer token-de-teste");
-    assert.equal(envio.headers["X-Papel-Usuario"], "educador");
-    assert.equal(envio.corpo.get("orcamento_id"), "orc-semear");
-    assert.equal(envio.corpo.get("categoria"), "alimentacao");
-    assert.equal(envio.corpo.get("valor"), "486.90");
-    assert.equal(envio.corpo.get("data_despesa"), "2026-10-12");
-    assert.equal(envio.corpo.get("descricao"), "Lanche da oficina");
+    const [envio] = tela.de("POST", "/rascunhos");
     assert.equal(envio.corpo.get("comprovante").name, "nota.jpg");
+    assert.match(tela.$("aviso-flutuante").textContent, /Foto salva em "A completar"/);
+    const acao = tela.$("aviso-flutuante").querySelector("a");
+    assert.equal(acao.textContent, "Completar agora");
+    assert.equal(acao.getAttribute("href"), "#/completar/r-novo");
+    await esperar(() => /A completar \(2\)/.test(tela.$("secao-completar")?.textContent || ""), "lista atualizada");
   });
 
-  test("mostra a confirmação 'Lançamento enviado · Pendente de aprovação' com o resumo", async () => {
+  test("arquivo que não é foto nem PDF não é enviado", async () => {
     const tela = await abrirTela();
-    preencherTudo(tela);
-    await anexar(tela);
-
-    await enviar(tela);
-    await esperar(() => !tela.$("painel-sucesso").hidden, "confirmação");
-
-    assert.equal(tela.$("form-lancamento").hidden, true);
-    assert.equal(tela.$("sucesso-status").textContent, "Pendente de aprovação");
-    assert.equal(tela.$("sucesso-projeto").textContent, "semear-contraturno");
-    assert.equal(tela.$("sucesso-categoria").textContent, "alimentacao");
-    assert.match(tela.$("sucesso-valor").textContent, /486,90/);
-    assert.equal(tela.$("sucesso-data").textContent, "12/10/2026");
-    assert.equal(tela.$("sucesso-comprovante").textContent, "nota.jpg");
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
+    const doc = new File([new Uint8Array(10)], "nota.docx", { type: "application/msword" });
+    Object.defineProperty(tela.$("campo-galeria"), "files", { value: [doc], configurable: true });
+    tela.$("campo-galeria").dispatchEvent(new tela.window.Event("change"));
+    await esperar(() => !tela.$("aviso-flutuante").hidden, "aviso");
+    assert.match(tela.$("aviso-flutuante").textContent, /foto|PDF/);
+    assert.equal(tela.de("POST", "/rascunhos").length, 0);
   });
 
-  test("toque duplo em 'Enviar' não cria dois lançamentos", async () => {
-    let liberar;
+  test("completar: data da foto, último projeto usado, categoria por botão, envia sem a foto", async () => {
+    const tela = await abrirTela({ hash: "#/completar/r1" });
+    await esperar(() => tela.$("form-despesa"), "formulário de completar");
+
+    const criada = new Date("2026-10-20T13:42:00Z");
+    const esperada = `${criada.getFullYear()}-${String(criada.getMonth() + 1).padStart(2, "0")}-${String(criada.getDate()).padStart(2, "0")}`;
+    assert.equal(tela.$("campo-data").value, esperada);
+    assert.equal(tela.$("campo-projeto").value, "orc-leitura"); // l3 é a mais recente
+    assert.equal(tela.$("abas").hidden, true);
+    const categorias = [...tela.$("campo-categoria").querySelectorAll("button")];
+    assert.deepEqual(categorias.map((b) => b.textContent), ["Materiais", "Alimentação", "Transporte"]);
+
+    categorias[0].click();
+    assert.equal(tela.$("campo-categoria").querySelector("[aria-pressed=true]").textContent, "Materiais");
+    digitar(tela, "campo-valor", "180,00");
+    digitar(tela, "campo-descricao", "  Livros para a oficina ");
+    await enviarFormulario(tela, "form-despesa");
+    await esperar(() => tela.window.location.hash === "#/", "volta para Minhas despesas");
+
+    const [envio] = tela.de("POST", "/rascunhos/r1/completar");
+    assert.equal(envio.corpo.get("orcamento_id"), "orc-leitura");
+    assert.equal(envio.corpo.get("categoria"), "Materiais");
+    assert.equal(envio.corpo.get("valor"), "180.00");
+    assert.equal(envio.corpo.get("descricao"), "Livros para a oficina");
+    assert.equal(envio.corpo.get("data_despesa"), esperada);
+    assert.equal(envio.corpo.has("comprovante"), false);
+    assert.equal(tela.$("aviso-flutuante").textContent, "Despesa enviada para aprovação");
+
+    tela.window.location.hash = "#/avisos";
+    await esperar(() => tela.$("aviso-flutuante").hidden, "aviso some ao trocar de aba");
+  });
+
+  test("completar sem valor e sem categoria não envia e aponta os campos", async () => {
+    const tela = await abrirTela({ hash: "#/completar/r1" });
+    await esperar(() => tela.$("form-despesa"), "formulário de completar");
+    digitar(tela, "campo-descricao", "Livros");
+    await enviarFormulario(tela, "form-despesa");
+
+    assert.equal(tela.de("POST", "/rascunhos/r1/completar").length, 0);
+    assert.equal(tela.$("erro-valor").hidden, false);
+    assert.equal(tela.$("erro-categoria").hidden, false);
+    assert.equal(tela.$("erro-descricao").hidden, true);
+  });
+
+  test("erro da API aparece no formulário e não sai da tela", async () => {
     const tela = await abrirTela({
-      responderEnvio: () => new Promise((ok) => { liberar = () => ok(RESPOSTA_CRIADO); }),
+      hash: "#/completar/r1",
+      responder: (metodo, caminho) => (metodo === "POST" && caminho.endsWith("/completar") ? { status: 400, corpo: { detail: "Saldo insuficiente." } } : null),
     });
-    preencherTudo(tela);
-    await anexar(tela);
+    await esperar(() => tela.$("form-despesa"), "formulário de completar");
+    tela.$("campo-categoria").querySelector("button").click();
+    digitar(tela, "campo-valor", "10");
+    digitar(tela, "campo-descricao", "Livros");
+    await enviarFormulario(tela, "form-despesa");
 
-    await enviar(tela);
-    assert.equal(tela.$("botao-enviar").disabled, true);
-    assert.equal(tela.$("botao-enviar").textContent, "Enviando…");
-    await enviar(tela);
-    liberar();
-    await esperar(() => !tela.$("painel-sucesso").hidden, "confirmação");
+    await esperar(() => !tela.$("aviso-geral").hidden, "aviso de erro");
+    assert.equal(tela.$("aviso-geral").textContent, "Saldo insuficiente.");
+    assert.equal(tela.window.location.hash, "#/completar/r1");
+  });
+});
 
-    assert.equal(tela.envios().length, 1);
+// --- Rejeitada ---------------------------------------------------------------
+
+describe("despesa rejeitada", { skip: SEM_JSDOM }, () => {
+  test("mostra o motivo em destaque e 'Corrigir e reenviar'", async () => {
+    const tela = await abrirTela({ hash: "#/despesa/l2" });
+    await esperar(() => tela.$("motivo-rejeicao"), "motivo");
+    assert.match(tela.$("motivo-rejeicao").textContent, /Motivo informado pela coordenação.*A nota está cortada\./);
+    assert.match(tela.texto(), /Alimentação · Esporte/);
+    assert.match(tela.texto(), /Lanche do treino · 23\/10\/2026/);
+    assert.equal(tela.$("botao-corrigir").getAttribute("href"), "#/corrigir/l2");
   });
 
-  test("'Lançar outra despesa' limpa o formulário e mantém o projeto", async () => {
-    const tela = await abrirTela({ orcamentos: [ORCAMENTO, { ...ORCAMENTO, id: "orc-2", projeto_id: "outro" }] });
-    preencherTudo(tela);
-    await anexar(tela);
-    await enviar(tela);
-    await esperar(() => !tela.$("painel-sucesso").hidden, "confirmação");
-
-    tela.$("botao-novo").click();
-
-    assert.equal(tela.$("form-lancamento").hidden, false);
-    assert.equal(tela.$("campo-projeto").value, "orc-semear");
-    assert.equal(tela.$("campo-valor").value, "");
-    assert.equal(tela.$("campo-descricao").value, "");
-    assert.equal(tela.$("comprovante-escolhido").hidden, true);
+  test("despesa aprovada não oferece reenviar", async () => {
+    const tela = await abrirTela({ hash: "#/despesa/l1" });
+    await esperar(() => tela.window.document.querySelector(".despesa"), "despesa");
+    assert.equal(tela.$("motivo-rejeicao"), null);
+    assert.equal(tela.$("botao-corrigir"), null);
   });
 
-  test("código de acesso recusado pela API leva de volta à tela de código", async () => {
-    const tela = await abrirTela({ responderEnvio: async () => ({ status: 401, corpo: { detail: "Autenticação obrigatória." } }) });
-    preencherTudo(tela);
-    await anexar(tela);
+  test("corrigir abre o formulário preenchido e reenvia pelo PATCH", async () => {
+    const tela = await abrirTela({ hash: "#/corrigir/l2" });
+    await esperar(() => tela.$("form-despesa"), "formulário de correção");
 
-    await enviar(tela);
-    await esperar(() => !tela.$("painel-acesso").hidden, "tela de código");
+    assert.equal(tela.$("campo-valor").value, "64,00");
+    assert.equal(tela.$("campo-descricao").value, "Lanche do treino");
+    assert.equal(tela.$("campo-data").value, "2026-10-23");
+    assert.equal(tela.$("campo-projeto").value, "orc-esporte");
+    assert.equal(tela.$("campo-projeto").disabled, true);
+    assert.equal(tela.$("campo-categoria").querySelector("[aria-pressed=true]").textContent, "Alimentação");
 
-    assert.equal(tela.$("painel-sucesso").hidden, true);
+    digitar(tela, "campo-descricao", "Lanche do treino de sábado");
+    await enviarFormulario(tela, "form-despesa");
+    await esperar(() => tela.window.location.hash === "#/", "volta para Minhas despesas");
+
+    const [envio] = tela.de("PATCH", "/lancamentos/l2/reenviar");
+    assert.equal(envio.corpo.get("descricao"), "Lanche do treino de sábado");
+    assert.equal(envio.corpo.get("valor"), "64.00");
+    assert.equal(envio.corpo.get("categoria"), "Alimentação");
+    assert.equal(envio.corpo.has("comprovante"), false);
+  });
+
+  test("ao corrigir, 'Trocar foto' manda a foto nova junto", async () => {
+    const tela = await abrirTela({ hash: "#/corrigir/l2" });
+    await esperar(() => tela.$("form-despesa"), "formulário de correção");
+    const foto = new File([new Uint8Array(100)], "nova.jpg", { type: "image/jpeg" });
+    Object.defineProperty(tela.$("campo-foto"), "files", { value: [foto], configurable: true });
+    tela.$("campo-foto").dispatchEvent(new tela.window.Event("change"));
+    await new Promise((ok) => setTimeout(ok, 10));
+
+    await enviarFormulario(tela, "form-despesa");
+    await esperar(() => tela.de("PATCH", "/lancamentos/l2/reenviar").length === 1, "reenvio");
+    assert.equal(tela.de("PATCH", "/lancamentos/l2/reenviar")[0].corpo.get("comprovante").name, "nova.jpg");
+  });
+});
+
+// --- Avisos e perfil ---------------------------------------------------------
+
+describe("avisos e perfil", { skip: SEM_JSDOM }, () => {
+  test("avisos lista as notificações e marca as novas como lidas", async () => {
+    const tela = await abrirTela({ hash: "#/avisos" });
+    await esperar(() => tela.window.document.querySelector(".item--aviso"), "avisos");
+    assert.match(tela.texto(), /foi rejeitado\. Motivo: A nota está cortada\./);
+    assert.equal(tela.window.document.querySelector(".item--aviso").getAttribute("href"), "#/despesa/l2");
+    await esperar(() => tela.de("PATCH", "/notificacoes/n1/lida").length === 1, "marcar como lida");
+  });
+
+  test("perfil mostra o nome e 'Sair' volta ao primeiro acesso", async () => {
+    const tela = await abrirTela({ hash: "#/perfil" });
+    await esperar(() => tela.$("perfil-nome"), "perfil");
+    assert.equal(tela.$("perfil-nome").textContent, "Marcos Vieira");
+
+    tela.$("botao-sair").click();
+    await esperar(() => tela.$("form-acesso"), "primeiro acesso");
+    assert.equal(tela.window.localStorage.getItem("mdca.financeiro.sessao.celular"), null);
+    assert.equal(tela.window.localStorage.getItem("mdca.financeiro.token"), null);
   });
 });

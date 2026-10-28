@@ -1,0 +1,40 @@
+/* Visual "B · Neutro e funcional" */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  --fundo: #fff;
+  --fundo-suave: #fafafa;
+  --fundo-selecionado: #f6faf5;
+  --borda: #e4e4e7;
+  --borda-campo: #d4d4d8;
+  --linha: #f0f0f2;
+  --texto: #18181b;
+  --texto-medio: #3f3f46;
+  --texto-suave: #71717a;
+  --verde: #3f8a3a;
+  --ativo-fundo: #ecf5ea;
+  --ativo-texto: #1f4d1c;
+  --amarelo: #ca8a04;
+  --vermelho: #dc2626;
+  --perigo-texto: #b91c1c;
+  --perigo-borda: #fecaca;
+  --pendente-texto: #854d0e;
+  --pendente-fundo: #fef9c3;
+  --aprovado-texto: #1f4d1c;
+  --aprovado-fundo: #ecf5ea;
+  --rejeitado-texto: #991b1b;
+  --rejeitado-fundo: #fee2e2;
+  --conciliado-texto: #1e40af;
+  --conciliado-fundo: #dbeafe;
+  --raio: 6px;
+  --raio-grande: 8px;
+  --fonte: "Inter", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: var(--fonte);
+  -webkit-font-smoothing: antialiased;
+}

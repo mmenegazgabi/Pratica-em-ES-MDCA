@@ -20,6 +20,7 @@ if __package__ == "routers":
         OrcamentoInvalido,
         validar_categorias,
     )
+    from projetos import buscar_projeto
 else:
     from ..alerta_saldo import (
         NivelAlerta,
@@ -35,6 +36,7 @@ else:
         OrcamentoInvalido,
         validar_categorias,
     )
+    from ..projetos import buscar_projeto
 
 router = APIRouter(tags=["orcamentos"])
 
@@ -43,7 +45,7 @@ _orcamentos: List[Orcamento] = []
 
 class CategoriaEntrada(BaseModel):
     nome: str
-    valor_orcado: float
+    valor_orcado: float = Field(allow_inf_nan=False)
 
 
 class OrcamentoCreate(BaseModel):
@@ -55,7 +57,7 @@ class OrcamentoCreate(BaseModel):
     """
 
     projeto_id: str
-    valor_total: float
+    valor_total: float = Field(allow_inf_nan=False)
     data_inicio: date
     data_fim: date
     categorias_despesa: Optional[List[str]] = Field(None, min_length=1)
@@ -68,19 +70,26 @@ class OrcamentoCreate(BaseModel):
         return self
 
 
-class OrcamentoUpdate(BaseModel):
+class OrcamentoEdicao(BaseModel):
     """Edição parcial: o que não vier fica como está.
 
-    ``categorias`` substitui a lista inteira de categorias e valores.
+    O formulário do redesign manda tudo, com ``categorias_despesa`` (só
+    nomes). ``categorias`` (US-01) traz também o valor orçado de cada uma.
+    As duas formas substituem a lista inteira; só uma delas por vez.
     """
 
-    valor_total: Optional[float] = None
-    categorias: Optional[List[CategoriaEntrada]] = Field(None, min_length=1)
+    valor_total: Optional[float] = Field(None, gt=0, allow_inf_nan=False)
+    data_inicio: Optional[date] = None
+    data_fim: Optional[date] = None
+    categorias_despesa: Optional[List[str]] = None
+    categorias: Optional[List[CategoriaEntrada]] = None
 
     @model_validator(mode="after")
     def _algo_para_editar(self):
-        if self.valor_total is None and self.categorias is None:
-            raise ValueError("Informe valor_total e/ou categorias.")
+        if not self.model_fields_set:
+            raise ValueError("Informe ao menos um campo para editar.")
+        if self.categorias is not None and self.categorias_despesa is not None:
+            raise ValueError("Informe categorias ou categorias_despesa (só um dos dois).")
         return self
 
 
@@ -113,13 +122,20 @@ class OrcamentoDetalhe(BaseModel):
 
     id: str
     projeto_id: str
-    valor_total: float
+    valor_total: float = Field(allow_inf_nan=False)
     data_inicio: date
     data_fim: date
     categorias_despesa: List[str]
     saldo: float
     # US-01: limite e gasto de cada categoria, na ordem de categorias_despesa.
     categorias: List[CategoriaDetalhe]
+
+    # Nome vem do cadastro de projetos; None se o projeto não existir mais.
+    @computed_field
+    @property
+    def projeto_nome(self) -> Optional[str]:
+        projeto = buscar_projeto(self.projeto_id)
+        return projeto.nome if projeto else None
 
     # T-08 · US-02: indicador de consumo com alerta em 80% e 100%.
     # Calculados a partir de valor_total e saldo para que as telas não
@@ -191,6 +207,12 @@ def criar_orcamento(payload: OrcamentoCreate) -> Orcamento:
             detail="data_fim não pode ser anterior a data_inicio",
         )
 
+    if buscar_projeto(payload.projeto_id) is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Projeto não encontrado. Cadastre o projeto antes de criar o orçamento.",
+        )
+
     if payload.categorias is not None:
         nomes = [c.nome.strip() for c in payload.categorias]
         # Nome repetido é barrado em validar_categorias, que olha a lista.
@@ -247,13 +269,10 @@ def obter_orcamento(orcamento_id: str) -> Orcamento:
 @router.patch("/orcamentos/{orcamento_id}", response_model=OrcamentoDetalhe)
 def editar_orcamento(
     orcamento_id: str,
-    payload: OrcamentoUpdate,
-    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
+    payload: OrcamentoEdicao,
+    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO)),
 ) -> Orcamento:
-    """Edita valor total e categorias com valor orçado (US-01).
-
-    Versão mínima: o redesign (tarefa 4) pode acrescentar outros campos.
-    """
+    """Coordenação edita valor, vigência e categorias (redesign + US-01)."""
     orcamento = _buscar_orcamento(orcamento_id)
     categorias = (
         None
@@ -261,7 +280,13 @@ def editar_orcamento(
         else [(c.nome.strip(), c.valor_orcado) for c in payload.categorias]
     )
     try:
-        orcamento.redefinir(valor_total=payload.valor_total, categorias=categorias)
+        orcamento.editar(
+            valor_total=payload.valor_total,
+            data_inicio=payload.data_inicio,
+            data_fim=payload.data_fim,
+            categorias_despesa=payload.categorias_despesa,
+            categorias=categorias,
+        )
     except OrcamentoInvalido as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
     return orcamento

@@ -19,9 +19,11 @@ from enum import Enum
 from typing import Optional
 
 if __package__:
-    from .orcamento import Lancamento, StatusLancamento, formatar_reais
+    from .moeda import formatar_reais
+    from .orcamento import Lancamento, StatusLancamento
 else:
-    from orcamento import Lancamento, StatusLancamento, formatar_reais
+    from moeda import formatar_reais
+    from orcamento import Lancamento, StatusLancamento
 
 
 class TipoNotificacao(str, Enum):

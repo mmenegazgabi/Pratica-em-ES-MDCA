@@ -14,3 +14,5 @@ venv/
 env-vars.yaml
 .local/
 gha-creds-*.json
+.superpowers/
+.playwright-mcp/

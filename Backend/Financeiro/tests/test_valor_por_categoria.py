@@ -12,6 +12,7 @@ from Financeiro.comprovantes import ArmazenamentoEmMemoria
 from Financeiro.main import app
 from Financeiro.notificacoes import caixa_de_notificacoes
 from Financeiro.orcamento import OrcamentoInvalido, validar_categorias
+from Financeiro.projetos import _projetos, registrar_projeto
 from Financeiro.routers.comprovantes import obter_armazenamento
 from Financeiro.routers.orcamentos import _orcamentos
 
@@ -35,17 +36,26 @@ COORDENACAO = como("coordenacao")
 def ambiente(monkeypatch):
     monkeypatch.setenv("FINANCEIRO_API_TOKEN", TOKEN)
     _orcamentos.clear()
+    _projetos.clear()
     caixa_de_notificacoes.limpar()
     app.dependency_overrides[obter_armazenamento] = lambda: ArmazenamentoEmMemoria()
     yield
     app.dependency_overrides.clear()
     _orcamentos.clear()
+    _projetos.clear()
     caixa_de_notificacoes.limpar()
+
+
+def projeto_id():
+    # O redesign só aceita orçamento de projeto cadastrado.
+    if not _projetos:
+        registrar_projeto("Oficina de Arte")
+    return _projetos[0].id
 
 
 def payload(valor_total=10000, **campos):
     corpo = {
-        "projeto_id": "oficina-de-arte",
+        "projeto_id": projeto_id(),
         "valor_total": valor_total,
         "data_inicio": "2026-01-01",
         "data_fim": "2026-12-31",
@@ -262,8 +272,7 @@ def test_reduzir_total_abaixo_do_gasto_retorna_400():
 
     assert resposta.status_code == 400
     assert resposta.json()["detail"] == (
-        "O valor total (R$ 2.999,00) é menor do que já foi gasto no "
-        "orçamento (R$ 3.000,00)."
+        "O valor total não pode ser menor que o já gasto (R$ 3.000,00)."
     )
 
 
@@ -329,7 +338,7 @@ def test_get_lista_tambem_traz_as_categorias():
     gastar(orcamento_id, 400)
 
     [item] = client.get("/orcamentos").json()
-    [paginado] = client.get("/orcamentos/projeto/oficina-de-arte").json()["itens"]
+    [paginado] = client.get(f"/orcamentos/projeto/{projeto_id()}").json()["itens"]
 
     for corpo in (item, paginado):
         assert corpo["id"] == orcamento_id
@@ -456,7 +465,7 @@ def test_nao_remove_categoria_com_lancamento():
 
     assert resposta.status_code == 400
     assert resposta.json()["detail"] == (
-        "Não é possível remover categoria com lançamentos: alimentacao."
+        'A categoria "alimentacao" tem lançamentos e não pode ser removida.'
     )
 
 
@@ -479,11 +488,11 @@ def test_orcamento_inexistente_retorna_404():
     assert editar("nao-existe", {"valor_total": 1}).status_code == 404
 
 
-@pytest.mark.parametrize("papel", ["educador", "voluntario_financeiro", ""])
-def test_so_coordenacao_e_direcao_editam(papel):
+@pytest.mark.parametrize("papel", ["direcao", "educador", "voluntario_financeiro", ""])
+def test_so_coordenacao_edita(papel):
+    # Regra do redesign: a edição do orçamento é da Coordenação.
     orcamento_id = criar()
-    assert editar(orcamento_id, {"valor_total": 1}, headers=como(papel)).status_code == 403
-    assert editar(orcamento_id, {"valor_total": 20000}, headers=como("direcao")).status_code == 200
+    assert editar(orcamento_id, {"valor_total": 20000}, headers=como(papel)).status_code == 403
 
 
 def test_editar_sem_token_retorna_401():
@@ -494,3 +503,52 @@ def test_editar_sem_token_retorna_401():
 def test_dominio_rejeita_soma_acima_do_total():
     with pytest.raises(OrcamentoInvalido):
         validar_categorias(100, ["a", "b"], {"a": 60, "b": 40.01})
+
+
+# --- Junção com o PATCH do redesign -----------------------------------------
+
+
+def test_editar_so_com_nomes_mantem_o_valor_das_categorias_que_continuam():
+    # O formulário do redesign manda categorias_despesa (só nomes) junto com
+    # valor e vigência; o limite das categorias que ficaram não pode sumir.
+    orcamento_id = criar()
+
+    resposta = editar(
+        orcamento_id,
+        {
+            "valor_total": 10000,
+            "data_inicio": "2026-01-01",
+            "data_fim": "2026-12-31",
+            "categorias_despesa": ["materiais", "transporte"],
+        },
+    )
+
+    assert resposta.status_code == 200
+    assert [(c["nome"], c["valor_orcado"]) for c in resposta.json()["categorias"]] == [
+        ("materiais", 4000),
+        ("transporte", None),
+    ]
+
+
+def test_editar_vigencia_sem_mexer_nas_categorias():
+    orcamento_id = criar()
+
+    resposta = editar(orcamento_id, {"data_fim": "2027-06-30"})
+
+    assert resposta.status_code == 200
+    assert resposta.json()["data_fim"] == "2027-06-30"
+    assert categorias(orcamento_id)["materiais"]["valor_orcado"] == 4000
+
+
+def test_editar_com_as_duas_formas_de_categoria_retorna_422():
+    orcamento_id = criar()
+
+    resposta = editar(
+        orcamento_id,
+        {
+            "categorias_despesa": ["materiais"],
+            "categorias": [{"nome": "materiais", "valor_orcado": 1}],
+        },
+    )
+
+    assert resposta.status_code == 422

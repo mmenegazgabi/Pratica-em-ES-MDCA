@@ -10,6 +10,7 @@ from Financeiro.orcamento import (
     Orcamento,
     StatusLancamento,
 )
+from Financeiro.projetos import _projetos, registrar_projeto
 from Financeiro.routers.orcamentos import _orcamentos
 
 client = TestClient(app)
@@ -17,6 +18,13 @@ client = TestClient(app)
 
 def setup_function():
     _orcamentos.clear()
+    _projetos.clear()
+    registrar_projeto("Projeto 1").id = "projeto-1"
+
+
+def teardown_function():
+    _orcamentos.clear()
+    _projetos.clear()
 
 
 def payload(**overrides):
@@ -426,4 +434,16 @@ def test_get_orcamentos_do_projeto_pagina_historico_mais_recente_primeiro():
 def test_get_orcamentos_do_projeto_com_pagina_invalida_retorna_422():
     response = client.get("/orcamentos/projeto/projeto-1?pagina=0")
 
+    assert response.status_code == 422
+
+
+def test_valor_total_nan_no_corpo_bruto_retorna_422():
+    import json
+
+    corpo = json.dumps(payload()).replace(
+        json.dumps(payload()["valor_total"]), "NaN", 1
+    )
+    response = client.post(
+        "/orcamentos", content=corpo, headers={"Content-Type": "application/json"}
+    )
     assert response.status_code == 422

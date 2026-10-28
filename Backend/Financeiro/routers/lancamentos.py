@@ -1,10 +1,11 @@
 """Rotas de lançamentos.
 
-GET   /lancamentos?status=pendente -> fila de aprovação (T-18 · US-04)
+GET   /lancamentos                 -> lista com filtros, mais antigos primeiro
 POST  /lancamentos                 -> cria com comprovante (T-12 · US-03)
 GET   /lancamentos/{id}            -> consulta, com o motivo de rejeição (T-16)
 PATCH /lancamentos/{id}/aprovar    -> aprova (T-15 · US-04)
 PATCH /lancamentos/{id}/rejeitar   -> rejeita com motivo obrigatório (T-16 · US-04)
+PATCH /lancamentos/{id}/reenviar   -> corrige e reenvia despesa rejeitada
 PATCH /lancamentos/{id}/conciliar  -> vincula a um item do extrato (T-21 · US-05)
 
 Aprovar e rejeitar notificam o autor do lançamento in-app (T-17 · US-04).
@@ -25,11 +26,26 @@ Ordem das verificações, para não deixar arquivo órfão no bucket:
 from datetime import date, datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+)
 from pydantic import BaseModel
 
 if __package__ == "routers":
-    from autenticacao import Papel, exigir_autenticacao, exigir_papel, obter_usuario
+    from autenticacao import (
+        Papel,
+        exigir_autenticacao,
+        exigir_papel,
+        exigir_usuario,
+        obter_usuario,
+    )
     from comprovantes import (
         TAMANHO_MAXIMO_BYTES,
         ArmazenamentoComprovantes,
@@ -50,7 +66,13 @@ if __package__ == "routers":
     from routers.comprovantes import obter_armazenamento
     from routers.orcamentos import _buscar_orcamento, _orcamentos
 else:
-    from ..autenticacao import Papel, exigir_autenticacao, exigir_papel, obter_usuario
+    from ..autenticacao import (
+        Papel,
+        exigir_autenticacao,
+        exigir_papel,
+        exigir_usuario,
+        obter_usuario,
+    )
     from ..comprovantes import (
         TAMANHO_MAXIMO_BYTES,
         ArmazenamentoComprovantes,
@@ -104,6 +126,103 @@ class LancamentoCriado(BaseModel):
     comprovante: ComprovanteDoLancamento
 
 
+async def _ler_comprovante(comprovante: Optional[UploadFile]) -> bytes:
+    conteudo = await comprovante.read(TAMANHO_MAXIMO_BYTES + 1) if comprovante else b""
+    if not conteudo:
+        raise HTTPException(status_code=400, detail="Comprovante obrigatório.")
+    return conteudo
+
+
+def _guardar_comprovante(
+    conteudo: bytes, filename: Optional[str], armazenamento: ArmazenamentoComprovantes
+) -> tuple[str, str, str, int]:
+    """Valida tipo e tamanho e salva no armazenamento."""
+    try:
+        tipo = validar_comprovante(conteudo)
+    except ComprovanteInvalido as erro:
+        status = 413 if len(conteudo) > TAMANHO_MAXIMO_BYTES else 400
+        raise HTTPException(status_code=status, detail=str(erro)) from erro
+
+    chave = gerar_chave(tipo)
+    nome_original = limpar_nome_original(filename)
+    try:
+        armazenamento.salvar(chave, conteudo, tipo.content_type, nome_original)
+    except Exception as erro:
+        raise HTTPException(
+            status_code=503, detail="Falha ao salvar o comprovante."
+        ) from erro
+    return chave, tipo.content_type, nome_original, len(conteudo)
+
+
+async def _receber_comprovante(
+    comprovante: Optional[UploadFile], armazenamento: ArmazenamentoComprovantes
+) -> tuple[str, str, str, int]:
+    """Lê, valida e salva o comprovante -> (chave, content_type, nome_original, tamanho)."""
+    conteudo = await _ler_comprovante(comprovante)
+    return _guardar_comprovante(conteudo, comprovante.filename, armazenamento)
+
+
+def _validar_dados_da_despesa(
+    orcamento: Orcamento,
+    valor: float,
+    descricao: str,
+    categoria: str,
+    data_despesa: date,
+) -> str:
+    """Devolve a descrição sem espaços sobrando; 400 se algo for inválido."""
+    descricao = descricao.strip()
+    if not descricao:
+        raise HTTPException(status_code=400, detail="Descrição obrigatória.")
+    try:
+        orcamento.validar_lancamento(valor, categoria, data_despesa)
+    except LancamentoInvalido as erro:
+        raise HTTPException(status_code=400, detail=str(erro)) from erro
+    return descricao
+
+
+def _criar_lancamento(
+    orcamento: Orcamento,
+    valor: float,
+    descricao: str,
+    categoria: str,
+    data_despesa: date,
+    comprovante_chave: str,
+    content_type: str,
+    nome_original: str,
+    tamanho: int,
+    autor_id: Optional[str],
+) -> LancamentoCriado:
+    """Registra o lançamento como pendente e monta a resposta."""
+    lancamento = orcamento.registrar_lancamento(
+        Lancamento(
+            valor=valor,
+            status=StatusLancamento.PENDENTE,
+            descricao=descricao,
+            categoria=categoria,
+            data_despesa=data_despesa,
+            comprovante_chave=comprovante_chave,
+            autor_id=autor_id,
+        )
+    )
+    return LancamentoCriado(
+        id=lancamento.id,
+        orcamento_id=orcamento.id,
+        valor=lancamento.valor,
+        descricao=lancamento.descricao,
+        categoria=lancamento.categoria,
+        data_despesa=data_despesa,
+        status=lancamento.status.value,
+        status_descricao=DESCRICAO_STATUS[lancamento.status],
+        comprovante=ComprovanteDoLancamento(
+            chave=comprovante_chave,
+            url=f"/{comprovante_chave}",
+            nome_original=nome_original,
+            content_type=content_type,
+            tamanho=tamanho,
+        ),
+    )
+
+
 @router.post("", response_model=LancamentoCriado, status_code=201)
 async def criar_lancamento(
     orcamento_id: str = Form(...),
@@ -116,65 +235,21 @@ async def criar_lancamento(
     autor_id: Optional[str] = Depends(obter_usuario),
 ) -> LancamentoCriado:
     # 1. Comprovante obrigatório
-    conteudo = await comprovante.read(TAMANHO_MAXIMO_BYTES + 1) if comprovante else b""
-    if not conteudo:
-        raise HTTPException(status_code=400, detail="Comprovante obrigatório.")
+    conteudo = await _ler_comprovante(comprovante)
 
     # 2 e 3. Orçamento e dados da despesa
     orcamento = _buscar_orcamento(orcamento_id)
-    descricao = descricao.strip()
-    if not descricao:
-        raise HTTPException(status_code=400, detail="Descrição obrigatória.")
-    try:
-        orcamento.validar_lancamento(valor, categoria, data_despesa)
-    except LancamentoInvalido as erro:
-        raise HTTPException(status_code=400, detail=str(erro)) from erro
-
-    # 4. Tipo (imagem/PDF) e tamanho máximo do arquivo
-    try:
-        tipo = validar_comprovante(conteudo)
-    except ComprovanteInvalido as erro:
-        status = 413 if len(conteudo) > TAMANHO_MAXIMO_BYTES else 400
-        raise HTTPException(status_code=status, detail=str(erro)) from erro
-
-    # 5. Salva o arquivo e registra o lançamento como pendente
-    chave = gerar_chave(tipo)
-    nome_original = limpar_nome_original(comprovante.filename)
-    try:
-        armazenamento.salvar(chave, conteudo, tipo.content_type, nome_original)
-    except Exception as erro:
-        raise HTTPException(
-            status_code=503, detail="Falha ao salvar o comprovante."
-        ) from erro
-
-    lancamento = orcamento.registrar_lancamento(
-        Lancamento(
-            valor=valor,
-            status=StatusLancamento.PENDENTE,
-            descricao=descricao,
-            categoria=categoria,
-            data_despesa=data_despesa,
-            comprovante_chave=chave,
-            autor_id=autor_id,
-        )
+    descricao = _validar_dados_da_despesa(
+        orcamento, valor, descricao, categoria, data_despesa
     )
 
-    return LancamentoCriado(
-        id=lancamento.id,
-        orcamento_id=orcamento.id,
-        valor=lancamento.valor,
-        descricao=lancamento.descricao,
-        categoria=lancamento.categoria,
-        data_despesa=data_despesa,
-        status=lancamento.status.value,
-        status_descricao=DESCRICAO_STATUS[lancamento.status],
-        comprovante=ComprovanteDoLancamento(
-            chave=chave,
-            url=f"/{chave}",
-            nome_original=nome_original,
-            content_type=tipo.content_type,
-            tamanho=len(conteudo),
-        ),
+    # 4 e 5. Tipo e tamanho do arquivo, salva e registra como pendente
+    chave, content_type, nome_original, tamanho = _guardar_comprovante(
+        conteudo, comprovante.filename, armazenamento
+    )
+    return _criar_lancamento(
+        orcamento, valor, descricao, categoria, data_despesa,
+        chave, content_type, nome_original, tamanho, autor_id,
     )
 
 
@@ -249,6 +324,7 @@ class LancamentoDetalhe(BaseModel):
     status: str
     status_descricao: str
     motivo_rejeicao: Optional[str]
+    motivos_rejeicao_anteriores: List[str]
     comprovante_url: Optional[str]
     conciliado: bool
     referencia_extrato: Optional[str]
@@ -291,6 +367,91 @@ def rejeitar_lancamento(
     )
 
 
+class LancamentoResumo(BaseModel):
+    id: str
+    orcamento_id: str
+    projeto_id: str
+    valor: float
+    descricao: str
+    categoria: str
+    data_despesa: Optional[date]
+    status: str
+    status_descricao: str
+    autor_id: Optional[str]
+    motivo_rejeicao: Optional[str]
+    conciliado: bool
+    referencia_extrato: Optional[str]
+    comprovante_url: Optional[str]
+    criado_em: datetime
+    aprovado_em: Optional[datetime]
+
+
+# GET /lancamentos precisa vir antes de GET /lancamentos/{id}.
+@router.get("", response_model=List[LancamentoResumo])
+def listar_lancamentos(
+    status: Optional[StatusLancamento] = Query(
+        None, description="Filtra pelo status, ex.: pendente."
+    ),
+    orcamento_id: Optional[str] = Query(None),
+    conciliado: Optional[bool] = Query(None),
+    meus: bool = Query(False, description="Só os lançamentos do usuário informado."),
+    papel: Papel = Depends(
+        exigir_papel(
+            Papel.COORDENACAO,
+            Papel.DIRECAO,
+            Papel.VOLUNTARIO_FINANCEIRO,
+            Papel.EDUCADOR,
+        )
+    ),
+    usuario: Optional[str] = Depends(obter_usuario),
+) -> List[LancamentoResumo]:
+    """Lançamentos de todos os orçamentos, dos mais antigos para os mais novos.
+
+    Ordem da fila de aprovação: quem espera há mais tempo vem primeiro.
+
+    Educador só enxerga os próprios; `meus=true` aplica o mesmo a qualquer papel.
+    """
+    so_do_usuario = meus or papel == Papel.EDUCADOR
+    if so_do_usuario and usuario is None:
+        raise HTTPException(
+            status_code=400, detail="Identificação do usuário obrigatória."
+        )
+
+    itens = [
+        (orcamento, lancamento)
+        for orcamento in _orcamentos
+        if orcamento_id is None or orcamento.id == orcamento_id
+        for lancamento in orcamento.lancamentos
+        if (status is None or lancamento.status == status)
+        and (conciliado is None or lancamento.conciliado == conciliado)
+        and (not so_do_usuario or lancamento.autor_id == usuario)
+    ]
+    itens.sort(key=lambda item: item[1].criado_em)
+    return [
+        LancamentoResumo(
+            id=lancamento.id,
+            orcamento_id=orcamento.id,
+            projeto_id=orcamento.projeto_id,
+            valor=lancamento.valor,
+            descricao=lancamento.descricao,
+            categoria=lancamento.categoria,
+            data_despesa=lancamento.data_despesa,
+            status=lancamento.status.value,
+            status_descricao=DESCRICAO_STATUS[lancamento.status],
+            autor_id=lancamento.autor_id,
+            motivo_rejeicao=lancamento.motivo_rejeicao,
+            conciliado=lancamento.conciliado,
+            referencia_extrato=lancamento.referencia_extrato,
+            comprovante_url=(
+                f"/{lancamento.comprovante_chave}" if lancamento.comprovante_chave else None
+            ),
+            criado_em=lancamento.criado_em,
+            aprovado_em=lancamento.aprovado_em,
+        )
+        for orcamento, lancamento in itens
+    ]
+
+
 @router.get("/{lancamento_id}", response_model=LancamentoDetalhe)
 def obter_lancamento(lancamento_id: str) -> LancamentoDetalhe:
     """Consulta do lançamento por quem lançou: status e motivo da rejeição.
@@ -309,12 +470,58 @@ def obter_lancamento(lancamento_id: str) -> LancamentoDetalhe:
         status=lancamento.status.value,
         status_descricao=DESCRICAO_STATUS[lancamento.status],
         motivo_rejeicao=lancamento.motivo_rejeicao,
+        motivos_rejeicao_anteriores=list(lancamento.motivos_rejeicao_anteriores),
         comprovante_url=(
             f"/{lancamento.comprovante_chave}" if lancamento.comprovante_chave else None
         ),
         conciliado=lancamento.conciliado,
         referencia_extrato=lancamento.referencia_extrato,
     )
+
+
+# --- PATCH /lancamentos/{id}/reenviar (redesign Financeiro) -----------------
+
+
+@router.patch("/{lancamento_id}/reenviar", response_model=LancamentoDetalhe)
+async def reenviar_lancamento(
+    lancamento_id: str,
+    valor: float = Form(...),
+    descricao: str = Form(..., min_length=1, max_length=200),
+    categoria: str = Form(...),
+    data_despesa: date = Form(...),
+    comprovante: Optional[UploadFile] = File(None),
+    armazenamento: ArmazenamentoComprovantes = Depends(obter_armazenamento),
+    autor_id: str = Depends(exigir_usuario),
+) -> LancamentoDetalhe:
+    orcamento = _buscar_orcamento_do_lancamento(lancamento_id)
+    lancamento = next(l for l in orcamento.lancamentos if l.id == lancamento_id)
+    if lancamento.autor_id != autor_id:
+        raise HTTPException(status_code=404, detail="Lançamento não encontrado")
+    if lancamento.status != StatusLancamento.REJEITADO:
+        raise HTTPException(
+            status_code=409, detail="Só despesas rejeitadas podem ser reenviadas"
+        )
+    # Valida tudo antes de salvar a foto nova, para não deixar arquivo órfão.
+    descricao = _validar_dados_da_despesa(
+        orcamento, valor, descricao, categoria, data_despesa
+    )
+    chave = None
+    if comprovante is not None:
+        chave, *_ = await _receber_comprovante(comprovante, armazenamento)
+    try:
+        orcamento.reenviar_lancamento(
+            lancamento_id,
+            valor=valor,
+            descricao=descricao,
+            categoria=categoria,
+            data_despesa=data_despesa,
+            comprovante_chave=chave,
+        )
+    except AprovacaoInvalida as erro:
+        raise HTTPException(status_code=409, detail=str(erro)) from erro
+    except LancamentoInvalido as erro:
+        raise HTTPException(status_code=400, detail=str(erro)) from erro
+    return obter_lancamento(lancamento_id)
 
 
 # --- PATCH /lancamentos/{id}/conciliar (T-21 · US-05) ------------------------
@@ -374,61 +581,3 @@ def conciliar_lancamento(
         conciliado=lancamento.conciliado,
         referencia_extrato=lancamento.referencia_extrato,
     )
-
-
-# --- GET /lancamentos (T-18 · US-04) -----------------------------------------
-
-
-class LancamentoNaFila(BaseModel):
-    id: str
-    orcamento_id: str
-    projeto_id: str
-    valor: float
-    descricao: str
-    categoria: str
-    data_despesa: Optional[date]
-    status: str
-    status_descricao: str
-    autor_id: Optional[str]
-    comprovante_url: Optional[str]
-    criado_em: datetime
-
-
-@router.get("", response_model=List[LancamentoNaFila])
-def listar_lancamentos(
-    status: Optional[StatusLancamento] = Query(
-        None, description="Filtra pelo status, ex.: pendente."
-    ),
-    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
-) -> List[LancamentoNaFila]:
-    """Lançamentos de todos os orçamentos, dos mais antigos para os mais novos.
-
-    É a fila do painel de aprovação: só Coordenação e Direção veem os
-    lançamentos de todo mundo.
-    """
-    itens = [
-        (orcamento, lancamento)
-        for orcamento in _orcamentos
-        for lancamento in orcamento.lancamentos
-        if status is None or lancamento.status == status
-    ]
-    itens.sort(key=lambda item: item[1].criado_em)
-    return [
-        LancamentoNaFila(
-            id=lancamento.id,
-            orcamento_id=orcamento.id,
-            projeto_id=orcamento.projeto_id,
-            valor=lancamento.valor,
-            descricao=lancamento.descricao,
-            categoria=lancamento.categoria,
-            data_despesa=lancamento.data_despesa,
-            status=lancamento.status.value,
-            status_descricao=DESCRICAO_STATUS[lancamento.status],
-            autor_id=lancamento.autor_id,
-            comprovante_url=(
-                f"/{lancamento.comprovante_chave}" if lancamento.comprovante_chave else None
-            ),
-            criado_em=lancamento.criado_em,
-        )
-        for orcamento, lancamento in itens
-    ]

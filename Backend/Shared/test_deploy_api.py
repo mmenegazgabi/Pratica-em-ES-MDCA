@@ -17,8 +17,12 @@ def load_deploy_app():
 
 def test_financial_routes_are_served_by_deploy_app():
     client = TestClient(load_deploy_app())
+    headers = {"Authorization": "Bearer token-deploy", "X-Papel-Usuario": "coordenacao"}
+    with patch.dict(os.environ, {"FINANCEIRO_API_TOKEN": "token-deploy"}):
+        projeto = client.post("/projetos", json={"nome": "Infra Integration"}, headers=headers)
+    assert projeto.status_code == 201
     response = client.post("/orcamentos", json={
-        "projeto_id": "infra-integration",
+        "projeto_id": projeto.json()["id"],
         "valor_total": 1000,
         "data_inicio": "2026-01-01",
         "data_fim": "2026-12-31",
@@ -28,6 +32,19 @@ def test_financial_routes_are_served_by_deploy_app():
     detail = client.get("/orcamentos/" + response.json()["id"])
     assert detail.status_code == 200
     assert detail.json()["saldo"] == 1000
+
+
+def test_deploy_app_responde_422_para_nan_no_corpo():
+    client = TestClient(load_deploy_app())
+    corpo = (
+        '{"projeto_id": "p", "valor_total": NaN, "data_inicio": "2026-01-01",'
+        ' "data_fim": "2026-12-31", "categorias_despesa": ["materiais"]}'
+    )
+    response = client.post(
+        "/orcamentos", content=corpo, headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == 422
+    assert "input" not in response.json()["detail"][0]
 
 
 def test_liveness_does_not_require_database_connection():

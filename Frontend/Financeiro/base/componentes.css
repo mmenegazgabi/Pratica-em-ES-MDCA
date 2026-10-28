@@ -1,0 +1,46 @@
+/* Componentes do visual B (medidas dos esboços telas-computador.html) */
+.btn { display: inline-flex; align-items: center; gap: 6px; background: var(--verde); color: #fff; border: 1px solid transparent; border-radius: 7px; padding: 7px 12px; font: 500 12px var(--fonte); white-space: nowrap; cursor: pointer; text-decoration: none; }
+.btn--sec { background: var(--fundo); color: var(--texto); border-color: var(--borda-campo); }
+.btn--perigo { background: var(--fundo); color: var(--perigo-texto); border-color: var(--perigo-borda); }
+.btn--pequeno { padding: 4px 9px; font-size: 11px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.caixa { border: 1px solid var(--borda); border-radius: var(--raio-grande); background: var(--fundo); }
+
+.tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tabela th { font-weight: 500; color: var(--texto-suave); font-size: 11px; text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--borda); background: var(--fundo-suave); }
+.tabela td { padding: 10px 12px; border-bottom: 1px solid var(--linha); vertical-align: middle; }
+.tabela tr:last-child td { border-bottom: 0; }
+.tabela tr.selecionada td { background: var(--fundo-selecionado); }
+.tabela small { display: block; color: var(--texto-suave); font-size: 11px; margin-top: 1px; }
+.tabela .num, .num { font-variant-numeric: tabular-nums; }
+.tabela th.num, .tabela td.num { text-align: right; }
+
+.etiqueta { display: inline-block; font-size: 10.5px; font-weight: 500; border-radius: 4px; padding: 1px 7px; }
+.etiqueta--pendente { color: var(--pendente-texto); background: var(--pendente-fundo); }
+.etiqueta--aprovado { color: var(--aprovado-texto); background: var(--aprovado-fundo); }
+.etiqueta--rejeitado { color: var(--rejeitado-texto); background: var(--rejeitado-fundo); }
+.etiqueta--conciliado { color: var(--conciliado-texto); background: var(--conciliado-fundo); }
+
+.filtro { border: 1px solid var(--borda); background: var(--fundo); border-radius: var(--raio); padding: 5px 10px; font: 11.5px var(--fonte); color: var(--texto-medio); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.filtro--ativo { border-color: var(--verde); background: var(--ativo-fundo); color: var(--ativo-texto); font-weight: 500; }
+.filtro__contagem { color: var(--texto-suave); font-weight: 400; }
+
+.barra-uso { height: 6px; background: var(--linha); border-radius: 3px; overflow: hidden; width: 120px; }
+.barra-uso > i { display: block; height: 100%; background: var(--verde); }
+.barra-uso--alerta > i { background: var(--amarelo); }
+.barra-uso--critica > i { background: var(--vermelho); }
+
+.campo { display: block; }
+.campo > label, .campo__rotulo { display: block; font-size: 11px; font-weight: 500; color: var(--texto-medio); margin: 12px 0 5px; }
+.entrada { box-sizing: border-box; width: 100%; border: 1px solid var(--borda-campo); border-radius: var(--raio); padding: 7px 9px; font: 12px var(--fonte); color: var(--texto); background: var(--fundo); }
+.entrada:focus { outline: 2px solid var(--verde); outline-offset: -1px; }
+
+.painel-lateral { position: absolute; top: 0; right: 0; bottom: 0; width: 300px; box-sizing: border-box; background: var(--fundo); border-left: 1px solid var(--borda); box-shadow: -8px 0 24px rgba(0, 0, 0, .06); padding: 18px; display: flex; flex-direction: column; overflow-y: auto; }
+
+.dialogo { border: 1px solid var(--borda); border-radius: 10px; padding: 18px; max-width: 420px; background: var(--fundo); color: var(--texto); box-shadow: 0 8px 32px rgba(0, 0, 0, .12); }
+.dialogo::backdrop { background: rgba(24, 24, 27, .35); }
+
+.vazio { text-align: center; color: var(--texto-suave); font-size: 12px; padding: 32px 16px; }
+
+.icone { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }

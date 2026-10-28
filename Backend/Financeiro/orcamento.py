@@ -3,9 +3,16 @@ import threading
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from enum import Enum
 from typing import Optional
+
+if __package__:
+    from .alerta_saldo import _em_centavos
+    from .moeda import formatar_reais
+else:
+    from alerta_saldo import _em_centavos
+    from moeda import formatar_reais
 
 
 class StatusLancamento(Enum):
@@ -32,16 +39,6 @@ class ConciliacaoInvalida(ValueError):
 
 class OrcamentoInvalido(ValueError):
     """Valor total e valores das categorias não fecham (US-01)."""
-
-
-def formatar_reais(valor: float) -> str:
-    """1234.5 -> "R$ 1.234,50"."""
-    texto = f"{valor:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
-    return f"R$ {texto}"
-
-
-def _em_centavos(valor: float) -> Decimal:
-    return Decimal(str(valor)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def validar_categorias(
@@ -115,11 +112,15 @@ class Lancamento:
     comprovante_chave: Optional[str] = None
     # T-16 · US-04: motivo informado por quem rejeitou.
     motivo_rejeicao: Optional[str] = None
+    # Redesign Financeiro: motivos de rejeições já corrigidas e reenviadas.
+    motivos_rejeicao_anteriores: list[str] = field(default_factory=list)
     # T-17 · US-04: quem lançou, para receber a notificação do resultado.
     autor_id: Optional[str] = None
     # T-18 · US-04: quando foi lançado, para a fila de aprovação mostrar
     # primeiro o que está esperando há mais tempo.
     criado_em: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    # Redesign Financeiro: quando foi aprovado, para a lista de lançamentos.
+    aprovado_em: Optional[datetime] = None
     # T-21 · US-05: vínculo com o item do extrato bancário.
     conciliado: bool = False
     referencia_extrato: Optional[str] = None
@@ -174,53 +175,6 @@ class Orcamento:
             for nome in self.categorias_despesa
         ]
 
-    def redefinir(
-        self,
-        valor_total: Optional[float] = None,
-        categorias: Optional[list[tuple[str, float]]] = None,
-    ) -> None:
-        """Edita o valor total e/ou as categorias com seus valores (US-01).
-
-        ``categorias`` (pares nome, valor orçado) substitui a lista inteira,
-        na ordem informada. Categoria com lançamento que não foi rejeitado
-        não pode sair do orçamento.
-        """
-        with self._lock:
-            novo_total = self.valor_total if valor_total is None else valor_total
-            if categorias is None:
-                novas_categorias = list(self.categorias_despesa)
-                novos_valores = dict(self.valores_categorias)
-            else:
-                novas_categorias = [nome for nome, _ in categorias]
-                novos_valores = dict(categorias)
-
-            em_uso = {
-                l.categoria
-                for l in self.lancamentos
-                if l.categoria and l.status != StatusLancamento.REJEITADO
-            }
-            removidas = sorted(em_uso - set(novas_categorias))
-            if removidas:
-                raise OrcamentoInvalido(
-                    "Não é possível remover categoria com lançamentos: "
-                    + ", ".join(removidas)
-                    + "."
-                )
-
-            realizado = self.realizado_por_categoria()
-            validar_categorias(novo_total, novas_categorias, novos_valores, realizado)
-            gasto_total = sum(realizado.values())
-            if _em_centavos(novo_total) < _em_centavos(gasto_total):
-                raise OrcamentoInvalido(
-                    f"O valor total ({formatar_reais(novo_total)}) é menor do que "
-                    f"já foi gasto no orçamento ({formatar_reais(gasto_total)})."
-                )
-
-            self.saldo_atual += novo_total - self.valor_total
-            self.valor_total = novo_total
-            self.categorias_despesa = novas_categorias
-            self.valores_categorias = novos_valores
-
     def _buscar_lancamento(self, lancamento_id: str) -> Lancamento:
         lancamento = next(
             (l for l in self.lancamentos if l.id == lancamento_id), None
@@ -243,8 +197,91 @@ class Orcamento:
                 )
 
             lancamento.status = StatusLancamento.APROVADO
+            lancamento.aprovado_em = datetime.now(timezone.utc)
             self.saldo_atual -= lancamento.valor
             return lancamento
+
+    def editar(
+        self,
+        *,
+        valor_total: Optional[float] = None,
+        data_inicio: Optional[date] = None,
+        data_fim: Optional[date] = None,
+        categorias_despesa: Optional[list[str]] = None,
+        categorias: Optional[list[tuple[str, float]]] = None,
+    ) -> None:
+        """Edição parcial do orçamento: o que vier como ``None`` fica como está.
+
+        Redesign Financeiro: a coordenação ajusta valor, vigência e
+        categorias; o saldo é recalculado sobre o que já foi aprovado.
+
+        US-01: ``categorias`` (pares nome, valor orçado) substitui a lista
+        inteira com os limites. ``categorias_despesa`` (só nomes, o que o
+        formulário do redesign envia) também substitui a lista, mas mantém o
+        valor orçado das categorias que continuam.
+        """
+        if categorias is not None and categorias_despesa is not None:
+            raise OrcamentoInvalido(
+                "Informe categorias ou categorias_despesa (só um dos dois)."
+            )
+        with self._lock:
+            novo_total = self.valor_total if valor_total is None else valor_total
+            novo_inicio = self.data_inicio if data_inicio is None else data_inicio
+            novo_fim = self.data_fim if data_fim is None else data_fim
+            if categorias is not None:
+                novas_categorias = [nome for nome, _ in categorias]
+                novos_valores = dict(categorias)
+            elif categorias_despesa is not None:
+                novas_categorias = list(categorias_despesa)
+                novos_valores = {
+                    nome: valor
+                    for nome, valor in self.valores_categorias.items()
+                    if nome in novas_categorias
+                }
+            else:
+                novas_categorias = list(self.categorias_despesa)
+                novos_valores = dict(self.valores_categorias)
+
+            if not novas_categorias:
+                raise OrcamentoInvalido("Informe ao menos uma categoria.")
+            if novo_fim < novo_inicio:
+                raise OrcamentoInvalido("data_fim não pode ser anterior a data_inicio")
+
+            # Em centavos (Decimal) para não acumular erro de ponto flutuante.
+            realizado = sum(
+                (
+                    _em_centavos(l.valor)
+                    for l in self.lancamentos
+                    if l.status == StatusLancamento.APROVADO
+                ),
+                Decimal("0"),
+            )
+            if _em_centavos(novo_total) < realizado:
+                raise OrcamentoInvalido(
+                    "O valor total não pode ser menor que o já gasto "
+                    f"({formatar_reais(float(realizado))})."
+                )
+            for categoria in self.categorias_despesa:
+                if categoria in novas_categorias:
+                    continue
+                if any(
+                    l.categoria == categoria
+                    and l.status != StatusLancamento.REJEITADO
+                    for l in self.lancamentos
+                ):
+                    raise OrcamentoInvalido(
+                        f'A categoria "{categoria}" tem lançamentos e não pode ser removida.'
+                    )
+            validar_categorias(
+                novo_total, novas_categorias, novos_valores, self.realizado_por_categoria()
+            )
+
+            self.valor_total = novo_total
+            self.data_inicio = novo_inicio
+            self.data_fim = novo_fim
+            self.categorias_despesa = novas_categorias
+            self.valores_categorias = novos_valores
+            self.saldo_atual = float(_em_centavos(novo_total) - realizado)
 
     def reverter_aprovacao(self, lancamento_id: str) -> None:
         with self._lock:
@@ -253,6 +290,7 @@ class Orcamento:
                 raise AprovacaoInvalida("Lançamento não está aprovado")
 
             lancamento.status = StatusLancamento.PENDENTE
+            lancamento.aprovado_em = None
             self.saldo_atual += lancamento.valor
 
     def rejeitar_lancamento(self, lancamento_id: str, motivo: str) -> Lancamento:
@@ -271,6 +309,36 @@ class Orcamento:
                 )
             lancamento.status = StatusLancamento.REJEITADO
             lancamento.motivo_rejeicao = motivo
+            return lancamento
+
+    def reenviar_lancamento(
+        self,
+        lancamento_id: str,
+        *,
+        valor: float,
+        descricao: str,
+        categoria: str,
+        data_despesa: date,
+        comprovante_chave: Optional[str],
+    ) -> Lancamento:
+        # Redesign Financeiro: corrige uma despesa rejeitada e a devolve para
+        # a fila. Não mexe no saldo (rejeitada nunca entrou nele).
+        with self._lock:
+            lancamento = self._buscar_lancamento(lancamento_id)
+            if lancamento.status != StatusLancamento.REJEITADO:
+                raise AprovacaoInvalida("Só despesas rejeitadas podem ser reenviadas")
+            self.validar_lancamento(valor, categoria, data_despesa)
+            if lancamento.motivo_rejeicao:
+                lancamento.motivos_rejeicao_anteriores.append(lancamento.motivo_rejeicao)
+            lancamento.motivo_rejeicao = None
+            lancamento.valor = valor
+            lancamento.descricao = descricao
+            lancamento.categoria = categoria
+            lancamento.data_despesa = data_despesa
+            if comprovante_chave is not None:
+                lancamento.comprovante_chave = comprovante_chave
+            lancamento.status = StatusLancamento.PENDENTE
+            lancamento.criado_em = datetime.now(timezone.utc)
             return lancamento
 
     def conciliar_lancamento(

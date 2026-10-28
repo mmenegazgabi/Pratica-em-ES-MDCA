@@ -3,130 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#436d43">
-  <title>Lançar despesa · MDCA</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;600&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#ffffff">
+  <title>Minhas despesas · MDCA</title>
+  <link rel="stylesheet" href="../base/tokens.css">
+  <link rel="stylesheet" href="../base/componentes.css">
   <link rel="stylesheet" href="./lancamento.css">
 </head>
 <body>
-  <header class="topo">
-    <a class="topo__voltar" href="../../" aria-label="Voltar ao início">‹</a>
-    <h1 class="topo__titulo">Lançar despesa</h1>
-    <button type="button" class="topo__acesso" id="botao-acesso" aria-label="Código de acesso">⚙</button>
-  </header>
-
-  <main class="conteudo">
-    <!-- Código de acesso (provisório até a US-08) -->
-    <section id="painel-acesso" class="cartao" hidden aria-labelledby="titulo-acesso">
-      <h2 id="titulo-acesso" class="cartao__titulo">Código de acesso</h2>
-      <p class="ajuda">Informe o código de acesso do Financeiro. Ele fica salvo só neste aparelho.</p>
-      <form id="form-acesso" class="campos" novalidate>
-        <div class="campo">
-          <label for="campo-token">Código</label>
-          <input id="campo-token" class="entrada" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" required>
-        </div>
-        <details class="avancado">
-          <summary>Servidor (avançado)</summary>
-          <div class="campo">
-            <label for="campo-api">Endereço da API</label>
-            <input id="campo-api" class="entrada" type="url" inputmode="url" autocapitalize="off" spellcheck="false">
-          </div>
-        </details>
-        <p id="erro-acesso" class="erro" role="alert" hidden></p>
-        <button type="submit" class="botao botao--primario">Salvar e continuar</button>
-        <button type="button" id="cancelar-acesso" class="botao botao--secundario" hidden>Voltar ao formulário</button>
-        <button type="button" id="esquecer-acesso" class="botao botao--link" hidden>Remover código deste aparelho</button>
-      </form>
-    </section>
-
-    <!-- Formulário -->
-    <form id="form-lancamento" class="campos" novalidate hidden>
-      <p id="aviso-geral" class="aviso" role="alert" hidden></p>
-
-      <div class="campo">
-        <label for="campo-projeto">Projeto</label>
-        <select id="campo-projeto" class="entrada" required aria-describedby="erro-projeto">
-          <option value="">Carregando projetos…</option>
-        </select>
-        <p id="erro-projeto" class="erro" hidden></p>
-      </div>
-
-      <div class="campo">
-        <label for="campo-categoria">Categoria</label>
-        <select id="campo-categoria" class="entrada" required aria-describedby="erro-categoria" disabled>
-          <option value="">Escolha o projeto primeiro</option>
-        </select>
-        <p id="erro-categoria" class="erro" hidden></p>
-      </div>
-
-      <div class="linha">
-        <div class="campo">
-          <label for="campo-valor">Valor (R$)</label>
-          <input id="campo-valor" class="entrada entrada--valor" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" required aria-describedby="erro-valor">
-          <p id="erro-valor" class="erro" hidden></p>
-        </div>
-        <div class="campo">
-          <label for="campo-data">Data</label>
-          <input id="campo-data" class="entrada" type="date" required aria-describedby="erro-data">
-          <p id="erro-data" class="erro" hidden></p>
-        </div>
-      </div>
-
-      <div class="campo">
-        <label for="campo-descricao">Descrição</label>
-        <textarea id="campo-descricao" class="entrada entrada--texto" maxlength="200" rows="3" placeholder="Ex.: lanche da oficina de leitura — 32 crianças" required aria-describedby="erro-descricao"></textarea>
-        <p id="erro-descricao" class="erro" hidden></p>
-      </div>
-
-      <fieldset class="campo comprovante" aria-describedby="erro-comprovante">
-        <legend>Comprovante</legend>
-
-        <div id="comprovante-vazio" class="comprovante__vazio">
-          <label class="botao botao--camera" for="campo-camera">
-            <span class="botao__icone" aria-hidden="true">◎</span>
-            Fotografar comprovante
-          </label>
-          <label class="botao botao--secundario" for="campo-galeria">Escolher da galeria ou arquivo</label>
-          <!-- capture abre direto a câmera traseira; o outro abre galeria/arquivos -->
-          <input id="campo-camera" class="arquivo-oculto" type="file" accept="image/*" capture="environment">
-          <input id="campo-galeria" class="arquivo-oculto" type="file" accept="image/*,application/pdf">
-        </div>
-
-        <div id="comprovante-escolhido" class="comprovante__escolhido" hidden>
-          <img id="previa" class="comprovante__previa" alt="Prévia do comprovante" hidden>
-          <div id="previa-pdf" class="comprovante__pdf" hidden aria-hidden="true">PDF</div>
-          <div class="comprovante__info">
-            <span id="nome-arquivo" class="comprovante__nome"></span>
-            <span id="tamanho-arquivo" class="comprovante__tamanho"></span>
-          </div>
-          <button type="button" id="trocar-arquivo" class="botao botao--link">Trocar</button>
-        </div>
-        <p id="erro-comprovante" class="erro" hidden></p>
-      </fieldset>
-
-      <button type="submit" id="botao-enviar" class="botao botao--primario">Enviar para aprovação</button>
-    </form>
-
-    <!-- Confirmação -->
-    <section id="painel-sucesso" class="cartao sucesso" hidden tabindex="-1" aria-labelledby="titulo-sucesso">
-      <div class="sucesso__icone" aria-hidden="true">✓</div>
-      <h2 id="titulo-sucesso" class="cartao__titulo">Lançamento enviado</h2>
-      <p class="sucesso__status"><span class="etiqueta etiqueta--pendente" id="sucesso-status">Pendente de aprovação</span></p>
-      <dl class="resumo">
-        <div><dt>Projeto</dt><dd id="sucesso-projeto"></dd></div>
-        <div><dt>Categoria</dt><dd id="sucesso-categoria"></dd></div>
-        <div><dt>Valor</dt><dd id="sucesso-valor"></dd></div>
-        <div><dt>Data</dt><dd id="sucesso-data"></dd></div>
-        <div><dt>Comprovante</dt><dd id="sucesso-comprovante"></dd></div>
-      </dl>
-      <p class="ajuda">A coordenação vai analisar. Se for rejeitado, o motivo aparece no lançamento.</p>
-      <button type="button" id="botao-novo" class="botao botao--primario">Lançar outra despesa</button>
-    </section>
-
-    <p id="carregando" class="ajuda" role="status">Carregando…</p>
+  <main id="tela" class="tela" aria-live="polite">
+    <p class="carregando" role="status">Carregando…</p>
   </main>
+
+  <nav id="abas" class="abas" aria-label="Seções" hidden>
+    <a class="abas__item" href="#/" data-aba="despesas"><span data-icone="lancamentos"></span>Despesas</a>
+    <a class="abas__item" href="#/avisos" data-aba="avisos"><span data-icone="sino"></span>Avisos</a>
+    <a class="abas__item" href="#/perfil" data-aba="perfil"><span data-icone="perfil"></span>Perfil</a>
+  </nav>
+
+  <div id="aviso-flutuante" class="aviso-flutuante" role="status" hidden></div>
+
+  <!-- capture abre direto a câmera traseira; o outro abre galeria/arquivos -->
+  <input id="campo-camera" class="arquivo-oculto" type="file" accept="image/*,application/pdf" capture="environment" tabindex="-1" aria-hidden="true">
+  <input id="campo-galeria" class="arquivo-oculto" type="file" accept="image/*,application/pdf" tabindex="-1" aria-hidden="true">
 
   <script type="module" src="./lancamento.js"></script>
 </body>
