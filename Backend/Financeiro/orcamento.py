@@ -327,3 +327,50 @@ class Orcamento:
             raise LancamentoInvalido(
                 "A data da despesa está fora da vigência do orçamento."
             )
+
+
+# T-22/T-23 · US-05: an approved entry still not reconciled after this many
+# days gets highlighted on the reconciliation screen.
+DIAS_PARA_DESTAQUE = 7
+
+
+@dataclass
+class PendenciaConciliacao:
+    lancamento: Lancamento
+    dias_sem_conciliar: int
+    destaque: bool
+
+
+def _em_utc(momento: datetime) -> datetime:
+    # Naive datetimes are treated as UTC, so mixing them with aware ones
+    # doesn't raise TypeError.
+    if momento.tzinfo is None:
+        return momento.replace(tzinfo=timezone.utc)
+    return momento.astimezone(timezone.utc)
+
+
+def pendencias_conciliacao(
+    lancamentos: list[Lancamento], agora: Optional[datetime] = None
+) -> list[PendenciaConciliacao]:
+    """Approved, not reconciled entries, oldest first.
+
+    Days are counted from ``criado_em`` (whole days); highlight only when
+    strictly more than ``DIAS_PARA_DESTAQUE``. ``agora`` is injectable so
+    tests don't depend on the clock.
+    """
+    agora = _em_utc(agora or datetime.now(timezone.utc))
+    pendencias = []
+    for lancamento in lancamentos:
+        if lancamento.status != StatusLancamento.APROVADO or lancamento.conciliado:
+            continue
+        # Clock skew can put criado_em slightly in the future; never go negative.
+        dias = max(0, (agora - _em_utc(lancamento.criado_em)).days)
+        pendencias.append(
+            PendenciaConciliacao(
+                lancamento=lancamento,
+                dias_sem_conciliar=dias,
+                destaque=dias > DIAS_PARA_DESTAQUE,
+            )
+        )
+    pendencias.sort(key=lambda p: _em_utc(p.lancamento.criado_em))
+    return pendencias
