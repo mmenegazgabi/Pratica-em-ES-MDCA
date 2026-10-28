@@ -3,37 +3,38 @@ from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 if __package__ == "routers":
-
-    from autenticacao import Papel, exigir_papel
     from alerta_saldo import (
         NivelAlerta,
         calcular_percentual_consumido,
         calcular_realizado,
         classificar_nivel_alerta,
     )
+    from autenticacao import Papel, exigir_papel
     from orcamento import (
         AprovacaoInvalida,
-        LancamentoInvalido,
         LancamentoNaoEncontrado,
         Orcamento,
+        OrcamentoInvalido,
+        validar_categorias,
     )
     from projetos import buscar_projeto
 else:
-    from ..autenticacao import Papel, exigir_papel
     from ..alerta_saldo import (
         NivelAlerta,
         calcular_percentual_consumido,
         calcular_realizado,
         classificar_nivel_alerta,
     )
+    from ..autenticacao import Papel, exigir_papel
     from ..orcamento import (
         AprovacaoInvalida,
-        LancamentoInvalido,
         LancamentoNaoEncontrado,
         Orcamento,
+        OrcamentoInvalido,
+        validar_categorias,
     )
     from ..projetos import buscar_projeto
 
@@ -42,19 +43,78 @@ router = APIRouter(tags=["orcamentos"])
 _orcamentos: List[Orcamento] = []
 
 
+class CategoriaEntrada(BaseModel):
+    nome: str
+    valor_orcado: float = Field(allow_inf_nan=False)
+
+
 class OrcamentoCreate(BaseModel):
+    """Categorias chegam de um dos dois jeitos:
+
+    - ``categorias``: nome e valor orçado de cada uma (US-01);
+    - ``categorias_despesa``: só os nomes, sem limite por categoria (formato
+      original, mantido para quem já usa).
+    """
+
     projeto_id: str
     valor_total: float = Field(allow_inf_nan=False)
     data_inicio: date
     data_fim: date
-    categorias_despesa: List[str] = Field(min_length=1)
+    categorias_despesa: Optional[List[str]] = Field(None, min_length=1)
+    categorias: Optional[List[CategoriaEntrada]] = Field(None, min_length=1)
+
+    @model_validator(mode="after")
+    def _uma_forma_de_categorias(self):
+        if (self.categorias is None) == (self.categorias_despesa is None):
+            raise ValueError("Informe categorias ou categorias_despesa (só um dos dois).")
+        return self
 
 
 class OrcamentoEdicao(BaseModel):
-    valor_total: float = Field(gt=0, allow_inf_nan=False)
-    data_inicio: date
-    data_fim: date
-    categorias_despesa: List[str]
+    """Edição parcial: o que não vier fica como está.
+
+    O formulário do redesign manda tudo, com ``categorias_despesa`` (só
+    nomes). ``categorias`` (US-01) traz também o valor orçado de cada uma.
+    As duas formas substituem a lista inteira; só uma delas por vez.
+    """
+
+    valor_total: Optional[float] = Field(None, gt=0, allow_inf_nan=False)
+    data_inicio: Optional[date] = None
+    data_fim: Optional[date] = None
+    categorias_despesa: Optional[List[str]] = None
+    categorias: Optional[List[CategoriaEntrada]] = None
+
+    @model_validator(mode="after")
+    def _algo_para_editar(self):
+        if not self.model_fields_set:
+            raise ValueError("Informe ao menos um campo para editar.")
+        if self.categorias is not None and self.categorias_despesa is not None:
+            raise ValueError("Informe categorias ou categorias_despesa (só um dos dois).")
+        return self
+
+
+class CategoriaDetalhe(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    nome: str
+    valor_orcado: Optional[float]
+    realizado: float
+
+    # Mesmos limiares de 80% e 100% do orçamento inteiro (T-08). Categoria
+    # sem valor orçado não tem percentual nem alerta.
+    @computed_field
+    @property
+    def percentual_consumido(self) -> Optional[float]:
+        if self.valor_orcado is None:
+            return None
+        return calcular_percentual_consumido(self.valor_orcado, self.realizado)
+
+    @computed_field
+    @property
+    def nivel_alerta(self) -> Optional[NivelAlerta]:
+        if self.valor_orcado is None:
+            return None
+        return classificar_nivel_alerta(self.valor_orcado, self.realizado)
 
 
 class OrcamentoDetalhe(BaseModel):
@@ -67,6 +127,8 @@ class OrcamentoDetalhe(BaseModel):
     data_fim: date
     categorias_despesa: List[str]
     saldo: float
+    # US-01: limite e gasto de cada categoria, na ordem de categorias_despesa.
+    categorias: List[CategoriaDetalhe]
 
     # Nome vem do cadastro de projetos; None se o projeto não existir mais.
     @computed_field
@@ -151,7 +213,27 @@ def criar_orcamento(payload: OrcamentoCreate) -> Orcamento:
             detail="Projeto não encontrado. Cadastre o projeto antes de criar o orçamento.",
         )
 
-    orcamento = Orcamento(id=str(uuid.uuid4()), **payload.model_dump())
+    if payload.categorias is not None:
+        nomes = [c.nome.strip() for c in payload.categorias]
+        # Nome repetido é barrado em validar_categorias, que olha a lista.
+        valores = {c.nome.strip(): c.valor_orcado for c in payload.categorias}
+    else:
+        nomes = payload.categorias_despesa
+        valores = {}
+    try:
+        validar_categorias(payload.valor_total, nomes, valores)
+    except OrcamentoInvalido as erro:
+        raise HTTPException(status_code=400, detail=str(erro)) from erro
+
+    orcamento = Orcamento(
+        id=str(uuid.uuid4()),
+        projeto_id=payload.projeto_id,
+        valor_total=payload.valor_total,
+        data_inicio=payload.data_inicio,
+        data_fim=payload.data_fim,
+        categorias_despesa=nomes,
+        valores_categorias=valores,
+    )
     _orcamentos.append(orcamento)
     return orcamento
 
@@ -190,10 +272,22 @@ def editar_orcamento(
     payload: OrcamentoEdicao,
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO)),
 ) -> Orcamento:
+    """Coordenação edita valor, vigência e categorias (redesign + US-01)."""
     orcamento = _buscar_orcamento(orcamento_id)
+    categorias = (
+        None
+        if payload.categorias is None
+        else [(c.nome.strip(), c.valor_orcado) for c in payload.categorias]
+    )
     try:
-        orcamento.editar(**payload.model_dump())
-    except LancamentoInvalido as erro:
+        orcamento.editar(
+            valor_total=payload.valor_total,
+            data_inicio=payload.data_inicio,
+            data_fim=payload.data_fim,
+            categorias_despesa=payload.categorias_despesa,
+            categorias=categorias,
+        )
+    except OrcamentoInvalido as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
     return orcamento
 
