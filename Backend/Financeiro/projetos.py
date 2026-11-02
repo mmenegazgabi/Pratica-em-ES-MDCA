@@ -9,6 +9,7 @@ import unicodedata
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from enum import Enum
 from typing import List, Optional
 
 
@@ -20,10 +21,17 @@ class ProjetoDuplicado(ProjetoInvalido):
     pass
 
 
+class StatusProjeto(str, Enum):
+    ATIVO = "ativo"
+    ENCERRADO = "encerrado"
+
+
 @dataclass
 class Projeto:
     nome: str
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    # T-29 · US-07: filtro do dashboard da Diretoria.
+    status: StatusProjeto = StatusProjeto.ATIVO
     criado_em: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -56,3 +64,12 @@ def registrar_projeto(nome: str) -> Projeto:
         projeto = Projeto(nome=nome)
         _projetos.append(projeto)
     return projeto
+
+
+def alterar_status(projeto_id: str, status: StatusProjeto) -> Optional[Projeto]:
+    """Encerra ou reabre o projeto; ``None`` se ele não existir."""
+    with _trava:
+        projeto = next((p for p in _projetos if p.id == projeto_id), None)
+        if projeto is not None:
+            projeto.status = status
+        return projeto
