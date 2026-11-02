@@ -13,18 +13,17 @@ As somas são feitas em centavos para não acumular erro de float.
 
 from dataclasses import dataclass
 from datetime import date
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Iterable, List, Optional
 
 if __package__:
+    from .alerta_saldo import _em_centavos
     from .orcamento import Lancamento, Orcamento, StatusLancamento
     from .projetos import Projeto, StatusProjeto
 else:
+    from alerta_saldo import _em_centavos
     from orcamento import Lancamento, Orcamento, StatusLancamento
     from projetos import Projeto, StatusProjeto
-
-_CENTAVO = Decimal("0.01")
-
 
 @dataclass
 class ResumoProjeto:
@@ -34,10 +33,6 @@ class ResumoProjeto:
     orcado: float
     realizado: float
     saldo: float
-
-
-def _em_centavos(valor: float) -> Decimal:
-    return Decimal(str(valor)).quantize(_CENTAVO, rounding=ROUND_HALF_UP)
 
 
 def _no_periodo(dia: date, inicio: Optional[date], fim: Optional[date]) -> bool:
@@ -81,10 +76,13 @@ def resumo_por_projeto(
                 continue
             if _cruza_periodo(orcamento, data_inicio, data_fim):
                 orcado += _em_centavos(orcamento.valor_total)
+            # Snapshot under the budget lock: approvals change entries concurrently.
+            with orcamento._lock:
+                lancamentos = list(orcamento.lancamentos)
             realizado += sum(
                 (
                     _em_centavos(l.valor)
-                    for l in orcamento.lancamentos
+                    for l in lancamentos
                     if _conta_no_realizado(l, data_inicio, data_fim)
                 ),
                 Decimal(0),
