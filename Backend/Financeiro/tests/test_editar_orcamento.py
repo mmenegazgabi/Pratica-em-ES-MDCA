@@ -83,7 +83,7 @@ def test_valor_menor_que_o_gasto_e_rejeitado():
     resposta = editar(corpo(valor_total=250))
     assert resposta.status_code == 400
     assert resposta.json()["detail"] == (
-        "O valor total não pode ser menor que o já gasto (R$ 300,00)."
+        "O valor total (R$ 250,00) é menor do que já foi gasto no orçamento (R$ 300,00)."
     )
 
 
@@ -102,7 +102,7 @@ def test_categoria_com_lancamento_nao_rejeitado_nao_pode_ser_removida(status):
     resposta = editar(corpo(categorias_despesa=["materiais"]))
     assert resposta.status_code == 400
     assert resposta.json()["detail"] == (
-        'A categoria "transporte" tem lançamentos e não pode ser removida.'
+        "Não é possível remover categoria com lançamentos: transporte."
     )
 
 
@@ -116,13 +116,14 @@ def test_categoria_so_com_lancamento_rejeitado_pode_ser_removida():
 def test_lista_vazia_de_categorias_e_rejeitada():
     criar_orcamento()
     resposta = editar(corpo(categorias_despesa=[]))
-    assert resposta.status_code == 400
-    assert resposta.json()["detail"] == "Informe ao menos uma categoria."
+    assert resposta.status_code == 422
 
 
-def test_direcao_recebe_403():
+def test_direcao_tambem_edita_e_outros_papeis_recebem_403():
+    # US-01 liberou a edição para a direção; o redesign mantém.
     criar_orcamento()
-    assert editar(corpo(), papel="direcao").status_code == 403
+    assert editar(corpo(), papel="direcao").status_code == 200
+    assert editar(corpo(), papel="voluntario_financeiro").status_code == 403
 
 
 def test_sem_token_recebe_401():
