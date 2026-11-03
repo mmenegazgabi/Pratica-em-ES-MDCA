@@ -28,7 +28,7 @@ const rotulos = () => [...raiz.querySelectorAll(".lateral__item")].map((a) => a.
 test("sem sessão mostra Entrar com os papéis do computador", () => {
   assert.equal(window.location.hash, "#/entrar");
   const opcoes = [...raiz.querySelectorAll("#campo-papel option")].map((o) => o.value);
-  assert.deepEqual(opcoes, ["coordenacao", "direcao", "voluntario_financeiro", "administracao"]);
+  assert.deepEqual(opcoes, ["coordenacao", "direcao", "voluntario_financeiro", "educador"]);
   assert.ok(raiz.querySelector("#campo-token"));
 });
 
@@ -89,4 +89,17 @@ test("educador é encaminhado ao app do celular", async () => {
   await irPara("#/inicio");
   await irPara("#/projetos");
   assert.ok(redirecionamentos.includes("lancamento/"));
+});
+
+test("Entrar como educador leva ao app do celular já com a sessão do celular", async () => {
+  localStorage.removeItem("mdca.financeiro.sessao");
+  await irPara("#/entrar");
+  redirecionamentos.length = 0;
+  raiz.querySelector("#campo-nome").value = "Marcos Vieira";
+  raiz.querySelector("#campo-papel").value = "educador";
+  raiz.querySelector("#campo-token").value = "abc";
+  raiz.querySelector("#form-entrar").dispatchEvent(new window.Event("submit", { cancelable: true }));
+  await esperar();
+  assert.ok(redirecionamentos.includes("lancamento/"));
+  assert.deepEqual(JSON.parse(localStorage.getItem("mdca.financeiro.sessao.celular")), { papel: "educador", nome: "Marcos Vieira" });
 });
