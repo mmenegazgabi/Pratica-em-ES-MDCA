@@ -1,5 +1,5 @@
 // Início: monta as pendências de cada papel (sem DOM, testável no Node).
-import { nomeDoAutor } from "../base/sessao.js";
+import { PAPEIS, nomeDoAutor } from "../base/sessao.js";
 import { diasDesde, formatarData, formatarMoeda, tempoRelativo } from "../base/formatar.js";
 
 const LIMITE_DIAS_ABERTO = 7;
@@ -58,16 +58,52 @@ function aprovadosSemConciliacao({ lancamentos, orcamentos }, agora) {
         rotulo: rotuloDaDespesa(l),
         detalhe: dias > LIMITE_DIAS_ABERTO ? `Projeto ${projeto} · aberto há ${dias} dias` : `Projeto ${projeto}`,
         valor: l.valor,
-        acao: { rotulo: "Ver", rota: `#/lancamentos?status=aprovado&abrir=${encodeURIComponent(l.id)}` },
+        acao: { rotulo: "Conciliar", rota: "#/conciliacao" },
       };
     });
   return { titulo: "Aprovados sem conciliação", itens };
 }
 
+const DIAS_PARA_PRESTACAO = 30;
+
+function hojeISO(agora) {
+  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
+}
+
+/** Orçamentos que terminaram ou terminam em até 30 dias: hora da prestação de contas. */
+function prestacoesAGerar({ orcamentos }, agora) {
+  const hoje = hojeISO(agora);
+  const limite = hojeISO(new Date(agora.getTime() + DIAS_PARA_PRESTACAO * 86400000));
+  const itens = orcamentos
+    .filter((o) => o.data_fim <= limite)
+    .sort(porData("data_fim"))
+    .map((o) => ({
+      rotulo: `Prestação de contas · ${o.projeto_nome || o.projeto_id}`,
+      detalhe: o.data_fim < hoje ? `Vigência terminou em ${formatarData(o.data_fim)}` : `Vigência termina em ${formatarData(o.data_fim)}`,
+      valor: o.realizado,
+      acao: { rotulo: "Gerar", rota: `#/relatorios?orcamento=${encodeURIComponent(o.id)}` },
+    }));
+  return { titulo: "Prestações de contas a gerar", coluna: "Executado", itens };
+}
+
+/** Convites ainda não aceitos (dados de exemplo até existir o backend de pessoas). */
+function convitesPendentes({ pessoas = [] }) {
+  const itens = pessoas
+    .filter((p) => p.convite)
+    .map((p) => ({
+      rotulo: p.nome,
+      detalhe: `${p.email} · convite ainda não aceito`,
+      valorTexto: PAPEIS[p.papel] || p.papel,
+      acao: { rotulo: "Ver", rota: "#/acessos" },
+    }));
+  return { titulo: "Convites pendentes", coluna: "Papel", itens };
+}
+
 const SECOES_POR_PAPEL = {
   coordenacao: [aguardandoAprovacao, alertasDeOrcamento],
-  direcao: [alertasDeOrcamento],
+  direcao: [alertasDeOrcamento, prestacoesAGerar],
   voluntario_financeiro: [aprovadosSemConciliacao],
+  administracao: [convitesPendentes],
 };
 
 export function montarPendencias(papel, dados, agora = new Date()) {

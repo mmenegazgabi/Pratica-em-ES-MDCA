@@ -36,3 +36,17 @@ test("direção não abre lançamentos; coordenação abre o projeto", () => {
   assert.equal(rotaPermitida("inicio", "educador"), false);
   assert.equal(rotaPermitida("entrar", "educador"), true);
 });
+
+test("telas novas: conciliação, relatórios, auditoria e acessos por papel", () => {
+  assert.deepEqual(lerRota("#/relatorios?orcamento=o1"), { tela: "relatorios", parametros: { orcamento: "o1" } });
+  assert.equal(lerRota("#/conciliacao").tela, "conciliacao");
+  assert.equal(lerRota("#/auditoria").tela, "auditoria");
+  assert.equal(lerRota("#/acessos").tela, "acessos");
+  assert.equal(rotaPermitida("conciliacao", "voluntario_financeiro"), true);
+  assert.equal(rotaPermitida("conciliacao", "coordenacao"), false);
+  assert.equal(rotaPermitida("relatorios", "direcao"), true);
+  assert.equal(rotaPermitida("relatorios", "voluntario_financeiro"), false);
+  assert.equal(rotaPermitida("auditoria", "coordenacao"), true);
+  assert.equal(rotaPermitida("acessos", "administracao"), true);
+  assert.equal(rotaPermitida("acessos", "coordenacao"), false);
+});

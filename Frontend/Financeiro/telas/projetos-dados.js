@@ -37,3 +37,20 @@ export function orcamentoDoProjeto(projetoId, orcamentos, hoje) {
   if (vigente) return vigente;
   return [...doProjeto].sort((a, b) => String(b.data_inicio).localeCompare(String(a.data_inicio)))[0];
 }
+
+/**
+ * Categorias do detalhe: com limite quando o orçamento tem valor por categoria (US-01),
+ * senão só o gasto (aprovados) de cada uma.
+ */
+export function categoriasDoOrcamento(orcamento, lancamentos) {
+  if (Array.isArray(orcamento.categorias) && orcamento.categorias.length) {
+    return orcamento.categorias.map((c) => ({
+      categoria: c.nome,
+      gasto: c.realizado,
+      limite: c.valor_orcado ?? null,
+      percentual: c.percentual_consumido ?? null,
+      nivel: c.nivel_alerta ?? null,
+    }));
+  }
+  return gastoPorCategoria(orcamento, lancamentos).map((i) => ({ ...i, limite: null, percentual: null, nivel: null }));
+}

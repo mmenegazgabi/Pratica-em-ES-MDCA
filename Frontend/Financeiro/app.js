@@ -10,7 +10,7 @@ import { API_PADRAO, esquecerAcesso, salvarAcesso, tokenSalvo, urlDaApi } from "
 
 export { definirContador } from "./base/contador.js";
 
-const PAPEIS_DO_COMPUTADOR = ["coordenacao", "direcao", "voluntario_financeiro"];
+const PAPEIS_DO_COMPUTADOR = ["coordenacao", "direcao", "voluntario_financeiro", "administracao"];
 
 function iniciais(nome) {
   return nome.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() || "").join("");
