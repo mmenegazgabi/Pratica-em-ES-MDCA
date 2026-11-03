@@ -34,3 +34,11 @@
 .entrar .erro[hidden] { display: none; }
 .entrar .btn { margin-top: 16px; width: 100%; justify-content: center; padding: 9px 12px; font-size: 13px; }
 .entrar select.entrada { appearance: auto; }
+
+/* Relatórios: "Gerar relatório" em PDF usa a impressão do navegador e imprime só o documento. */
+@media print {
+  .lateral, .relatorio-opcoes { display: none !important; }
+  .principal { padding: 0; }
+  .relatorio-previa { background: none !important; padding: 0 !important; min-height: 0 !important; }
+  .relatorio-pagina { border: 0 !important; padding: 0 !important; }
+}

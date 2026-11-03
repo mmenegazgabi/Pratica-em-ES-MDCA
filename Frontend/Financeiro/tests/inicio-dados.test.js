@@ -45,10 +45,41 @@ describe("montarPendencias", () => {
     assert.equal(r.total, 4);
   });
 
-  test("direção: só alertas de orçamento", () => {
+  test("direção: alertas de orçamento e nenhuma prestação quando nada termina em 30 dias", () => {
     const r = montarPendencias("direcao", dados, AGORA);
     assert.deepEqual(r.secoes.map((s) => s.titulo), ["Alertas de orçamento"]);
     assert.equal(r.total, 2);
+  });
+
+  test("direção: prestações de contas de orçamentos que terminaram ou terminam em até 30 dias", () => {
+    const comFim = [
+      ...orcamentos,
+      { id: "o4", projeto_id: "p4", projeto_nome: "Horta", valor_total: 2000, saldo: 1700, realizado: 300, percentual_consumido: 15, nivel_alerta: "normal", data_fim: "2026-11-20" },
+      { id: "o5", projeto_id: "p5", projeto_nome: "Teatro", valor_total: 3000, saldo: 0, realizado: 3000, percentual_consumido: 100, nivel_alerta: "normal", data_fim: "2026-09-30" },
+    ];
+    const r = montarPendencias("direcao", { lancamentos, orcamentos: comFim }, AGORA);
+    const prestacoes = r.secoes.find((s) => s.titulo === "Prestações de contas a gerar");
+    assert.deepEqual(prestacoes.itens.map((i) => i.rotulo), ["Prestação de contas · Teatro", "Prestação de contas · Horta"]);
+    assert.equal(prestacoes.itens[0].detalhe, "Vigência terminou em 30/09/2026");
+    assert.equal(prestacoes.itens[1].detalhe, "Vigência termina em 20/11/2026");
+    assert.deepEqual(prestacoes.itens[1].acao, { rotulo: "Gerar", rota: "#/relatorios?orcamento=o4" });
+    assert.equal(prestacoes.itens[1].valor, 300);
+  });
+
+  test("administração: convites ainda não aceitos", () => {
+    const pessoas = [
+      { nome: "Luana", email: "l@x", papel: "coordenacao", convite: false },
+      { nome: "Carla Souza", email: "carla@x", papel: "educador", convite: true },
+    ];
+    const r = montarPendencias("administracao", { lancamentos: [], orcamentos: [], pessoas }, AGORA);
+    assert.equal(r.total, 1);
+    assert.equal(r.secoes[0].coluna, "Papel");
+    assert.deepEqual(r.secoes[0].itens[0], {
+      rotulo: "Carla Souza",
+      detalhe: "carla@x · convite ainda não aceito",
+      valorTexto: "Educador",
+      acao: { rotulo: "Ver", rota: "#/acessos" },
+    });
   });
 
   test("voluntário financeiro: aprovados sem conciliação", () => {
@@ -56,8 +87,8 @@ describe("montarPendencias", () => {
     assert.deepEqual(r.secoes.map((s) => s.titulo), ["Aprovados sem conciliação"]);
     const [i1, i2] = r.secoes[0].itens;
     assert.equal(r.total, 2);
-    assert.equal(i1.acao.rota, "#/lancamentos?status=aprovado&abrir=l3");
-    assert.equal(i1.acao.rotulo, "Ver");
+    assert.equal(i1.acao.rota, "#/conciliacao");
+    assert.equal(i1.acao.rotulo, "Conciliar");
     assert.equal(i2.detalhe, "Projeto Esporte");
   });
 
