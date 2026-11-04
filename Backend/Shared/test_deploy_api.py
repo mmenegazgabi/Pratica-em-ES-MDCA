@@ -34,6 +34,14 @@ def test_financial_routes_are_served_by_deploy_app():
     assert detail.json()["saldo"] == 1000
 
 
+def test_dashboard_da_diretoria_e_servido_pelo_deploy_app():
+    client = TestClient(load_deploy_app())
+    headers = {"Authorization": "Bearer token-deploy", "X-Papel-Usuario": "direcao"}
+    with patch.dict(os.environ, {"FINANCEIRO_API_TOKEN": "token-deploy"}):
+        resposta = client.get("/dashboard/projetos", headers=headers)
+    assert resposta.status_code == 200
+
+
 def test_deploy_app_responde_422_para_nan_no_corpo():
     client = TestClient(load_deploy_app())
     corpo = (
