@@ -1,7 +1,7 @@
 """create usuarios, papeis, usuarios_papeis and log_auditoria
 
 Revision ID: 9409373416eb
-Revises: 768d1bb2ccf2
+Revises: a3c5e7f9b1d2
 Create Date: 2026-11-04 12:00:00.000000
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '9409373416eb'
-down_revision: Union[str, Sequence[str], None] = '768d1bb2ccf2'
+down_revision: Union[str, Sequence[str], None] = 'a3c5e7f9b1d2'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
