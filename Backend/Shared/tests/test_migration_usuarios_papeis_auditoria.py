@@ -26,7 +26,7 @@ RAISE_EXCEPTION = "P0001"
 
 # Revision right before this migration; a relative "-1" would break once newer
 # migrations are added.
-REV_CONCILIACAO = "768d1bb2ccf2"
+REV_STATUS_PROJETOS = "a3c5e7f9b1d2"
 TABELAS = {"usuarios", "papeis", "usuarios_papeis", "log_auditoria"}
 
 pytestmark = pytest.mark.skipif(
@@ -306,10 +306,12 @@ def test_log_nao_aceita_alteracao_nem_exclusao(migrated_db, comando):
 def test_downgrade_remove_so_as_tabelas_novas_e_upgrade_recria(migrated_db):
     engine, config = migrated_db
 
-    command.downgrade(config, REV_CONCILIACAO)
+    command.downgrade(config, REV_STATUS_PROJETOS)
     tabelas = set(sa.inspect(engine).get_table_names())
     assert not TABELAS & tabelas
     assert {"projetos", "orcamentos", "lancamentos"} <= tabelas
+    # The previous migration (status on projetos, #82) stays applied.
+    assert "status" in {c["name"] for c in sa.inspect(engine).get_columns("projetos")}
     with engine.connect() as conn:
         funcao = conn.execute(
             sa.text("SELECT 1 FROM pg_proc WHERE proname = 'log_auditoria_somente_inclusao'")

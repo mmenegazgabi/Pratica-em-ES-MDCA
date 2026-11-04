@@ -530,3 +530,60 @@ def test_downgrade_de_conciliacao_remove_apenas_as_colunas_novas(migrated_db):
     command.upgrade(config, "head")
     colunas = {c["name"] for c in sa.inspect(engine).get_columns("lancamentos")}
     assert {"conciliado", "item_extrato_ref"} <= colunas
+
+
+# T-29 · US-07: projetos.status migration (active/closed filter on the dashboard).
+
+REV_CONCILIACAO = "768d1bb2ccf2"
+
+
+def test_status_do_projeto_tem_default_ativo_e_aceita_encerrado(migrated_db):
+    engine, _ = migrated_db
+
+    with engine.connect() as conn:
+        conn.execute(sa.text("INSERT INTO projetos (id, nome) VALUES ('p-1', 'Projeto 1')"))
+        conn.execute(
+            sa.text("INSERT INTO projetos (id, nome, status) VALUES ('p-2', 'Projeto 2', 'encerrado')")
+        )
+        gravados = conn.execute(sa.text("SELECT id, status FROM projetos ORDER BY id")).all()
+        conn.rollback()
+
+    assert [tuple(g) for g in gravados] == [("p-1", "ativo"), ("p-2", "encerrado")]
+
+
+def test_check_impede_status_de_projeto_invalido(migrated_db):
+    engine, _ = migrated_db
+
+    with engine.connect() as conn:
+        with pytest.raises(IntegrityError) as erro:
+            conn.execute(
+                sa.text("INSERT INTO projetos (id, nome, status) VALUES ('p-1', 'P', 'pausado')")
+            )
+        conn.rollback()
+
+    assert erro.value.orig.sqlstate == CHECK_VIOLATION
+
+
+def test_migration_de_status_preserva_projetos_existentes(migrated_db):
+    engine, config = migrated_db
+
+    command.downgrade(config, REV_CONCILIACAO)
+    with engine.begin() as conn:
+        conn.execute(sa.text("INSERT INTO projetos (id, nome) VALUES ('p-1', 'Projeto 1')"))
+
+    command.upgrade(config, "head")
+
+    with engine.connect() as conn:
+        gravado = conn.execute(sa.text("SELECT id, nome, status FROM projetos")).one()
+
+    assert tuple(gravado) == ("p-1", "Projeto 1", "ativo")
+
+
+def test_downgrade_de_status_remove_apenas_a_coluna_nova(migrated_db):
+    engine, config = migrated_db
+
+    command.downgrade(config, REV_CONCILIACAO)
+
+    colunas = {c["name"] for c in sa.inspect(engine).get_columns("projetos")}
+    assert colunas == {"id", "nome"}
+    assert "conciliado" in {c["name"] for c in sa.inspect(engine).get_columns("lancamentos")}

@@ -117,8 +117,45 @@ def test_listar_projetos_em_ordem_alfabetica():
 
     assert resposta.status_code == 200
     assert [p["nome"] for p in resposta.json()] == ["Casa de Convivência", "Oficina", "Semear"]
-    assert set(resposta.json()[0]) == {"id", "nome"}
+    assert set(resposta.json()[0]) == {"id", "nome", "status"}
+    assert resposta.json()[0]["status"] == "ativo"
 
 
 def test_listar_projetos_sem_autenticacao_401():
     assert client.get("/projetos").status_code == 401
+
+
+def alterar_status(projeto_id, status, papel="direcao"):
+    return client.patch(
+        f"/projetos/{projeto_id}/status", json={"status": status}, headers=cabecalhos(papel)
+    )
+
+
+@pytest.mark.parametrize("papel", ["coordenacao", "direcao"])
+def test_encerrar_e_reabrir_projeto(papel):
+    projeto = criar_projeto("Leitura").json()
+
+    encerrado = alterar_status(projeto["id"], "encerrado", papel)
+    assert encerrado.status_code == 200
+    assert encerrado.json()["status"] == "encerrado"
+    assert client.get("/projetos", headers=cabecalhos()).json()[0]["status"] == "encerrado"
+
+    assert alterar_status(projeto["id"], "ativo", papel).json()["status"] == "ativo"
+
+
+@pytest.mark.parametrize("papel", ["educador", "voluntario_financeiro"])
+def test_alterar_status_outros_papeis_403(papel):
+    projeto = criar_projeto("Leitura").json()
+
+    assert alterar_status(projeto["id"], "encerrado", papel).status_code == 403
+    assert _projetos[0].status == "ativo"
+
+
+def test_alterar_status_de_projeto_inexistente_404():
+    assert alterar_status("nao-existe", "encerrado").status_code == 404
+
+
+def test_alterar_status_invalido_422():
+    projeto = criar_projeto("Leitura").json()
+
+    assert alterar_status(projeto["id"], "pausado").status_code == 422
