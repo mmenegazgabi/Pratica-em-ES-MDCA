@@ -124,6 +124,8 @@ export const listarLancamentos = (filtros = {}) => requisitar(`/lancamentos${con
 export const obterLancamento = (id) => requisitar(`/lancamentos/${rota(id)}`);
 export const aprovarLancamento = (id) => requisitar(`/lancamentos/${rota(id)}/aprovar`, { method: "PATCH" });
 export const rejeitarLancamento = (id, motivo) => requisitar(`/lancamentos/${rota(id)}/rejeitar`, comJson("PATCH", { motivo }));
+export const conciliarLancamento = (id, referenciaExtrato) =>
+  requisitar(`/lancamentos/${rota(id)}/conciliar`, comJson("PATCH", { referencia_extrato: referenciaExtrato }));
 
 // Multipart: sem Content-Type, o navegador monta o boundary certo.
 export const enviarLancamento = (formData) => requisitar("/lancamentos", { method: "POST", body: formData });

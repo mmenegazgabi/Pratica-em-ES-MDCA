@@ -43,11 +43,14 @@ test("sessão com papel inválido ou armazenamento quebrado vira null", () => {
 
 test("itensDeMenu por papel", () => {
   const ids = (papel) => itensDeMenu(papel).map((i) => i.id);
-  assert.deepEqual(ids("coordenacao"), ["inicio", "lancamentos", "projetos"]);
-  assert.deepEqual(ids("direcao"), ["inicio", "projetos"]);
-  assert.deepEqual(ids("voluntario_financeiro"), ["inicio", "lancamentos"]);
+  assert.deepEqual(ids("coordenacao"), ["inicio", "lancamentos", "projetos", "relatorios", "auditoria"]);
+  assert.deepEqual(ids("direcao"), ["inicio", "projetos", "relatorios", "auditoria"]);
+  assert.deepEqual(ids("voluntario_financeiro"), ["inicio", "lancamentos", "conciliacao"]);
+  assert.deepEqual(ids("administracao"), ["inicio", "acessos"]);
   assert.deepEqual(ids("educador"), []);
-  for (const item of itensDeMenu("coordenacao")) assert.ok(item.rotulo && item.icone && item.rota);
+  for (const papel of ["coordenacao", "voluntario_financeiro", "administracao"]) {
+    for (const item of itensDeMenu(papel)) assert.ok(item.rotulo && item.icone && item.rota);
+  }
 });
 
 test("nomeDoAutor capitaliza o slug e tolera vazio", () => {

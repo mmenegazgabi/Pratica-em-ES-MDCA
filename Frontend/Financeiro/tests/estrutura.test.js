@@ -25,10 +25,10 @@ async function irPara(hash) {
 }
 const rotulos = () => [...raiz.querySelectorAll(".lateral__item")].map((a) => a.textContent.replace(/\d+$/, ""));
 
-test("sem sessão mostra Entrar com os três papéis do computador", () => {
+test("sem sessão mostra Entrar com os papéis do computador", () => {
   assert.equal(window.location.hash, "#/entrar");
   const opcoes = [...raiz.querySelectorAll("#campo-papel option")].map((o) => o.value);
-  assert.deepEqual(opcoes, ["coordenacao", "direcao", "voluntario_financeiro"]);
+  assert.deepEqual(opcoes, ["coordenacao", "direcao", "voluntario_financeiro", "administracao"]);
   assert.ok(raiz.querySelector("#campo-token"));
 });
 
@@ -44,7 +44,7 @@ test("Entrar preenchido abre o menu do papel e Projetos carrega a tela", async (
   raiz.querySelector("#campo-token").value = "abc";
   raiz.querySelector("#form-entrar").dispatchEvent(new window.Event("submit", { cancelable: true }));
   await esperar();
-  assert.deepEqual(rotulos(), ["Início", "Projetos"]);
+  assert.deepEqual(rotulos(), ["Início", "Projetos", "Relatórios", "Auditoria"]);
   await irPara("#/projetos");
   assert.match(raiz.querySelector(".principal").textContent, /Projetos/);
   assert.match(raiz.querySelector(".lateral__usuario").textContent, /Jane/);

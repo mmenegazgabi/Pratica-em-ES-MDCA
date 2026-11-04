@@ -1,4 +1,4 @@
-# Financeiro no computador (redesign, parte 1)
+# Financeiro no computador (redesign)
 
 Visual B "Neutro e funcional" (esboços em
 `docs/superpowers/specs/2026-10-27-redesign-financeiro/telas-computador.html` e
@@ -37,16 +37,29 @@ computador no mesmo navegador.
 
 ## Telas por papel
 
-| Tela | Coordenação | Direção | Voluntário financeiro |
-| --- | --- | --- | --- |
-| Início (`#/inicio`) | Despesas aguardando aprovação e alertas de orçamento (>= 80%) | Alertas de orçamento | Aprovados sem conciliação |
-| Lançamentos (`#/lancamentos`) | Filas Aguardando/Aprovados/Rejeitados/Todos, filtro por projeto, painel com Aprovar e Rejeitar (motivo obrigatório) | não aparece | Abre em Aprovados (consulta; a conciliação fica para a parte 2) |
-| Projetos (`#/projetos`) | Totais, uso por projeto, Novo projeto/Criar orçamento | Só leitura | não aparece |
-| Detalhe do projeto (`#/projetos/<orçamento>`) | Orçado, gasto, disponível, gasto por categoria, últimos lançamentos e **Editar orçamento** | Igual, sem Editar orçamento | não aparece |
+| Tela | Coordenação | Direção | Voluntário financeiro | Administração |
+| --- | --- | --- | --- | --- |
+| Início (`#/inicio`) | Despesas aguardando aprovação e alertas de orçamento (>= 80%) | Alertas de orçamento e prestações de contas a gerar (vigência terminou ou termina em até 30 dias) | Aprovados sem conciliação | Convites pendentes |
+| Lançamentos (`#/lancamentos`) | Filas Aguardando/Aprovados/Rejeitados/Todos, filtro por projeto, painel com Aprovar e Rejeitar (motivo obrigatório) | não aparece | Abre em Aprovados (consulta) | não aparece |
+| Projetos (`#/projetos`) | Totais, uso por projeto, Novo projeto/Criar orçamento | Só leitura | não aparece | não aparece |
+| Detalhe do projeto (`#/projetos/<orçamento>`) | Orçado, gasto, disponível, gasto / limite por categoria, últimos lançamentos e **Editar orçamento** | Igual, sem Editar orçamento | não aparece | não aparece |
+| Conciliação (`#/conciliacao`) | não aparece | não aparece | Extrato e aprovados lado a lado; marca um de cada e concilia (`PATCH /lancamentos/{id}/conciliar`) | não aparece |
+| Relatórios (`#/relatorios`) | Prestação de contas: projeto, período, PDF (impressão) ou planilha (CSV) | Igual | não aparece | não aparece |
+| Auditoria (`#/auditoria`) | Histórico de ações com busca | Igual | não aparece | não aparece |
+| Acessos (`#/acessos`) | não aparece | não aparece | não aparece | Pessoas e papéis (convidar, editar) e Auditoria |
 
 As barras de uso são verdes abaixo de 80%, amarelas de 80% a 99,99% e vermelhas a
 partir de 100% (campo `nivel_alerta`: normal, atencao, estourado). Rotas fora do
 papel voltam para o Início.
+
+### O que ainda usa dados de exemplo
+
+`telas/dados-exemplo.js` guarda dados fixos para o que ainda não tem backend: o
+**extrato bancário** da Conciliação, as **pessoas** de Acessos e o **histórico** da
+Auditoria. As telas avisam ("exemplo") e nada disso é salvo. "Importar extrato" só
+mostra um aviso. O resto (lançamentos, orçamentos, conciliar, prévia e arquivos do
+relatório) já usa a API de verdade. Quando existirem as rotas, troque as importações
+de `dados-exemplo.js` por chamadas em `base/api.js` e apague o arquivo.
 
 ## Rotas do backend adicionadas na parte 1
 
@@ -64,16 +77,17 @@ papel voltam para o Início.
 
 CORS só permite GET, POST, PATCH e OPTIONS; por isso não há PUT nem DELETE.
 
-## Fica para a parte 2
+## Falta no backend
 
-- Extrato e conciliação (importar o extrato e vincular a cada lançamento aprovado;
-  hoje só existe `PATCH /lancamentos/{id}/conciliar`).
-- Relatórios.
-- Acessos por usuário, depois da US-08 (login) — troca o código único.
+- Extrato: importar o arquivo do banco e listar os itens (a Conciliação usa o extrato
+  de exemplo).
+- Pessoas, papéis e convites, e o registro de ações para a Auditoria (dependem da
+  US-08, login).
+- Quem rejeitou e quando, para mostrar no aviso da despesa rejeitada no celular.
 
 Tickets de acompanhamento:
 
-- **Orçamento por categoria**: hoje o orçamento tem um valor total e a lista de
-  categorias; o detalhe do projeto mostra o gasto por categoria sem teto.
 - **Trocar foto de rascunho**: em "A completar" só dá para completar; falta trocar a
   foto antes de enviar (em despesa rejeitada já existe "Trocar foto").
+- **Segundo orçamento por projeto**: "Criar orçamento" só aparece em projeto sem
+  orçamento.

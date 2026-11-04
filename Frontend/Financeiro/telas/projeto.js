@@ -3,7 +3,7 @@ import { el, limpar } from "../base/dom.js";
 import { formatarData, formatarDataCurta, formatarMoeda } from "../base/formatar.js";
 import { nomeDoAutor } from "../base/sessao.js";
 import { editarOrcamento, listarLancamentos, obterOrcamento } from "../base/api.js";
-import { gastoPorCategoria } from "./projetos-dados.js";
+import { categoriasDoOrcamento } from "./projetos-dados.js";
 import { abrirDialogoOrcamento, falhou } from "./orcamento-dialogo.js";
 
 const ROTULO_STATUS = { pendente: "Aguardando", aprovado: "Aprovado", rejeitado: "Rejeitado" };
@@ -53,8 +53,14 @@ export async function mostrar(container, { parametros = {}, sessao, navegar }) {
   }
 
   function porCategoria() {
-    const itens = gastoPorCategoria(orcamento, lancamentos);
+    const itens = categoriasDoOrcamento(orcamento, lancamentos);
     const maior = Math.max(0, ...itens.map((i) => i.gasto));
+    const barra = (i) => {
+      if (i.limite === null) return el("div", { class: "barra-uso", style: "width:100%;margin-top:4px" }, el("i", { style: `width:${maior > 0 ? (i.gasto / maior) * 100 : 0}%` }));
+      const classe = i.nivel === "estourado" ? "barra-uso barra-uso--critica" : i.nivel === "atencao" ? "barra-uso barra-uso--alerta" : "barra-uso";
+      const largura = i.percentual === null ? (i.gasto > 0 ? 100 : 0) : Math.max(0, Math.min(100, i.percentual));
+      return el("div", { class: classe, style: "width:100%;margin-top:4px" }, el("i", { style: `width:${largura}%` }));
+    };
     return el(
       "div",
       { class: "caixa" },
@@ -65,8 +71,8 @@ export async function mostrar(container, { parametros = {}, sessao, navegar }) {
             "div",
             { style: "padding:12px;display:grid;grid-template-columns:1fr auto;gap:10px 12px;align-items:end" },
             itens.flatMap((i) => [
-              el("div", { style: "font-size:12px" }, i.categoria, el("div", { class: "barra-uso", style: "width:100%;margin-top:4px" }, el("i", { style: `width:${maior > 0 ? (i.gasto / maior) * 100 : 0}%` }))),
-              el("span", { class: "num", style: "font-size:11px" }, formatarMoeda(i.gasto)),
+              el("div", { style: "font-size:12px" }, i.categoria, barra(i)),
+              el("span", { class: "num", style: "font-size:11px" }, i.limite === null ? formatarMoeda(i.gasto) : `${formatarMoeda(i.gasto)} / ${formatarMoeda(i.limite)}`),
             ]),
           ),
     );
