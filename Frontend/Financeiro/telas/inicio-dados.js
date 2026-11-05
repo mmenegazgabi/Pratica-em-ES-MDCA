@@ -1,5 +1,5 @@
 // Início: monta as pendências de cada papel (sem DOM, testável no Node).
-import { PAPEIS, nomeDoAutor } from "../base/sessao.js";
+import { nomeDoAutor } from "../base/sessao.js";
 import { diasDesde, formatarData, formatarMoeda, tempoRelativo } from "../base/formatar.js";
 
 const LIMITE_DIAS_ABERTO = 7;
@@ -86,24 +86,10 @@ function prestacoesAGerar({ orcamentos }, agora) {
   return { titulo: "Prestações de contas a gerar", coluna: "Executado", itens };
 }
 
-/** Convites ainda não aceitos (dados de exemplo até existir o backend de pessoas). */
-function convitesPendentes({ pessoas = [] }) {
-  const itens = pessoas
-    .filter((p) => p.convite)
-    .map((p) => ({
-      rotulo: p.nome,
-      detalhe: `${p.email} · convite ainda não aceito`,
-      valorTexto: PAPEIS[p.papel] || p.papel,
-      acao: { rotulo: "Ver", rota: "#/acessos" },
-    }));
-  return { titulo: "Convites pendentes", coluna: "Papel", itens };
-}
-
 const SECOES_POR_PAPEL = {
   coordenacao: [aguardandoAprovacao, alertasDeOrcamento],
   direcao: [alertasDeOrcamento, prestacoesAGerar],
   voluntario_financeiro: [aprovadosSemConciliacao],
-  administracao: [convitesPendentes],
 };
 
 export function montarPendencias(papel, dados, agora = new Date()) {

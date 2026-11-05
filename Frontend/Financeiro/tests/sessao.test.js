@@ -46,9 +46,8 @@ test("itensDeMenu por papel", () => {
   assert.deepEqual(ids("coordenacao"), ["inicio", "lancamentos", "projetos", "relatorios", "auditoria"]);
   assert.deepEqual(ids("direcao"), ["inicio", "projetos", "relatorios", "auditoria"]);
   assert.deepEqual(ids("voluntario_financeiro"), ["inicio", "lancamentos", "conciliacao"]);
-  assert.deepEqual(ids("administracao"), ["inicio", "acessos"]);
   assert.deepEqual(ids("educador"), []);
-  for (const papel of ["coordenacao", "voluntario_financeiro", "administracao"]) {
+  for (const papel of ["coordenacao", "direcao", "voluntario_financeiro"]) {
     for (const item of itensDeMenu(papel)) assert.ok(item.rotulo && item.icone && item.rota);
   }
 });

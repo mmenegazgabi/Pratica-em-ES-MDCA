@@ -5,12 +5,21 @@ import { icone } from "./base/icones.js";
 import { lerRota, rotaPermitida } from "./base/rotas.js";
 import { contadorDefinido, reaplicarContador } from "./base/contador.js";
 import { atualizarContadorDePendencias } from "./telas/inicio.js";
-import { PAPEIS, lerSessao, salvarSessao, encerrarSessao, itensDeMenu } from "./base/sessao.js";
+import {
+  CHAVE_SESSAO_CELULAR,
+  CHAVE_SESSAO_COMPUTADOR,
+  PAPEIS,
+  encerrarSessao,
+  itensDeMenu,
+  lerSessao,
+  salvarSessao,
+  usarChaveDeSessao,
+} from "./base/sessao.js";
 import { API_PADRAO, esquecerAcesso, salvarAcesso, tokenSalvo, urlDaApi } from "./base/api.js";
 
 export { definirContador } from "./base/contador.js";
 
-const PAPEIS_DO_COMPUTADOR = ["coordenacao", "direcao", "voluntario_financeiro", "administracao"];
+const PAPEIS_DO_COMPUTADOR = ["coordenacao", "direcao", "voluntario_financeiro", "educador"];
 
 function iniciais(nome) {
   return nome.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() || "").join("");
@@ -99,6 +108,12 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
       }
       salvarSessao({ papel: papel.value, nome: nome.value.trim() });
       salvarAcesso(token.value, api.value || API_PADRAO);
+      if (papel.value === "educador") {
+        // O educador usa o app do celular; já entra lá com o mesmo nome e código.
+        usarChaveDeSessao(CHAVE_SESSAO_CELULAR);
+        salvarSessao({ papel: "educador", nome: nome.value.trim() });
+        usarChaveDeSessao(CHAVE_SESSAO_COMPUTADOR);
+      }
       navegar("#/inicio");
     }
 

@@ -66,22 +66,6 @@ describe("montarPendencias", () => {
     assert.equal(prestacoes.itens[1].valor, 300);
   });
 
-  test("administração: convites ainda não aceitos", () => {
-    const pessoas = [
-      { nome: "Luana", email: "l@x", papel: "coordenacao", convite: false },
-      { nome: "Carla Souza", email: "carla@x", papel: "educador", convite: true },
-    ];
-    const r = montarPendencias("administracao", { lancamentos: [], orcamentos: [], pessoas }, AGORA);
-    assert.equal(r.total, 1);
-    assert.equal(r.secoes[0].coluna, "Papel");
-    assert.deepEqual(r.secoes[0].itens[0], {
-      rotulo: "Carla Souza",
-      detalhe: "carla@x · convite ainda não aceito",
-      valorTexto: "Educador",
-      acao: { rotulo: "Ver", rota: "#/acessos" },
-    });
-  });
-
   test("voluntário financeiro: aprovados sem conciliação", () => {
     const r = montarPendencias("voluntario_financeiro", dados, AGORA);
     assert.deepEqual(r.secoes.map((s) => s.titulo), ["Aprovados sem conciliação"]);

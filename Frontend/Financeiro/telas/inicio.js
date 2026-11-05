@@ -4,7 +4,6 @@ import { definirContador } from "../base/contador.js";
 import { formatarMoeda } from "../base/formatar.js";
 import { listarLancamentos, listarOrcamentos } from "../base/api.js";
 import { montarPendencias } from "./inicio-dados.js";
-import { PESSOAS_EXEMPLO } from "./dados-exemplo.js";
 
 const COM_LANCAMENTOS = ["coordenacao", "voluntario_financeiro"];
 const COM_ORCAMENTOS = ["coordenacao", "direcao", "voluntario_financeiro"];
@@ -32,12 +31,11 @@ function celulaDeValor(item, tipo) {
       ),
     );
   }
-  if (tipo === "texto") return el("td", { class: "num" }, item.valorTexto);
   return el("td", { class: "num" }, formatarMoeda(item.valor));
 }
 
 function tabelaDaSecao(secao, navegar) {
-  const tipo = secao.itens[0]?.nivel ? "uso" : secao.itens[0]?.valorTexto !== undefined ? "texto" : "dinheiro";
+  const tipo = secao.itens[0]?.nivel ? "uso" : "dinheiro";
   const coluna = secao.coluna || (tipo === "uso" ? "Usado" : "Valor");
   return el(
     "div",
@@ -74,7 +72,7 @@ function carregarDados(papel) {
 export async function atualizarContadorDePendencias(papel) {
   const [lancamentos, orcamentos] = await carregarDados(papel);
   if (falhou(lancamentos) || falhou(orcamentos)) return;
-  definirContador(montarPendencias(papel, { lancamentos: lancamentos.corpo, orcamentos: orcamentos.corpo, pessoas: PESSOAS_EXEMPLO }, new Date()).total);
+  definirContador(montarPendencias(papel, { lancamentos: lancamentos.corpo, orcamentos: orcamentos.corpo}, new Date()).total);
 }
 
 export async function mostrar(container, { sessao, navegar }) {
@@ -90,7 +88,7 @@ export async function mostrar(container, { sessao, navegar }) {
     return;
   }
 
-  const { total, secoes } = montarPendencias(sessao.papel, { lancamentos: lancamentos.corpo, orcamentos: orcamentos.corpo, pessoas: PESSOAS_EXEMPLO }, agora);
+  const { total, secoes } = montarPendencias(sessao.papel, { lancamentos: lancamentos.corpo, orcamentos: orcamentos.corpo}, agora);
   definirContador(total);
 
   const resumo = total === 0 ? "Nada pendente" : total === 1 ? "1 item precisa de você" : `${total} itens precisam de você`;
