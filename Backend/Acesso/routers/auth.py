@@ -1,5 +1,6 @@
 """Rotas de login único (T-35): entrar, primeiro acesso, quem sou eu e sair."""
 
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -23,6 +24,9 @@ CREDENCIAIS_INVALIDAS = "E-mail ou senha incorretos."
 CODIGO_INVALIDO = "Código inválido ou vencido."
 MUITAS_TENTATIVAS = "Muitas tentativas. Tente de novo em alguns minutos."
 SESSAO_INVALIDA = "Sessão inválida ou vencida."
+
+# Hash de uma senha aleatória: faz o scrypt rodar também quando não há senha a conferir.
+_HASH_FALSO = senhas.gerar_hash(secrets.token_urlsafe())
 
 
 class EntrarEntrada(BaseModel):
@@ -69,7 +73,11 @@ def entrar(corpo: EntrarEntrada, conexao: Connection = Depends(obter_conexao)) -
 
     usuario = usuarios.por_email(conexao, email)
     # Confere sempre, mesmo sem usuário, para a resposta demorar parecido.
-    confere = senhas.conferir(corpo.senha, usuario.senha_hash if usuario else None)
+    confere = senhas.conferir(
+        corpo.senha, (usuario.senha_hash if usuario else None) or _HASH_FALSO
+    )
+    if usuario is None or not usuario.senha_hash:
+        confere = False
     if usuario is None or not usuario.ativo or not confere:
         auditoria.registrar(
             conexao, usuario_id=None, acao="login_falhou", alvo_tipo="usuario", alvo_id=email

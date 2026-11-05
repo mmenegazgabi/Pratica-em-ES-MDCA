@@ -23,6 +23,8 @@ PAPEL_ADMIN = "administracao"
 
 def criar_admin(conexao: Connection, nome: str, email: str, agora: datetime) -> Tuple[str, str, datetime]:
     """Garante a pessoa com o papel de administração e devolve (usuario_id, código, validade)."""
+    if not nome.strip():
+        raise ValueError("O nome não pode ficar em branco.")
     email = usuarios.normalizar_email(email)
     existente = usuarios.por_email(conexao, email)
     if existente is not None:
@@ -60,6 +62,8 @@ def main(argv: Optional[list] = None) -> int:
     parser.add_argument("--nome", required=True)
     parser.add_argument("--email", required=True)
     args = parser.parse_args(argv)
+    if not args.nome.strip():
+        parser.error("--nome não pode ficar em branco.")
 
     url = os.getenv("DATABASE_URL", "")
     if not url:

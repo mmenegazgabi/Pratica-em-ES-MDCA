@@ -53,7 +53,9 @@ def test_bloqueia_depois_de_5_falhas(banco, cliente):
     _ana(banco)
     for _ in range(5):
         assert _entrar(cliente, senha="errada-errada").status_code == 401
-    assert _entrar(cliente).status_code == 429
+    r = _entrar(cliente)
+    assert r.status_code == 429
+    assert r.json()["detail"] == "Muitas tentativas. Tente de novo em alguns minutos."
 
 
 def test_primeiro_acesso_define_senha(banco, cliente):
@@ -121,3 +123,13 @@ def test_auditoria_de_login(banco, cliente):
         ).all()
     assert [(l.acao, l.modulo) for l in linhas] == [("login", "plataforma"), ("login_falhou", "plataforma")]
     assert linhas[1].alvo_id == "ana@mdca.org.br"
+
+
+def test_email_desconhecido_tambem_roda_o_scrypt(banco, cliente, monkeypatch):
+    from Acesso import senhas
+
+    chamadas = []
+    original = senhas._scrypt
+    monkeypatch.setattr(senhas, "_scrypt", lambda *a, **k: chamadas.append(1) or original(*a, **k))
+    assert _entrar(cliente, email="nao@mdca.org.br").status_code == 401
+    assert len(chamadas) == 1

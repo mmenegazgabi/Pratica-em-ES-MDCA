@@ -46,3 +46,10 @@ def test_codigo_serve_no_primeiro_acesso(banco, cliente):
     )
     assert r.status_code == 200
     assert [p["id"] for p in r.json()["usuario"]["papeis"]] == ["administracao"]
+
+
+def test_nome_em_branco_e_recusado(banco):
+    import pytest
+
+    with pytest.raises(ValueError):
+        _criar(banco, "   ", "x@mdca.org.br")
