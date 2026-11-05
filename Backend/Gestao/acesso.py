@@ -15,11 +15,16 @@ desativado não acessa nada. Toda negação vai para ``log_auditoria`` antes do 
 
 A lista de usuários da plataforma (T-40) é consultada pela administração e por quem
 coordena algum programa (para escolher quem vincular à equipe).
+
+Cadastros de pessoas atendidas (US-03) são dados de crianças e famílias: consulta só
+quem tem vínculo ativo no programa da pessoa e a administração (a direção não vê
+cadastros individuais); cadastram e alteram a coordenação e a assistência social
+vinculadas ao programa, e a administração.
 """
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 import sqlalchemy as sa
 from fastapi import Depends, HTTPException, Request
@@ -37,6 +42,12 @@ PROGRAMA_NAO_ENCONTRADO = "Programa não encontrado."
 SEM_ACESSO = "Seu perfil não tem acesso a este programa."
 SEM_PERMISSAO_PARA_GERENCIAR = "Seu perfil não pode alterar a equipe nem os espaços deste programa."
 SEM_ACESSO_AOS_USUARIOS = "Seu perfil não tem acesso à lista de usuários."
+
+PAPEIS_COM_TODAS_AS_PESSOAS = {"administracao"}
+PAPEIS_QUE_CADASTRAM_PESSOAS = {"coordenacao", "assistente_social"}
+PESSOA_NAO_ENCONTRADA = "Pessoa não encontrada."
+SEM_ACESSO_A_PESSOAS = "Seu perfil não tem acesso aos cadastros de pessoas deste programa."
+SEM_PERMISSAO_PARA_CADASTRAR = "Seu perfil não pode cadastrar nem alterar pessoas deste programa."
 
 
 @dataclass(frozen=True)
@@ -210,6 +221,118 @@ def exigir_gestao_do_programa(
     conexao: Connection = Depends(obter_conexao),
 ) -> Acesso:
     return verificar_acesso(conexao, usuario_id, programa_id, gerenciar=True, requisicao=requisicao)
+
+
+@dataclass(frozen=True)
+class AcessoAPessoas:
+    usuario_id: str
+    programa_id: str
+    pode_cadastrar: bool
+
+
+def verificar_acesso_a_pessoas(
+    conexao: Connection,
+    usuario_id: str,
+    programa_id: str,
+    *,
+    cadastrar: bool,
+    alvo_tipo: str = "programa",
+    alvo_id: Optional[str] = None,
+    requisicao: Optional[Request] = None,
+    hoje: Optional[date] = None,
+) -> AcessoAPessoas:
+    """Regra dos cadastros de pessoas (US-03) sobre o programa da pessoa."""
+    if not programa_existe(conexao, programa_id):
+        raise HTTPException(status_code=404, detail=PROGRAMA_NAO_ENCONTRADO)
+
+    papeis = papeis_do_usuario(conexao, usuario_id, programa_id, hoje or date.today())
+    if papeis is None:
+        consulta = cadastro = False
+    else:
+        globais, no_programa = papeis
+        todas = bool(globais & PAPEIS_COM_TODAS_AS_PESSOAS)
+        cadastro = todas or bool(no_programa & PAPEIS_QUE_CADASTRAM_PESSOAS)
+        consulta = cadastro or todas or bool(no_programa)
+
+    if not (cadastro if cadastrar else consulta):
+        operacao = "cadastrar" if cadastrar else "consultar"
+        _registrar_negacao(
+            conexao,
+            usuario_id,
+            alvo_tipo=alvo_tipo,
+            alvo_id=alvo_id or programa_id,
+            operacao=operacao,
+            descricao=f"Tentativa de {operacao} cadastro de pessoa sem permissão",
+            requisicao=requisicao,
+        )
+        detalhe = SEM_PERMISSAO_PARA_CADASTRAR if cadastrar and consulta else SEM_ACESSO_A_PESSOAS
+        raise HTTPException(status_code=403, detail=detalhe)
+    return AcessoAPessoas(usuario_id=usuario_id, programa_id=programa_id, pode_cadastrar=cadastro)
+
+
+def programas_com_pessoas_visiveis(
+    conexao: Connection, usuario_id: str, hoje: Optional[date] = None
+) -> Optional[List[str]]:
+    """Programas cujas pessoas o usuário pode listar; ``None`` quando são todos."""
+    ativo = conexao.execute(
+        sa.text("SELECT ativo FROM usuarios WHERE id = :id"), {"id": usuario_id}
+    ).scalar_one_or_none()
+    if not ativo:
+        return []
+    globais = set(
+        conexao.execute(
+            sa.text("SELECT papel_id FROM usuarios_papeis WHERE usuario_id = :id"), {"id": usuario_id}
+        ).scalars()
+    )
+    if globais & PAPEIS_COM_TODAS_AS_PESSOAS:
+        return None
+    return list(
+        conexao.execute(
+            sa.text(
+                """
+                SELECT DISTINCT programa_id FROM vinculos_equipe
+                WHERE usuario_id = :id AND (data_saida IS NULL OR data_saida > :hoje)
+                ORDER BY programa_id
+                """
+            ),
+            {"id": usuario_id, "hoje": hoje or date.today()},
+        ).scalars()
+    )
+
+
+def _acesso_a_pessoa(conexao, usuario_id, pessoa_id, requisicao, *, cadastrar) -> AcessoAPessoas:
+    programa_id = conexao.execute(
+        sa.text("SELECT programa_id FROM pessoas WHERE id = :id"), {"id": pessoa_id}
+    ).scalar_one_or_none()
+    if programa_id is None:
+        raise HTTPException(status_code=404, detail=PESSOA_NAO_ENCONTRADA)
+    return verificar_acesso_a_pessoas(
+        conexao,
+        usuario_id,
+        programa_id,
+        cadastrar=cadastrar,
+        alvo_tipo="pessoa",
+        alvo_id=pessoa_id,
+        requisicao=requisicao,
+    )
+
+
+def exigir_consulta_a_pessoa(
+    pessoa_id: str,
+    requisicao: Request,
+    usuario_id: str = Depends(exigir_usuario),
+    conexao: Connection = Depends(obter_conexao),
+) -> AcessoAPessoas:
+    return _acesso_a_pessoa(conexao, usuario_id, pessoa_id, requisicao, cadastrar=False)
+
+
+def exigir_cadastro_na_pessoa(
+    pessoa_id: str,
+    requisicao: Request,
+    usuario_id: str = Depends(exigir_usuario),
+    conexao: Connection = Depends(obter_conexao),
+) -> AcessoAPessoas:
+    return _acesso_a_pessoa(conexao, usuario_id, pessoa_id, requisicao, cadastrar=True)
 
 
 def exigir_acesso_aos_usuarios(
