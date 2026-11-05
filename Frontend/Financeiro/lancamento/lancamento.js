@@ -6,14 +6,15 @@
 //   #/despesa/<lancamento>   Despesa (rejeitada: motivo + "Corrigir e reenviar")
 //   #/corrigir/<lancamento>  Mesmo formulário, preenchido, para reenviar
 //   #/avisos                 Notificações
-//   #/perfil                 Nome, código de acesso, servidor, sair
+//   #/perfil                 Nome e sair
+//
+// Entra pela sessão da plataforma (login único na página inicial, ../../).
 
 import {
-  API_PADRAO,
   baixarArquivo,
+  configurarSaida,
   completarRascunho,
   criarRascunho,
-  esquecerAcesso,
   listarLancamentos,
   listarNotificacoes,
   listarOrcamentos,
@@ -21,14 +22,12 @@ import {
   marcarNotificacaoLida,
   obterLancamento,
   reenviarLancamento,
-  salvarAcesso,
-  tokenSalvo,
-  urlDaApi,
 } from "../base/api.js";
 import { el, limpar } from "../base/dom.js";
 import { formatarData, formatarMoeda, tempoRelativo } from "../base/formatar.js";
 import { icone } from "../base/icones.js";
-import { CHAVE_SESSAO_CELULAR, encerrarSessao, lerSessao, salvarSessao, usarChaveDeSessao } from "../base/sessao.js";
+import { lerSessao } from "../base/sessao.js";
+import { sair as sairDaPlataforma } from "../../Shared/plataforma.js";
 import {
   agruparDespesas,
   legendaDaDespesa,
@@ -48,7 +47,8 @@ import {
   validarFormulario,
 } from "./formulario.js";
 
-usarChaveDeSessao(CHAVE_SESSAO_CELULAR);
+const INICIO_DA_PLATAFORMA = "../../";
+configurarSaida(INICIO_DA_PLATAFORMA);
 
 const $ = (id) => document.getElementById(id);
 const tela = $("tela");
@@ -57,7 +57,6 @@ const avisoFlutuante = $("aviso-flutuante");
 const entradaCamera = $("campo-camera");
 const entradaGaleria = $("campo-galeria");
 
-const CODIGO_INVALIDO = "Código de acesso inválido. Informe de novo.";
 const LIMITE_ENVIADAS = 5;
 
 let vez = 0; // cada troca de tela descarta respostas que chegarem da tela anterior
@@ -139,7 +138,7 @@ function respostaComFalha(respostas) {
 }
 
 function mostrarFalha({ status, corpo }) {
-  if (status === 401) return telaPrimeiroAcesso(CODIGO_INVALIDO);
+  if (status === 401) return telaSemSessao();
   montar(
     el("p", { class: "aviso", role: "alert" }, mensagemDeErro(status, corpo)),
     el("button", { type: "button", class: "botao botao--sec", onclick: mostrarTela }, "Tentar de novo"),
@@ -158,9 +157,8 @@ function rotaAtual() {
   return { nome, id: decodeURIComponent(id) };
 }
 
-function precisaPrimeiroAcesso() {
-  const sessao = lerSessao();
-  return !sessao || sessao.papel !== "educador" || !tokenSalvo();
+function precisaEntrar() {
+  return lerSessao()?.papel !== "educador";
 }
 
 const TELAS = {
@@ -175,7 +173,7 @@ const TELAS = {
 function mostrarTela() {
   vez += 1;
   liberarImagens();
-  if (precisaPrimeiroAcesso()) return telaPrimeiroAcesso();
+  if (precisaEntrar()) return telaSemSessao();
   const { nome, id } = rotaAtual();
   const rota = TELAS[nome] || TELAS[""];
   if (rota.aba && rota.aba !== "despesas") fecharAviso();
@@ -187,46 +185,17 @@ function mostrarTela() {
   return rota.abrir(id, vez);
 }
 
-// --- Primeiro acesso -------------------------------------------------------
+// --- Sem sessão de educador ------------------------------------------------
+// Provisório: a entrada completa pela sessão da plataforma vem no próximo passo do T-35.
 
-function telaPrimeiroAcesso(mensagem = "") {
+function telaSemSessao() {
   vez += 1;
   abas.hidden = true;
-  const sessao = lerSessao();
-  const nome = el("input", { id: "campo-nome", class: "entrada", type: "text", autocomplete: "name", required: true });
-  nome.value = sessao?.papel === "educador" ? sessao.nome : "";
-  const token = el("input", { id: "campo-token", class: "entrada", type: "password", autocomplete: "off", autocapitalize: "off", spellcheck: "false", required: true });
-  const api = el("input", { id: "campo-api", class: "entrada", type: "url", inputmode: "url", autocapitalize: "off", spellcheck: "false" });
-  api.value = urlDaApi();
-  const erro = el("p", { id: "erro-acesso", class: "erro", role: "alert", hidden: !mensagem }, mensagem);
-
-  function entrar(evento) {
-    evento.preventDefault();
-    const falta = !nome.value.trim() ? "Informe seu nome." : !token.value.trim() ? "Informe o código de acesso." : "";
-    if (falta) {
-      erro.textContent = falta;
-      erro.hidden = false;
-      return;
-    }
-    salvarSessao({ papel: "educador", nome: nome.value.trim() });
-    salvarAcesso(token.value, api.value || API_PADRAO);
-    mostrarTela();
-  }
-
   montar(
-    el(
-      "form",
-      { id: "form-acesso", class: "formulario", novalidate: true, onsubmit: entrar },
-      el("h1", { class: "titulo" }, "Minhas despesas"),
-      el("p", { class: "ajuda" }, "Informe seu nome e o código de acesso do Financeiro. Eles ficam salvos só neste aparelho."),
-      campo("Seu nome", nome),
-      campo("Código de acesso", token),
-      el("details", { class: "avancado" }, el("summary", {}, "Servidor (avançado)"), campo("Endereço da API", api)),
-      erro,
-      el("button", { type: "submit", class: "botao" }, "Entrar"),
-    ),
+    el("h1", { class: "titulo" }, "Minhas despesas"),
+    el("p", { id: "aviso-entrar", class: "aviso", role: "alert" }, "Entre pela página inicial do MDCA para usar este app."),
+    el("a", { id: "link-inicio", class: "botao", href: INICIO_DA_PLATAFORMA }, "Ir para o início"),
   );
-  (nome.value ? token : nome).focus();
 }
 
 function campo(rotulo, entrada, erro = null) {
@@ -342,7 +311,7 @@ async function fotografar(evento) {
     return;
   }
   avisoFlutuante.hidden = true;
-  if (status === 401) return telaPrimeiroAcesso(CODIGO_INVALIDO);
+  if (status === 401) return telaSemSessao();
   avisar(mensagemDeErro(status, corpo));
 }
 
@@ -457,7 +426,7 @@ function formularioDespesa(config, minhaVez) {
       window.location.hash = "#/";
       return;
     }
-    if (status === 401) return telaPrimeiroAcesso(CODIGO_INVALIDO);
+    if (status === 401) return telaSemSessao();
     aviso.textContent = mensagemDeErro(status, corpo);
     aviso.hidden = false;
     aviso.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -637,20 +606,9 @@ async function telaAvisos(_id, minhaVez) {
 
 function telaPerfil() {
   const sessao = lerSessao();
-  const token = el("input", { id: "campo-token", class: "entrada", type: "password", autocomplete: "off", autocapitalize: "off", spellcheck: "false", placeholder: "Deixe em branco para manter" });
-  const api = el("input", { id: "campo-api", class: "entrada", type: "url", inputmode: "url", autocapitalize: "off", spellcheck: "false" });
-  api.value = urlDaApi();
 
-  function salvar(evento) {
-    evento.preventDefault();
-    salvarAcesso(token.value.trim() || tokenSalvo(), api.value || API_PADRAO);
-    token.value = "";
-    avisar("Dados de acesso salvos");
-  }
-
-  function sair() {
-    encerrarSessao();
-    esquecerAcesso();
+  async function sair() {
+    await sairDaPlataforma();
     window.location.hash = "#/";
     mostrarTela();
   }
@@ -658,13 +616,6 @@ function telaPerfil() {
   montar(
     el("h1", { class: "titulo" }, "Perfil"),
     el("div", { class: "perfil" }, el("span", { class: "campo__rotulo" }, "Nome"), el("p", { id: "perfil-nome", class: "perfil__nome" }, sessao.nome), el("p", { class: "ajuda" }, "Educador")),
-    el(
-      "form",
-      { id: "form-perfil", class: "formulario", novalidate: true, onsubmit: salvar },
-      campo("Código de acesso", token),
-      el("details", { class: "avancado" }, el("summary", {}, "Servidor (avançado)"), campo("Endereço da API", api)),
-      el("button", { type: "submit", class: "botao botao--sec" }, "Salvar"),
-    ),
     el("button", { type: "button", id: "botao-sair", class: "botao botao--perigo", onclick: sair }, "Sair deste aparelho"),
   );
 }

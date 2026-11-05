@@ -1,50 +1,99 @@
 import { beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
+import * as modulo from "../base/api.js";
 import {
   API_PADRAO,
+  configurarSaida,
   criarRascunho,
   editarOrcamento,
   listarLancamentos,
   listarOrcamentos,
   rejeitarLancamento,
   requisitar,
-  salvarAcesso,
 } from "../base/api.js";
-import { encerrarSessao, salvarSessao } from "../base/sessao.js";
+import { sessaoDeTeste } from "./ajuda-sessao.js";
 
 let chamadas;
+let destinos;
 
-beforeEach(() => {
+function armazemFalso() {
   const dados = new Map();
-  globalThis.localStorage = {
+  return {
     getItem: (k) => (dados.has(k) ? dados.get(k) : null),
     setItem: (k, v) => dados.set(k, String(v)),
     removeItem: (k) => dados.delete(k),
   };
+}
+
+beforeEach(() => {
+  globalThis.localStorage = armazemFalso();
+  globalThis.sessionStorage = armazemFalso();
+  destinos = [];
+  globalThis.window = { location: { assign: (destino) => destinos.push(destino) } };
   chamadas = [];
   globalThis.fetch = async (url, opcoes = {}) => {
     chamadas.push({ url, ...opcoes });
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   };
-  salvarAcesso("token-de-teste");
+  configurarSaida("../");
+  sessaoDeTeste({ papeis: ["coordenacao"], token: "tok-sessao" });
 });
 
-test("api envia papel e usuário da sessão", async () => {
-  salvarSessao({ papel: "coordenacao", nome: "Ana Souza" });
+test("saíram o código de acesso fixo e o salvo no aparelho", () => {
+  for (const nome of ["TOKEN_FIXO", "salvarAcesso", "esquecerAcesso", "tokenSalvo"]) assert.equal(nome in modulo, false, nome);
+});
+
+test("requisições levam o token da sessão e o papel em uso, sem X-Usuario-Id", async () => {
   const r = await requisitar("/projetos");
   assert.deepEqual(r, { status: 200, corpo: { ok: true } });
   assert.equal(chamadas[0].url, `${API_PADRAO}/projetos`);
-  assert.equal(chamadas[0].headers.Authorization, "Bearer token-de-teste");
+  assert.equal(chamadas[0].headers.Authorization, "Bearer tok-sessao");
   assert.equal(chamadas[0].headers["X-Papel-Usuario"], "coordenacao");
-  assert.equal(chamadas[0].headers["X-Usuario-Id"], "ana-souza");
+  assert.equal("X-Usuario-Id" in chamadas[0].headers, false);
 });
 
-test("sem sessão não envia papel nem usuário", async () => {
-  encerrarSessao();
+test("o papel em uso é o escolhido entre os da pessoa", async () => {
+  sessaoDeTeste({ papeis: ["coordenacao", "educador"], papel: "educador" });
+  await requisitar("/rascunhos");
+  assert.equal(chamadas[0].headers["X-Papel-Usuario"], "educador");
+});
+
+test("sem sessão não envia token nem papel", async () => {
+  localStorage.removeItem("mdca.sessao");
   await requisitar("/projetos");
-  assert.equal(chamadas[0].headers.Authorization, "Bearer token-de-teste");
+  assert.equal("Authorization" in chamadas[0].headers, false);
   assert.equal("X-Papel-Usuario" in chamadas[0].headers, false);
-  assert.equal("X-Usuario-Id" in chamadas[0].headers, false);
+});
+
+test("endereço da API vem da plataforma (chave mdca.api)", async () => {
+  localStorage.setItem("mdca.api", "http://localhost:8000/");
+  await requisitar("/projetos");
+  assert.equal(chamadas[0].url, "http://localhost:8000/projetos");
+});
+
+test("401 apaga a sessão e o papel e volta para a página inicial", async () => {
+  sessaoDeTeste({ papeis: ["coordenacao", "direcao"], papel: "direcao" });
+  globalThis.fetch = async () => new Response(JSON.stringify({ detail: "Sessão expirada." }), { status: 401 });
+  const r = await requisitar("/projetos");
+  assert.equal(r.status, 401);
+  assert.equal(localStorage.getItem("mdca.sessao"), null);
+  assert.equal(localStorage.getItem("mdca.financeiro.papel"), null);
+  assert.deepEqual(destinos, ["../"]);
+});
+
+test("configurarSaida muda o destino do 401 (app do celular)", async () => {
+  configurarSaida("../../");
+  globalThis.fetch = async () => new Response(null, { status: 401 });
+  await requisitar("/rascunhos");
+  assert.deepEqual(destinos, ["../../"]);
+});
+
+test("baixarArquivo também trata o 401", async () => {
+  globalThis.fetch = async () => new Response(null, { status: 401 });
+  const r = await modulo.baixarArquivo("/comprovantes/a.jpg");
+  assert.deepEqual(r, { status: 401, blob: null });
+  assert.equal(localStorage.getItem("mdca.sessao"), null);
+  assert.deepEqual(destinos, ["../"]);
 });
 
 test("api devolve status 0 sem conexão", async () => {

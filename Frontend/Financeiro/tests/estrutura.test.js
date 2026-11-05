@@ -1,54 +1,61 @@
-// Estrutura do computador: menu por papel, tela Entrar e tela ausente (jsdom).
+// Estrutura do computador: sessão da plataforma, escolha de papel, menu por papel e tela ausente (jsdom).
+// A raiz não se chama "app" para o app.js não se montar sozinho ao ser importado.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
+import { sessaoDeTeste } from "./ajuda-sessao.js";
 
-const dom = new JSDOM('<!DOCTYPE html><body><div id="app"></div></body>', { url: "http://localhost/Financeiro/" });
-Object.assign(globalThis, { window: dom.window, document: dom.window.document, localStorage: dom.window.localStorage });
+const dom = new JSDOM('<!DOCTYPE html><body><div id="app-teste"></div></body>', { url: "http://localhost/Financeiro/" });
+Object.assign(globalThis, {
+  window: dom.window,
+  document: dom.window.document,
+  localStorage: dom.window.localStorage,
+  sessionStorage: dom.window.sessionStorage,
+});
 const { iniciar, definirContador } = await import("../app.js");
-const { salvarAcesso } = await import("../base/api.js");
 
-globalThis.fetch = async () => { throw new Error("sem rede nos testes"); };
-const raiz = document.getElementById("app");
+const chamadas = [];
+globalThis.fetch = async (url, opcoes = {}) => {
+  chamadas.push({ url, ...opcoes });
+  if (String(url).endsWith("/auth/sair")) return new Response(null, { status: 204 });
+  throw new Error("sem rede nos testes");
+};
+const raiz = document.getElementById("app-teste");
 const esperar = () => new Promise((r) => setTimeout(r, 20));
 const redirecionamentos = [];
 iniciar(raiz, { redirecionar: (d) => redirecionamentos.push(d) });
 await esperar();
 
-function entrarComo(papel, nome = "Luana Ferraz") {
-  localStorage.setItem("mdca.financeiro.sessao", JSON.stringify({ papel, nome }));
-  salvarAcesso("token-de-teste");
-}
 async function irPara(hash) {
-  window.location.hash = hash;
+  if (window.location.hash === hash) window.dispatchEvent(new window.HashChangeEvent("hashchange"));
+  else window.location.hash = hash;
   await esperar();
 }
 const rotulos = () => [...raiz.querySelectorAll(".lateral__item")].map((a) => a.textContent.replace(/\d+$/, ""));
+const botoes = () => [...raiz.querySelectorAll("button")].map((b) => b.textContent);
+const botao = (texto) => [...raiz.querySelectorAll("button")].find((b) => b.textContent === texto);
 
-test("sem sessão mostra Entrar com os papéis do computador", () => {
-  assert.equal(window.location.hash, "#/entrar");
-  const opcoes = [...raiz.querySelectorAll("#campo-papel option")].map((o) => o.value);
-  assert.deepEqual(opcoes, ["coordenacao", "direcao", "voluntario_financeiro", "educador"]);
-  assert.ok(raiz.querySelector("#campo-token"));
+test("sem sessão da plataforma vai para a página inicial", () => {
+  assert.deepEqual(redirecionamentos, ["../"]);
+  assert.equal(raiz.querySelector(".lateral"), null);
 });
 
-test("Entrar sem nome ou código mostra o erro e não cria sessão", async () => {
-  raiz.querySelector("#form-entrar").dispatchEvent(new window.Event("submit", { cancelable: true }));
-  assert.equal(raiz.querySelector("#erro-acesso").textContent, "Informe seu nome.");
-  assert.equal(localStorage.getItem("mdca.financeiro.sessao"), null);
-});
-
-test("Entrar preenchido abre o menu do papel e Projetos carrega a tela", async () => {
-  raiz.querySelector("#campo-nome").value = "Jane";
-  raiz.querySelector("#campo-papel").value = "direcao";
-  raiz.querySelector("#campo-token").value = "abc";
-  raiz.querySelector("#form-entrar").dispatchEvent(new window.Event("submit", { cancelable: true }));
-  await esperar();
+test("papel único entra direto no Início, com o nome do banco e o papel", async () => {
+  sessaoDeTeste({ papeis: ["direcao"], nome: "Jane Almeida" });
+  await irPara("#/inicio");
   assert.deepEqual(rotulos(), ["Início", "Projetos", "Relatórios", "Auditoria"]);
+  assert.equal(raiz.querySelector('[aria-current="page"]').textContent.replace(/\d+$/, ""), "Início");
+  const usuario = raiz.querySelector(".lateral__usuario").textContent;
+  assert.match(usuario, /Jane Almeida/);
+  assert.match(usuario, /Diretoria/);
+  assert.equal(botao("Trocar papel"), undefined);
+  assert.ok(botao("Sair"));
+  assert.equal(botao("Trocar perfil"), undefined);
+});
+
+test("Projetos carrega a tela", async () => {
   await irPara("#/projetos");
   assert.match(raiz.querySelector(".principal").textContent, /Projetos/);
-  assert.match(raiz.querySelector(".lateral__usuario").textContent, /Jane/);
-  assert.match(raiz.querySelector(".lateral__usuario").textContent, /Diretoria/);
 });
 
 test("rota fora do menu volta ao Início", async () => {
@@ -77,29 +84,79 @@ test("contador aparece no Início e some em zero", async () => {
   assert.equal(selo.hidden, true);
 });
 
-test("Trocar perfil volta ao Entrar e esquece o acesso", async () => {
-  raiz.querySelector(".lateral__trocar").click();
+test("dois papéis mostram 'Entrar como' e a escolha persiste", async () => {
+  sessaoDeTeste({ papeis: ["voluntario_financeiro", "coordenacao"], nome: "Luana Ferraz" });
+  await irPara("#/inicio");
+  assert.equal(raiz.querySelector("h1").textContent, "Entrar como");
+  assert.equal(raiz.querySelector(".lateral"), null);
+  assert.deepEqual(botoes(), ["Coordenação", "Voluntário financeiro"]);
+  botao("Voluntário financeiro").click();
   await esperar();
-  assert.equal(window.location.hash, "#/entrar");
-  assert.equal(localStorage.getItem("mdca.financeiro.sessao"), null);
+  assert.equal(localStorage.getItem("mdca.financeiro.papel"), "voluntario_financeiro");
+  assert.deepEqual(rotulos(), ["Início", "Lançamentos", "Conciliação"]);
+  await irPara("#/conciliacao");
+  assert.deepEqual(rotulos(), ["Início", "Lançamentos", "Conciliação"]);
+});
+
+test("Trocar papel abre 'Entrar como' e a nova escolha vale", async () => {
+  botao("Trocar papel").click();
+  await esperar();
+  assert.equal(window.location.hash, "#/papel");
+  assert.equal(raiz.querySelector("h1").textContent, "Entrar como");
+  botao("Coordenação").click();
+  await esperar();
+  assert.equal(window.location.hash, "#/inicio");
+  assert.equal(localStorage.getItem("mdca.financeiro.papel"), "coordenacao");
+  assert.deepEqual(rotulos(), ["Início", "Lançamentos", "Projetos", "Relatórios", "Auditoria"]);
+});
+
+test("papel salvo que a pessoa perdeu é ignorado", async () => {
+  sessaoDeTeste({ papeis: ["direcao", "voluntario_financeiro"], papel: "coordenacao" });
+  await irPara("#/inicio");
+  assert.equal(raiz.querySelector("h1").textContent, "Entrar como");
+  assert.deepEqual(botoes(), ["Diretoria", "Voluntário financeiro"]);
+});
+
+test("sem papel do Financeiro mostra o aviso sem redirecionar", async () => {
+  sessaoDeTeste({ papeis: ["administracao"] });
+  redirecionamentos.length = 0;
+  await irPara("#/inicio");
+  assert.match(raiz.textContent, /Seu perfil não tem acesso ao Financeiro\./);
+  const link = [...raiz.querySelectorAll("a")].find((a) => a.textContent === "Voltar ao início");
+  assert.equal(link.getAttribute("href"), "../");
+  assert.deepEqual(redirecionamentos, []);
+  assert.equal(raiz.querySelector(".lateral"), null);
 });
 
 test("educador é encaminhado ao app do celular", async () => {
-  entrarComo("educador", "Marcos");
-  await irPara("#/inicio");
+  sessaoDeTeste({ papeis: ["educador"], nome: "Marcos Vieira" });
+  redirecionamentos.length = 0;
   await irPara("#/projetos");
-  assert.ok(redirecionamentos.includes("lancamento/"));
+  assert.deepEqual(redirecionamentos, ["lancamento/"]);
 });
 
-test("Entrar como educador leva ao app do celular já com a sessão do celular", async () => {
-  localStorage.removeItem("mdca.financeiro.sessao");
-  await irPara("#/entrar");
+test("escolher Educador em 'Entrar como' leva ao app do celular", async () => {
+  sessaoDeTeste({ papeis: ["coordenacao", "educador"], nome: "Marcos Vieira" });
   redirecionamentos.length = 0;
-  raiz.querySelector("#campo-nome").value = "Marcos Vieira";
-  raiz.querySelector("#campo-papel").value = "educador";
-  raiz.querySelector("#campo-token").value = "abc";
-  raiz.querySelector("#form-entrar").dispatchEvent(new window.Event("submit", { cancelable: true }));
+  await irPara("#/inicio");
+  botao("Educador").click();
   await esperar();
-  assert.ok(redirecionamentos.includes("lancamento/"));
-  assert.deepEqual(JSON.parse(localStorage.getItem("mdca.financeiro.sessao.celular")), { papel: "educador", nome: "Marcos Vieira" });
+  assert.equal(localStorage.getItem("mdca.financeiro.papel"), "educador");
+  assert.deepEqual(redirecionamentos, ["lancamento/"]);
+});
+
+test("Sair chama /auth/sair, apaga a sessão e volta à página inicial", async () => {
+  sessaoDeTeste({ papeis: ["coordenacao", "direcao"], papel: "direcao", token: "tok-sair" });
+  await irPara("#/inicio");
+  redirecionamentos.length = 0;
+  chamadas.length = 0;
+  botao("Sair").click();
+  await esperar();
+  const saida = chamadas.find((c) => String(c.url).endsWith("/auth/sair"));
+  assert.ok(saida);
+  assert.equal(saida.method, "POST");
+  assert.equal(saida.headers.Authorization, "Bearer tok-sair");
+  assert.equal(localStorage.getItem("mdca.sessao"), null);
+  assert.equal(localStorage.getItem("mdca.financeiro.papel"), null);
+  assert.deepEqual(redirecionamentos, ["../"]);
 });

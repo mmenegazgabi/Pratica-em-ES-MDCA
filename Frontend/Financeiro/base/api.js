@@ -1,71 +1,35 @@
 // Acesso à API do Financeiro a partir do navegador (base de todas as telas).
 //
-// O código de acesso (FINANCEIRO_API_TOKEN) NÃO fica no código: este
-// repositório é público no GitHub. O educador informa o código uma vez e ele
-// fica salvo só naquele aparelho (localStorage). Quando a US-08 (login)
-// existir, o token dá lugar à sessão do usuário.
+// Quem chama é identificado pela sessão da plataforma (login único): o token vai em
+// Authorization e o papel em uso no Financeiro em X-Papel-Usuario. Sessão inválida ou
+// vencida (401) apaga a sessão e volta para a página inicial.
 
-import { lerSessao, usuarioId } from "./sessao.js";
+import { encerrarSessaoLocal, lerSessao as lerSessaoDaPlataforma, urlDaApi } from "../../Shared/plataforma.js";
+import { lerSessao } from "./sessao.js";
 
-export const API_PADRAO = "https://pratica-em-es-mdca-547285598829.southamerica-east1.run.app";
+export { API_PADRAO, urlDaApi } from "../../Shared/plataforma.js";
 
-// Opcional e NÃO recomendado: preencher aqui faz o código de acesso ir para o
-// GitHub (repositório público) e para o site publicado. Deixe vazio para o
-// educador informar o código no próprio celular.
-export const TOKEN_FIXO = "";
+let saida = "../";
 
-const CHAVE_TOKEN = "mdca.financeiro.token";
-const CHAVE_API = "mdca.financeiro.api";
-
-function ler(chave) {
-  try {
-    return localStorage.getItem(chave) || "";
-  } catch {
-    return "";
-  }
-}
-
-function gravar(chave, valor) {
-  try {
-    if (valor) localStorage.setItem(chave, valor);
-    else localStorage.removeItem(chave);
-  } catch {
-    /* navegador sem armazenamento: o código vale só até fechar a página */
-  }
-}
-
-let tokenEmMemoria = "";
-
-export function urlDaApi() {
-  // Para testar com o backend local, use "Servidor (avançado)" na tela de
-  // código de acesso. Não aceitamos o endereço pela URL da página: um link
-  // malicioso poderia mandar o código de acesso para outro servidor.
-  return (ler(CHAVE_API) || API_PADRAO).replace(/\/+$/, "");
-}
-
-export function tokenSalvo() {
-  return TOKEN_FIXO || tokenEmMemoria || ler(CHAVE_TOKEN);
-}
-
-export function salvarAcesso(token, api) {
-  tokenEmMemoria = token.trim();
-  gravar(CHAVE_TOKEN, tokenEmMemoria);
-  if (api !== undefined) gravar(CHAVE_API, api.trim() === API_PADRAO ? "" : api.trim());
-}
-
-export function esquecerAcesso() {
-  tokenEmMemoria = "";
-  gravar(CHAVE_TOKEN, "");
+/** Página inicial relativa à página atual: "../" no computador, "../../" no celular. */
+export function configurarSaida(url) {
+  saida = url;
 }
 
 function cabecalhos() {
-  const cab = { Authorization: `Bearer ${tokenSalvo()}` };
-  const sessao = lerSessao();
-  if (sessao) {
-    cab["X-Papel-Usuario"] = sessao.papel;
-    cab["X-Usuario-Id"] = usuarioId(sessao.nome);
-  }
+  const cab = {};
+  const sessao = lerSessaoDaPlataforma();
+  if (!sessao) return cab;
+  cab.Authorization = `Bearer ${sessao.token}`;
+  const papel = lerSessao()?.papel;
+  if (papel) cab["X-Papel-Usuario"] = papel;
   return cab;
+}
+
+function sessaoRecusada(status) {
+  if (status !== 401) return;
+  encerrarSessaoLocal();
+  globalThis.window?.location?.assign(saida);
 }
 
 export async function requisitar(caminho, opcoes = {}) {
@@ -78,6 +42,7 @@ export async function requisitar(caminho, opcoes = {}) {
   } catch {
     return { status: 0, corpo: null };
   }
+  sessaoRecusada(resposta.status);
   let corpo = null;
   try {
     corpo = await resposta.json();
@@ -87,10 +52,11 @@ export async function requisitar(caminho, opcoes = {}) {
   return { status: resposta.status, corpo };
 }
 
-/** Arquivo protegido (ex.: comprovante_url) como Blob: a rota exige o código de acesso. */
+/** Arquivo protegido (ex.: comprovante_url) como Blob: a rota exige a sessão. */
 export async function baixarArquivo(caminho) {
   try {
     const resposta = await fetch(urlDaApi() + caminho, { headers: cabecalhos() });
+    sessaoRecusada(resposta.status);
     return { status: resposta.status, blob: resposta.ok ? await resposta.blob() : null };
   } catch {
     return { status: 0, blob: null };

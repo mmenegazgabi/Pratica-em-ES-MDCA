@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 
-const dom = new JSDOM('<!DOCTYPE html><body><div id="app"></div></body>', { url: "http://localhost/Financeiro/#/projetos" });
+const dom = new JSDOM('<!DOCTYPE html><body><div id="app-teste"></div></body>', { url: "http://localhost/Financeiro/#/projetos" });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, localStorage: dom.window.localStorage });
 
 const PENDENTES = [
@@ -17,13 +17,12 @@ globalThis.fetch = async (url) => {
   return { status: 200, json: async () => corpo };
 };
 
-localStorage.setItem("mdca.financeiro.sessao", JSON.stringify({ papel: "coordenacao", nome: "Luana Ferraz" }));
-const { salvarAcesso } = await import("../base/api.js");
-salvarAcesso("token-de-teste");
+const { sessaoDeTeste } = await import("./ajuda-sessao.js");
+sessaoDeTeste({ papeis: ["coordenacao"], nome: "Luana Ferraz" });
 const { iniciar } = await import("../app.js");
 
 test("abrindo direto em Projetos, o contador do Início mostra as pendências", async () => {
-  const raiz = document.getElementById("app");
+  const raiz = document.getElementById("app-teste");
   iniciar(raiz, { redirecionar: () => {} });
   await new Promise((r) => setTimeout(r, 50));
   const selo = raiz.querySelector("[data-contador]");
