@@ -4,7 +4,6 @@ export const PAPEIS = {
   coordenacao: "Coordenação",
   direcao: "Diretoria",
   voluntario_financeiro: "Voluntário financeiro",
-  administracao: "Administração",
   educador: "Educador",
 };
 
@@ -72,14 +71,12 @@ const ITENS = {
   conciliacao: { id: "conciliacao", rotulo: "Conciliação", icone: "conciliacao", rota: "#/conciliacao" },
   relatorios: { id: "relatorios", rotulo: "Relatórios", icone: "relatorios", rota: "#/relatorios" },
   auditoria: { id: "auditoria", rotulo: "Auditoria", icone: "auditoria", rota: "#/auditoria" },
-  acessos: { id: "acessos", rotulo: "Acessos", icone: "acessos", rota: "#/acessos" },
 };
 
 const MENU_POR_PAPEL = {
   coordenacao: ["inicio", "lancamentos", "projetos", "relatorios", "auditoria"],
   direcao: ["inicio", "projetos", "relatorios", "auditoria"],
   voluntario_financeiro: ["inicio", "lancamentos", "conciliacao"],
-  administracao: ["inicio", "acessos"],
   educador: [],
 };
 

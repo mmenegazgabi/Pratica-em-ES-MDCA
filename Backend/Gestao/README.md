@@ -9,15 +9,20 @@ Dono: time de Gestão.
 ```
 Gestao/
   banco.py        # conexão com o PostgreSQL (DATABASE_URL), via Depends(obter_conexao)
+  acesso.py       # quem pode consultar e gerenciar cada programa (provisório até a T-33)
+  auditoria.py    # registro de eventos na trilha única (log_auditoria)
   programas.py    # programas, convênios e vagas (regras e consultas, um arquivo por assunto)
   plano_de_acao.py  # objetivos, ações, metas, registros do realizado e painel
+  equipe.py       # equipe e espaços de cada programa
+  usuarios.py     # usuários e papéis da plataforma (só consulta)
   routers/        # rotas FastAPI, todas com prefixo /gestao
+    __init__.py   # junta todos os routers de Gestão num só
   tests/          # testes do módulo, rodados pelo job backend-gestao do CI
 ```
 
-- A API não tem entrada própria: os routers são registrados em
-  [`Backend/main.py`](../main.py), a entrada única publicada no Cloud Run.
-  Toda rota nova precisa de um `app.include_router(...)` lá.
+- A API não tem entrada própria: [`Backend/main.py`](../main.py), a entrada única
+  publicada no Cloud Run, inclui só o router de `routers/__init__.py`. Uma rota nova
+  de Gestão entra nesse arquivo, sem mexer no `main.py` compartilhado com o Financeiro.
 - As tabelas são criadas pelas migrations do Alembic em
   [`Backend/Shared/migrations`](../Shared/migrations) (head único, compartilhado com
   o Financeiro). O código de Gestão só lê e grava.
@@ -27,7 +32,9 @@ Gestao/
 
 ## Rotas
 
-Programas e plano de ação (US-02), sobre o cadastro canônico de Programas/Projetos
+### Programas e plano de ação (US-02)
+
+Sobre o cadastro canônico de Programas/Projetos
 (tabela `projetos`, ARQ-02, a mesma que o Financeiro usa em orçamentos e lançamentos):
 
 | Rota | O que faz |
@@ -53,6 +60,54 @@ Regras:
   `semestral` ou `anual`.
 - Identificador repetido (sem diferenciar maiúsculas) e vagas com a mesma descrição no
   programa respondem **409**. Programa ou meta inexistente: **404**.
+- Estas rotas exigem só o token de serviço; ainda não usam o acesso por programa
+  da seção abaixo.
+
+### Equipe, espaços e usuários (US-01)
+
+| Rota | O que faz | Quem pode |
+|---|---|---|
+| `GET /gestao/programas/{programa_id}/equipe` | Vínculos ativos (quem pode ser responsável de turma); `?incluir_desligados=true` traz o histórico | Equipe ativa do programa, direção, administração |
+| `POST /gestao/programas/{programa_id}/equipe` | Vincula uma pessoa: `usuario_id`, `papel_id`, `data_entrada` | Coordenação vinculada ao programa, administração |
+| `PATCH /gestao/programas/{programa_id}/equipe/{vinculo_id}/desligamento` | Registra a `data_saida`; o vínculo não é apagado | Coordenação vinculada ao programa, administração |
+| `GET /gestao/programas/{programa_id}/espacos` | Espaços do programa | Equipe ativa do programa, direção, administração |
+| `POST /gestao/programas/{programa_id}/espacos` | Cadastra um espaço: `nome`, `capacidade` opcional | Coordenação vinculada ao programa, administração |
+| `GET /gestao/usuarios` | Usuários da plataforma (ativos e desativados) com papéis da plataforma e vínculos ativos; alimenta "Usuários e acessos" e a escolha de quem vincular | Administração, coordenação ativa em algum programa |
+| `GET /gestao/papeis` | Catálogo de papéis (`id`, `nome`) | Qualquer usuário identificado |
+
+Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
+409 (vínculo ativo repetido, desligamento já registrado, espaço com nome repetido),
+400 (usuário ou papel inexistente, saída antes da entrada) e 422 (corpo inválido).
+
+## Acesso às rotas de programa (provisório até a T-33 e a T-35)
+
+- Quem chama é identificado pelo cabeçalho `X-Usuario-Id`, junto com o token de
+  serviço, como no Financeiro. Sem ele, a resposta é 400.
+- Os papéis vêm do banco, não de cabeçalho: os da plataforma em `usuarios_papeis`
+  (direção e administração) e os do programa em `vinculos_equipe`.
+- **Vínculo ativo** é o que não tem data de saída ou tem a saída no futuro. A partir
+  da data de saída o acesso ao programa é bloqueado, e o vínculo fica no histórico.
+- Usuário inexistente ou desativado não acessa nenhum programa.
+- Toda negação grava em `log_auditoria` (módulo `gestao`, ação `acesso_negado`,
+  programa, método e rota) antes de responder 403. Na lista de usuários o alvo é
+  `usuarios`, sem id.
+- Enquanto não há login, quem tem o token pode se identificar como qualquer usuário.
+  A proteção real vem com a T-35 (login) e a T-33 (RBAC).
+- Ainda não há rota de cadastro de usuários (a API só consulta): para começar, inclua
+  um administrador direto no banco. Para testar as telas de Gestão, vale incluir também
+  um programa, uma coordenação e uma educadora:
+
+  ```sql
+  INSERT INTO usuarios (id, nome) VALUES ('admin', 'Administração');
+  INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('admin', 'administracao');
+
+  -- Opcional, para testar o frontend:
+  INSERT INTO projetos (id, nome) VALUES ('p-semear', 'Semear');
+  INSERT INTO usuarios (id, nome) VALUES ('ana', 'Ana Martins'), ('jessica', 'Jéssica Almeida');
+  INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) VALUES
+    ('v-ana', 'ana', 'p-semear', 'coordenacao', '2026-01-10'),
+    ('v-jessica', 'jessica', 'p-semear', 'educador', '2026-03-01');
+  ```
 
 ## Testes
 

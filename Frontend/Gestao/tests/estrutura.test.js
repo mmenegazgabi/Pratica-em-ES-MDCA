@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RAIZ = fileURLToPath(new URL("..", import.meta.url));
@@ -18,7 +18,8 @@ function arquivosJs(pasta) {
 test("só base/api.js faz requisições HTTP", () => {
   const usam = arquivosJs(RAIZ)
     .filter((arquivo) => /\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon/.test(readFileSync(arquivo, "utf8")))
-    .map((arquivo) => relative(RAIZ, arquivo));
+    // Separador do POSIX também no Windows, para a comparação valer em qualquer máquina.
+    .map((arquivo) => relative(RAIZ, arquivo).split(sep).join("/"));
 
   assert.deepEqual(usam, ["base/api.js"]);
 });
