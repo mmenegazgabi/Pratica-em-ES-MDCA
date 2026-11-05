@@ -3,7 +3,7 @@
 // `carregarNaTela` é o caminho comum: mostra "Carregando…", chama a API e troca o
 // conteúdo pelo resultado ou pelo estado certo do erro, com como tentar de novo.
 
-import { API_PADRAO, ERROS, ErroApi, salvarAcesso, salvarServidor, urlDaApi } from "./api.js";
+import { API_PADRAO, ERROS, ErroApi, salvarAcesso, salvarServidor, salvarUsuario, urlDaApi, usuarioSalvo } from "./api.js";
 import { el } from "./dom.js";
 
 const campo = (id, rotulo, entrada, dica) =>
@@ -78,20 +78,29 @@ function semPermissao(erro) {
   );
 }
 
+// Pede o código (401) e/ou o usuário (400 sem X-Usuario-Id). Os dois campos aparecem
+// sempre; só o que causou o erro é obrigatório, e o código em branco mantém o salvo.
 function pedirCodigo(erro, tentarDeNovo) {
-  const codigo = el("input", { id: "f-codigo-acesso", name: "codigo", type: "password", autocomplete: "off", autocapitalize: "off", spellcheck: "false", required: true });
+  const pedeCodigo = erro.tipo === ERROS.NAO_AUTENTICADO;
+  const codigo = el("input", { id: "f-codigo-acesso", name: "codigo", type: "password", autocomplete: "off", autocapitalize: "off", spellcheck: "false", required: pedeCodigo });
+  const usuario = el("input", { id: "f-usuario", name: "usuario", type: "text", autocomplete: "username", autocapitalize: "off", spellcheck: "false", required: !pedeCodigo });
+  usuario.value = usuarioSalvo();
   const servidor = entradaServidor();
   const aviso = el("p", { class: "error-message", role: "alert", hidden: true });
 
+  function recusar(texto, campo) {
+    aviso.textContent = texto;
+    aviso.hidden = false;
+    campo.focus();
+  }
+
   function enviar(evento) {
     evento.preventDefault();
-    if (!codigo.value.trim()) {
-      aviso.textContent = "Informe o código de acesso.";
-      aviso.hidden = false;
-      codigo.focus();
-      return;
-    }
-    salvarAcesso(codigo.value, servidor.value);
+    if (pedeCodigo && !codigo.value.trim()) return recusar("Informe o código de acesso.", codigo);
+    if (!pedeCodigo && !usuario.value.trim()) return recusar("Informe seu usuário.", usuario);
+    if (codigo.value.trim()) salvarAcesso(codigo.value, servidor.value);
+    else salvarServidor(servidor.value);
+    salvarUsuario(usuario.value);
     tentarDeNovo();
   }
 
@@ -105,7 +114,8 @@ function pedirCodigo(erro, tentarDeNovo) {
       el(
         "form",
         { class: "form-grid estado__formulario", novalidate: true, onsubmit: enviar },
-        campo("f-codigo-acesso", "Código de acesso", codigo, "O mesmo código do Financeiro. Fica salvo só neste aparelho."),
+        campo("f-codigo-acesso", "Código de acesso", codigo, pedeCodigo ? "O mesmo código do Financeiro. Fica salvo só neste aparelho." : "Em branco, mantém o código já salvo."),
+        campo("f-usuario", "Seu usuário", usuario, "Identificador da sua conta na plataforma (ex.: jessica). Fica salvo só neste aparelho."),
         servidorAvancado(servidor),
         aviso,
         el("div", { class: "field wide" }, el("button", { type: "submit", class: "btn primary" }, "Entrar e carregar")),
@@ -114,8 +124,11 @@ function pedirCodigo(erro, tentarDeNovo) {
   );
 }
 
+const PEDE_IDENTIFICACAO = [ERROS.NAO_AUTENTICADO, ERROS.SEM_USUARIO];
+export const ehRestrito = (erro) => [...PEDE_IDENTIFICACAO, ERROS.SEM_PERMISSAO].includes(erro?.tipo);
+
 export function acessoRestrito(erro, tentarDeNovo) {
-  return erro.tipo === ERROS.NAO_AUTENTICADO ? pedirCodigo(erro, tentarDeNovo) : semPermissao(erro);
+  return PEDE_IDENTIFICACAO.includes(erro.tipo) ? pedirCodigo(erro, tentarDeNovo) : semPermissao(erro);
 }
 
 /**
@@ -130,8 +143,7 @@ export function carregarNaTela(container, buscar, mostrar) {
       conteudo = mostrar(await buscar());
     } catch (e) {
       const erro = e instanceof ErroApi ? e : new ErroApi(ERROS.FALHA);
-      const restrito = erro.tipo === ERROS.NAO_AUTENTICADO || erro.tipo === ERROS.SEM_PERMISSAO;
-      conteudo = restrito ? acessoRestrito(erro, tentar) : falha(erro, tentar);
+      conteudo = ehRestrito(erro) ? acessoRestrito(erro, tentar) : falha(erro, tentar);
     }
     if (container.isConnected) container.replaceChildren(conteudo);
   }

@@ -15,7 +15,15 @@ function semProgramas() {
 
 export function listaDeProgramas(programas) {
   if (!programas?.length) return semProgramas();
-  const linhas = programas.map((p) => el("tr", {}, el("td", {}, p.nome), el("td", {}, el("code", {}, p.id))));
+  const linhas = programas.map((p) =>
+    el(
+      "tr",
+      {},
+      el("td", {}, p.nome),
+      el("td", {}, el("code", {}, p.id)),
+      el("td", {}, el("a", { class: "text-link", href: `#/programas/${encodeURIComponent(p.id)}/equipe` }, "Equipe e espaços")),
+    ),
+  );
   return el(
     "section",
     { class: "card" },
@@ -25,7 +33,11 @@ export function listaDeProgramas(programas) {
       el(
         "table",
         {},
-        el("thead", {}, el("tr", {}, el("th", { scope: "col" }, "Programa"), el("th", { scope: "col" }, "Identificador"))),
+        el(
+          "thead",
+          {},
+          el("tr", {}, el("th", { scope: "col" }, "Programa"), el("th", { scope: "col" }, "Identificador"), el("th", { scope: "col" }, "Equipe")),
+        ),
         el("tbody", {}, linhas),
       ),
     ),

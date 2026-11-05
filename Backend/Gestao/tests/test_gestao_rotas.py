@@ -5,6 +5,11 @@ def test_rotas_de_gestao_aparecem_no_openapi_junto_com_as_do_financeiro(cliente)
     rotas = cliente.get("/openapi.json").json()["paths"]
 
     assert "/gestao/programas" in rotas
+    assert "/gestao/programas/{programa_id}/equipe" in rotas
+    assert "/gestao/programas/{programa_id}/equipe/{vinculo_id}/desligamento" in rotas
+    assert "/gestao/programas/{programa_id}/espacos" in rotas
+    assert "/gestao/usuarios" in rotas
+    assert "/gestao/papeis" in rotas
     assert "/orcamentos" in rotas
     assert "/health" in rotas
 

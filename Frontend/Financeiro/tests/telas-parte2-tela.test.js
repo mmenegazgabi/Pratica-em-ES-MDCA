@@ -1,4 +1,4 @@
-// Conciliação, Relatórios e Acessos montados no jsdom com a API simulada.
+// Conciliação, Relatórios e Auditoria montados no jsdom com a API simulada.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
@@ -7,7 +7,6 @@ const dom = new JSDOM('<!DOCTYPE html><body><div id="c"></div></body>', { url: "
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, localStorage: dom.window.localStorage });
 const conciliacao = await import("../telas/conciliacao.js");
 const relatorios = await import("../telas/relatorios.js");
-const acessos = await import("../telas/acessos.js");
 const auditoria = await import("../telas/auditoria.js");
 
 const resposta = (status, corpo) => ({ ok: status < 400, status, headers: { get: () => "application/json" }, json: async () => corpo, text: async () => JSON.stringify(corpo) });
@@ -102,32 +101,13 @@ test("relatórios: prévia só com aprovados do período e aviso de não concili
   assert.equal([...container().querySelectorAll("button")].find((b) => b.textContent.includes("Gerar relatório")).disabled, true);
 });
 
-test("acessos: convidar valida e acrescenta com convite pendente; auditoria filtra", async () => {
-  await acessos.mostrar(container());
-  const linhasAntes = container().querySelectorAll("tbody tr").length;
-  [...container().querySelectorAll("button")].find((b) => b.textContent.includes("Convidar pessoa")).click();
-  const dialogo = container().querySelector("dialog") || document.querySelector("dialog");
-  dialogo.querySelector("form").dispatchEvent(new window.Event("submit", { cancelable: true }));
-  assert.match(dialogo.textContent, /Informe o nome\./);
-  dialogo.querySelector("#pessoa-nome").value = "Rita Dias";
-  dialogo.querySelector("#pessoa-email").value = "rita@mdca.org.br";
-  dialogo.querySelector("#pessoa-papel").value = "educador";
-  dialogo.querySelector("#pessoa-projetos").value = "Música";
-  dialogo.querySelector("form").dispatchEvent(new window.Event("submit", { cancelable: true }));
-  const linhas = [...container().querySelectorAll("tbody tr")];
-  assert.equal(linhas.length, linhasAntes + 1);
-  assert.match(linhas.at(-1).textContent, /Rita Dias.*Convite pendente/);
-
-  [...container().querySelectorAll('[role="tab"]')].find((b) => b.textContent === "Auditoria").click();
+test("auditoria (coordenação e direção): histórico com busca", async () => {
+  await auditoria.mostrar(container());
+  assert.match(container().textContent, /Histórico de ações/);
+  const total = container().querySelectorAll("tbody tr").length;
+  assert.ok(total > 1);
   const busca = container().querySelector('input[type="search"]');
   busca.value = "concil";
   busca.dispatchEvent(new window.Event("input"));
   assert.equal(container().querySelectorAll("tbody tr").length, 1);
-});
-
-test("auditoria (coordenação e direção): só o histórico, sem aba de pessoas", async () => {
-  await auditoria.mostrar(container());
-  assert.match(container().textContent, /Histórico de ações/);
-  assert.equal(container().querySelector('[role="tab"]'), null);
-  assert.ok(container().querySelectorAll("tbody tr").length > 0);
 });

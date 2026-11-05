@@ -48,9 +48,40 @@ test("lista os programas na ordem da API, com nome e identificador", async () =>
 
   const linhas = [...container.querySelectorAll("tbody tr")].map((tr) => [...tr.cells].map((c) => c.textContent));
   assert.deepEqual(linhas, [
-    ["Casa de Convivência", "p-2"],
-    ["Semear", "p-1"],
+    ["Casa de Convivência", "p-2", "Equipe e espaços"],
+    ["Semear", "p-1", "Equipe e espaços"],
   ]);
+});
+
+test("cada programa leva à sua Equipe e espaços, com o id codificado", async () => {
+  await mostrarProgramas(container, { buscar: async () => [{ id: "p 1/x", nome: "Semear" }] });
+
+  assert.equal(container.querySelector("tbody a").getAttribute("href"), "#/programas/p%201%2Fx/equipe");
+});
+
+test("sem usuário identificado (400) pede o usuário e mantém o código salvo", async () => {
+  localStorage.setItem("mdca.financeiro.token", "token-salvo");
+  let chamadas = 0;
+  const buscar = async () => {
+    chamadas += 1;
+    if (chamadas === 1) throw new ErroApi(ERROS.SEM_USUARIO, 400, "Identificação do usuário obrigatória.");
+    return [];
+  };
+  await mostrarProgramas(container, { buscar });
+  assert.match(texto(), /Informe seu usuário/);
+
+  const form = container.querySelector("form");
+  enviar(form);
+  assert.equal(chamadas, 1);
+  assert.match(container.querySelector('[role="alert"]:not([hidden])').textContent, /Informe seu usuário/);
+
+  container.querySelector("#f-usuario").value = " jessica ";
+  enviar(form);
+  await esperar();
+
+  assert.equal(chamadas, 2);
+  assert.equal(localStorage.getItem("mdca.gestao.usuario"), "jessica");
+  assert.equal(localStorage.getItem("mdca.financeiro.token"), "token-salvo");
 });
 
 test("nome vindo da API entra como texto, nunca como HTML", async () => {
