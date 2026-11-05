@@ -22,7 +22,8 @@ Gestao/
     estados.js    # estados carregando, erro e acesso restrito
     papeis.js     # perfis e menu por perfil
     dom.js        # montagem de DOM sem innerHTML
-  telas/          # telas ligadas à API (hoje: programas.js)
+    formulario.js # formulário em diálogo que mostra a recusa da API sem fechar
+  telas/          # telas ligadas à API (programas, equipe, usuarios)
   tests/          # node --test + jsdom
 ```
 
@@ -31,14 +32,24 @@ Gestao/
 | Tela | Rota da API | Situação |
 |---|---|---|
 | Programas (lista) | `GET /gestao/programas` | ligada (T-00g) |
+| Equipe e espaços do programa (`#/programas/{id}/equipe`) | `…/equipe`, `…/equipe/{vinculo}/desligamento`, `…/espacos`, `/gestao/usuarios`, `/gestao/papeis` | ligada (T-40) |
+| Usuários e acessos (administração) | `GET /gestao/usuarios` | ligada, só consulta (T-40) |
 | Demais telas | — | demonstração, até a US de cada uma |
+
+- **Equipe e espaços:** aberta pelo link de cada programa na lista. Mostra a equipe com
+  o histórico (quem saiu aparece como Desligado) e os espaços. Coordenação e
+  administração veem os botões de vincular, desligar (com data de saída obrigatória) e
+  cadastrar espaço. Os programas fictícios do protótipo (`p1`…) continuam na
+  demonstração, e o detalhe completo do programa chega com a US-02 (T-45).
+- **Usuários e acessos:** contas com perfis da plataforma e vínculos ativos. Criar e
+  editar contas ainda não têm rota na API.
 
 Para ligar uma tela nova:
 
 1. Adicione a chamada em `base/api.js` (ex.: `export const listarTurmas = () => requisitar("/gestao/turmas")`).
 2. Crie `telas/<tela>.js` com `carregarNaTela(container, buscar, mostrar)`, que já cuida de
-   carregando, erro (com "Tentar de novo") e acesso restrito (401 pede o código; 403 avisa
-   que o perfil não tem acesso).
+   carregando, erro (com "Tentar de novo") e acesso restrito (401 pede o código; 400 sem
+   usuário pede o usuário; 403 avisa que o perfil não tem acesso).
 3. Em `app.js`, troque a tela de demonstração pela nova e não mostre o aviso de
    demonstração nela (veja `programsApiPage` e `apiScreen` em `render`).
 4. Teste em `tests/`.
@@ -53,6 +64,11 @@ Nenhum outro arquivo deve chamar `fetch`: o teste `estrutura.test.js` falha se i
   O campo "Servidor (avançado)" troca o endereço da API, para testar com o backend local.
   Ele aparece também na tela de erro (aberto quando o endereço não é o padrão); em
   branco, volta para a API publicada.
+- **Seu usuário:** as rotas de programa e de usuários exigem saber quem chama
+  (`X-Usuario-Id`, o `id` da tabela `usuarios`, ex.: `jessica`). A tela de acesso pede o
+  usuário junto com o código, e ele pode ser trocado em "Usuário na API" no menu do
+  usuário. Fica salvo só neste aparelho, em `mdca.gestao.usuario`. Até o login, qualquer
+  pessoa com o código pode se identificar como outro usuário.
 - **Perfil:** escolhido na entrada ou no menu do usuário e salvo em `mdca.gestao.papel`.
   Ele só define o que aparece no menu; quem protege os dados é a API (RBAC, T-33).
 
