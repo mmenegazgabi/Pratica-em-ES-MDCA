@@ -1,10 +1,10 @@
-// Conciliação, Relatórios, Acessos e categorias com limite: regras sem DOM.
+// Conciliação, Relatórios, Auditoria e categorias com limite: regras sem DOM.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 import { aprovadosEmAberto, diasEmAberto, extratoEmAberto, mesmoValor, valoresDiferentes } from "../telas/conciliacao-dados.js";
 import { lancamentosDoPeriodo, montarCsv, resumoDoPeriodo, validarPeriodo } from "../telas/relatorios-dados.js";
-import { filtrarAuditoria, validarPessoa } from "../telas/acessos-dados.js";
+import { filtrarAuditoria } from "../telas/auditoria-dados.js";
 import { categoriasDoOrcamento } from "../telas/projetos-dados.js";
 
 const AGORA = new Date("2026-10-27T15:00:00Z");
@@ -79,20 +79,7 @@ describe("relatórios", () => {
   });
 });
 
-describe("acessos", () => {
-  const pessoas = [{ id: "p1", email: "luana@mdca.org.br" }];
-
-  test("validar pessoa", () => {
-    assert.deepEqual(validarPessoa({ nome: "", email: "x", papel: "", projetos: "" }, pessoas), {
-      nome: "Informe o nome.",
-      email: "E-mail inválido.",
-      papel: "Escolha o papel.",
-      projetos: 'Informe os projetos (ou "Todos").',
-    });
-    assert.equal(validarPessoa({ nome: "A", email: "LUANA@mdca.org.br", papel: "educador", projetos: "Todos" }, pessoas).email, "Já existe uma pessoa com esse e-mail.");
-    assert.deepEqual(validarPessoa({ nome: "A", email: "luana@mdca.org.br", papel: "educador", projetos: "Todos" }, pessoas, "p1"), {});
-  });
-
+describe("auditoria", () => {
   test("filtrar auditoria por texto", () => {
     const registros = [{ quem: "Luana", acao: "Aprovou despesa", alvo: "Leitura" }, { quem: "Lucas", acao: "Conciliou", alvo: "EXT-1" }];
     assert.equal(filtrarAuditoria(registros, "  ").length, 2);

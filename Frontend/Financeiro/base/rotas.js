@@ -10,7 +10,7 @@ export function lerRota(hash) {
   if (nome === "entrar") return { tela: "entrar", parametros: {} };
   if (nome === "projetos" && id) return { tela: "projeto", parametros: { id: decodeURIComponent(id) } };
   if (nome === "projetos") return { tela: "projetos", parametros };
-  if (["conciliacao", "relatorios", "auditoria", "acessos"].includes(nome)) return { tela: nome, parametros };
+  if (["conciliacao", "relatorios", "auditoria"].includes(nome)) return { tela: nome, parametros };
   return { tela: "inicio", parametros: {} };
 }
 
