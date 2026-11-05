@@ -61,16 +61,6 @@ export function nomeDoAutor(autorId) {
     .join(" ");
 }
 
-/** " Marcos Vieira " → "marcos-vieira". */
-export function usuarioId(nome) {
-  return String(nome)
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-");
-}
-
 const ITENS = {
   inicio: { id: "inicio", rotulo: "Início", icone: "inicio", rota: "#/inicio" },
   lancamentos: { id: "lancamentos", rotulo: "Lançamentos", icone: "lancamentos", rota: "#/lancamentos" },

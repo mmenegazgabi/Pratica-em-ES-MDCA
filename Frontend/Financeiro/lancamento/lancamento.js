@@ -26,8 +26,8 @@ import {
 import { el, limpar } from "../base/dom.js";
 import { formatarData, formatarMoeda, tempoRelativo } from "../base/formatar.js";
 import { icone } from "../base/icones.js";
-import { lerSessao } from "../base/sessao.js";
-import { sair as sairDaPlataforma } from "../../Shared/plataforma.js";
+import { escolherPapel, lerSessao } from "../base/sessao.js";
+import { lerSessao as lerSessaoDaPlataforma, sair as sairDaPlataforma, temPapel } from "../../Shared/plataforma.js";
 import {
   agruparDespesas,
   legendaDaDespesa,
@@ -138,7 +138,7 @@ function respostaComFalha(respostas) {
 }
 
 function mostrarFalha({ status, corpo }) {
-  if (status === 401) return telaSemSessao();
+  if (status === 401) return irParaOInicio();
   montar(
     el("p", { class: "aviso", role: "alert" }, mensagemDeErro(status, corpo)),
     el("button", { type: "button", class: "botao botao--sec", onclick: mostrarTela }, "Tentar de novo"),
@@ -157,10 +157,6 @@ function rotaAtual() {
   return { nome, id: decodeURIComponent(id) };
 }
 
-function precisaEntrar() {
-  return lerSessao()?.papel !== "educador";
-}
-
 const TELAS = {
   "": { abrir: telaDespesas, aba: "despesas" },
   completar: { abrir: telaCompletar },
@@ -173,7 +169,10 @@ const TELAS = {
 function mostrarTela() {
   vez += 1;
   liberarImagens();
-  if (precisaEntrar()) return telaSemSessao();
+  const plataforma = lerSessaoDaPlataforma();
+  if (!plataforma) return irParaOInicio();
+  if (!temPapel(plataforma, "educador")) return telaSoParaEducadores();
+  escolherPapel("educador"); // este app é sempre do educador, mesmo que a pessoa use outro papel no computador
   const { nome, id } = rotaAtual();
   const rota = TELAS[nome] || TELAS[""];
   if (rota.aba && rota.aba !== "despesas") fecharAviso();
@@ -185,16 +184,19 @@ function mostrarTela() {
   return rota.abrir(id, vez);
 }
 
-// --- Sem sessão de educador ------------------------------------------------
-// Provisório: a entrada completa pela sessão da plataforma vem no próximo passo do T-35.
+// --- Sem sessão / sem papel de educador -------------------------------------
 
-function telaSemSessao() {
+function irParaOInicio() {
+  window.location.assign(INICIO_DA_PLATAFORMA);
+}
+
+function telaSoParaEducadores() {
   vez += 1;
   abas.hidden = true;
   montar(
     el("h1", { class: "titulo" }, "Minhas despesas"),
-    el("p", { id: "aviso-entrar", class: "aviso", role: "alert" }, "Entre pela página inicial do MDCA para usar este app."),
-    el("a", { id: "link-inicio", class: "botao", href: INICIO_DA_PLATAFORMA }, "Ir para o início"),
+    el("p", { id: "aviso-educadores", class: "aviso", role: "alert" }, "Este app é para educadores."),
+    el("a", { id: "link-inicio", class: "botao", href: "../" }, "Ir para o início"),
   );
 }
 
@@ -311,7 +313,7 @@ async function fotografar(evento) {
     return;
   }
   avisoFlutuante.hidden = true;
-  if (status === 401) return telaSemSessao();
+  if (status === 401) return irParaOInicio();
   avisar(mensagemDeErro(status, corpo));
 }
 
@@ -426,7 +428,7 @@ function formularioDespesa(config, minhaVez) {
       window.location.hash = "#/";
       return;
     }
-    if (status === 401) return telaSemSessao();
+    if (status === 401) return irParaOInicio();
     aviso.textContent = mensagemDeErro(status, corpo);
     aviso.hidden = false;
     aviso.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -606,16 +608,16 @@ async function telaAvisos(_id, minhaVez) {
 
 function telaPerfil() {
   const sessao = lerSessao();
+  const email = lerSessaoDaPlataforma()?.usuario?.email || "";
 
   async function sair() {
     await sairDaPlataforma();
-    window.location.hash = "#/";
-    mostrarTela();
+    irParaOInicio();
   }
 
   montar(
     el("h1", { class: "titulo" }, "Perfil"),
-    el("div", { class: "perfil" }, el("span", { class: "campo__rotulo" }, "Nome"), el("p", { id: "perfil-nome", class: "perfil__nome" }, sessao.nome), el("p", { class: "ajuda" }, "Educador")),
+    el("div", { class: "perfil" }, el("span", { class: "campo__rotulo" }, "Nome"), el("p", { id: "perfil-nome", class: "perfil__nome" }, sessao.nome), el("p", { id: "perfil-email", class: "ajuda" }, email)),
     el("button", { type: "button", id: "botao-sair", class: "botao botao--perigo", onclick: sair }, "Sair deste aparelho"),
   );
 }

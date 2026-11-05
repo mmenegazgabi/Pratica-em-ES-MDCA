@@ -1,7 +1,7 @@
 import { beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import * as modulo from "../base/sessao.js";
-import { escolherPapel, esquecerPapel, itensDeMenu, lerSessao, nomeDoAutor, papeisDoFinanceiro, usuarioId } from "../base/sessao.js";
+import { escolherPapel, esquecerPapel, itensDeMenu, lerSessao, nomeDoAutor, papeisDoFinanceiro } from "../base/sessao.js";
 import { sessaoDeTeste } from "./ajuda-sessao.js";
 
 function armazemFalso() {
@@ -16,11 +16,6 @@ function armazemFalso() {
 beforeEach(() => {
   globalThis.localStorage = armazemFalso();
   globalThis.sessionStorage = armazemFalso();
-});
-
-test("usuarioId normaliza o nome", () => {
-  assert.equal(usuarioId(" Marcos Vieira "), "marcos-vieira");
-  assert.equal(usuarioId("José  da Conceição"), "jose-da-conceicao");
 });
 
 test("saíram a sessão própria do Financeiro e as chaves do celular", () => {

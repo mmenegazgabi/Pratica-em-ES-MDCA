@@ -69,9 +69,11 @@ const json = (corpo, status = 200) => new Response(JSON.stringify(corpo), { stat
 async function abrirTela({ sessao = SESSAO_EDUCADOR, hash = "", dados = dadosIniciais(), responder } = {}) {
   // A saída por 401 chama location.assign, que o jsdom não navega: ignora só esse aviso.
   const virtualConsole = new VirtualConsole();
+  let saidas = 0; // quantas vezes a página tentou navegar (location.assign)
   virtualConsole.sendTo(console, { omitJSDOMErrors: true });
   virtualConsole.on("jsdomError", (erro) => {
-    if (!/Not implemented: navigation/.test(erro.message)) console.error(erro);
+    if (/Not implemented: navigation/.test(erro.message)) saidas += 1;
+    else console.error(erro);
   });
   const dom = new JSDOM(HTML, { url: `https://mdca-sistema.pages.dev/Financeiro/lancamento/${hash}`, virtualConsole });
   const { window } = dom;
@@ -129,7 +131,7 @@ async function abrirTela({ sessao = SESSAO_EDUCADOR, hash = "", dados = dadosIni
 
   const $ = (id) => window.document.getElementById(id);
   const texto = () => window.document.getElementById("tela").textContent;
-  return { window, $, texto, chamadas, dados, de: (metodo, caminho) => chamadas.filter((c) => c.metodo === metodo && c.caminho === caminho) };
+  return { window, $, texto, chamadas, dados, saidas: () => saidas, de: (metodo, caminho) => chamadas.filter((c) => c.metodo === metodo && c.caminho === caminho) };
 }
 
 async function irPara(tela, hash) {
@@ -152,7 +154,7 @@ async function enviarFormulario(tela, id) {
   await new Promise((ok) => setTimeout(ok, 20));
 }
 
-// --- Entrada pela sessão da plataforma (provisório até a entrada completa) ---
+// --- Entrada pela sessão da plataforma ---------------------------------------
 
 describe("sessão da plataforma", { skip: SEM_JSDOM }, () => {
   test("com sessão de educador: requisições levam o token da sessão e o papel educador", async () => {
@@ -162,24 +164,35 @@ describe("sessão da plataforma", { skip: SEM_JSDOM }, () => {
     assert.equal(chamada.headers.Authorization, "Bearer token-de-teste");
     assert.equal(chamada.headers["X-Papel-Usuario"], "educador");
     assert.equal("X-Usuario-Id" in chamada.headers, false);
+    assert.equal(tela.saidas(), 0);
   });
 
-  test("sem sessão: aviso com link para a página inicial e nenhuma chamada", async () => {
+  test("educador com outro papel em uso passa a usar o papel educador", async () => {
+    const tela = await abrirTela({ sessao: { papeis: ["coordenacao", "educador"], papel: "coordenacao", nome: "Marcos Vieira" } });
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
+    assert.equal(tela.window.localStorage.getItem("mdca.financeiro.papel"), "educador");
+    assert.equal(tela.de("GET", "/lancamentos")[0].headers["X-Papel-Usuario"], "educador");
+  });
+
+  test("sem sessão: vai para a página inicial sem nenhuma chamada", async () => {
     const tela = await abrirTela({ sessao: null });
-    await esperar(() => tela.$("aviso-entrar"), "aviso de entrar");
-    assert.equal(tela.$("abas").hidden, true);
-    assert.equal(tela.$("link-inicio").getAttribute("href"), "../../");
+    await esperar(() => tela.saidas() > 0, "ida para ../../");
     assert.equal(tela.de("GET", "/lancamentos").length, 0);
   });
 
-  test("pessoa sem o papel educador também vê o aviso", async () => {
+  test("pessoa sem o papel educador vê o aviso com link para o início do Financeiro", async () => {
     const tela = await abrirTela({ sessao: { papeis: ["coordenacao"], nome: "Luana" } });
-    await esperar(() => tela.$("aviso-entrar"), "aviso de entrar");
+    await esperar(() => tela.$("aviso-educadores"), "aviso de educadores");
+    assert.equal(tela.$("aviso-educadores").textContent, "Este app é para educadores.");
+    assert.equal(tela.$("link-inicio").getAttribute("href"), "../");
+    assert.equal(tela.$("abas").hidden, true);
+    assert.equal(tela.de("GET", "/lancamentos").length, 0);
+    assert.equal(tela.saidas(), 0);
   });
 
-  test("sessão recusada pela API (401) apaga a sessão e mostra o aviso", async () => {
+  test("sessão recusada pela API (401) apaga a sessão e volta para a página inicial", async () => {
     const tela = await abrirTela({ responder: () => ({ status: 401, corpo: { detail: "Sessão expirada." } }) });
-    await esperar(() => tela.$("aviso-entrar"), "aviso de entrar");
+    await esperar(() => tela.saidas() > 0, "ida para ../../");
     assert.equal(tela.window.localStorage.getItem("mdca.sessao"), null);
   });
 });
@@ -377,14 +390,16 @@ describe("avisos e perfil", { skip: SEM_JSDOM }, () => {
     await esperar(() => tela.de("PATCH", "/notificacoes/n1/lida").length === 1, "marcar como lida");
   });
 
-  test("perfil mostra o nome, sem campo de código, e 'Sair' encerra a sessão da plataforma", async () => {
-    const tela = await abrirTela({ hash: "#/perfil" });
+  test("perfil mostra nome e e-mail, sem campo de código, e 'Sair deste aparelho' encerra a sessão", async () => {
+    const tela = await abrirTela({ sessao: { ...SESSAO_EDUCADOR, email: "marcos@mdca.org.br" }, hash: "#/perfil" });
     await esperar(() => tela.$("perfil-nome"), "perfil");
     assert.equal(tela.$("perfil-nome").textContent, "Marcos Vieira");
+    assert.equal(tela.$("perfil-email").textContent, "marcos@mdca.org.br");
     assert.equal(tela.$("campo-token"), null);
+    assert.equal(tela.$("campo-servidor"), null);
 
     tela.$("botao-sair").click();
-    await esperar(() => tela.$("aviso-entrar"), "aviso de entrar");
+    await esperar(() => tela.saidas() > 0, "ida para ../../");
     assert.equal(tela.de("POST", "/auth/sair").length, 1);
     assert.equal(tela.window.localStorage.getItem("mdca.sessao"), null);
   });
