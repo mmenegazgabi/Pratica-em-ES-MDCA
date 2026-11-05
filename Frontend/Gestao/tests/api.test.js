@@ -1,0 +1,149 @@
+// Cliente de API: endereço, código de acesso, corpo e tradução dos erros.
+import { beforeEach, test } from "node:test";
+import assert from "node:assert/strict";
+import { API_PADRAO, ERROS, ErroApi, esquecerAcesso, listarProgramas, requisitar, salvarAcesso, salvarServidor, urlDaApi } from "../base/api.js";
+
+let chamadas;
+let dados;
+
+function responder(status, corpo) {
+  globalThis.fetch = async (url, opcoes = {}) => {
+    chamadas.push({ url, ...opcoes });
+    const texto = corpo === undefined ? "" : typeof corpo === "string" ? corpo : JSON.stringify(corpo);
+    return new Response(texto || null, { status });
+  };
+}
+
+async function falhaDe(promessa) {
+  try {
+    await promessa;
+  } catch (erro) {
+    return erro;
+  }
+  assert.fail("a chamada deveria falhar");
+}
+
+beforeEach(() => {
+  dados = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (dados.has(k) ? dados.get(k) : null),
+    setItem: (k, v) => dados.set(k, String(v)),
+    removeItem: (k) => dados.delete(k),
+  };
+  chamadas = [];
+  esquecerAcesso();
+  responder(200, [{ id: "p-1", nome: "Semear" }]);
+});
+
+test("usa o servidor publicado e envia o código de acesso salvo", async () => {
+  salvarAcesso("  token-de-teste  ");
+
+  const corpo = await listarProgramas();
+
+  assert.deepEqual(corpo, [{ id: "p-1", nome: "Semear" }]);
+  assert.equal(chamadas[0].url, `${API_PADRAO}/gestao/programas`);
+  assert.equal(chamadas[0].method, "GET");
+  assert.equal(chamadas[0].headers.Authorization, "Bearer token-de-teste");
+  assert.equal(chamadas[0].headers.Accept, "application/json");
+});
+
+test("sem código de acesso não envia Authorization", async () => {
+  await requisitar("/gestao/programas");
+
+  assert.equal("Authorization" in chamadas[0].headers, false);
+});
+
+test("o código e o servidor ficam nas mesmas chaves do Financeiro", () => {
+  salvarAcesso("token-de-teste", "http://localhost:8000/");
+
+  assert.equal(dados.get("mdca.financeiro.token"), "token-de-teste");
+  assert.equal(dados.get("mdca.financeiro.api"), "http://localhost:8000");
+  assert.equal(urlDaApi(), "http://localhost:8000");
+});
+
+test("voltar ao servidor publicado apaga o endereço salvo", () => {
+  salvarAcesso("token-de-teste", "http://localhost:8000");
+  salvarAcesso("token-de-teste", API_PADRAO);
+
+  assert.equal(dados.has("mdca.financeiro.api"), false);
+  assert.equal(urlDaApi(), API_PADRAO);
+});
+
+test("trocar só o servidor não mexe no código salvo; em branco volta ao publicado", () => {
+  salvarAcesso("token-de-teste", "http://localhost:8000");
+  salvarServidor("  ");
+
+  assert.equal(dados.has("mdca.financeiro.api"), false);
+  assert.equal(dados.get("mdca.financeiro.token"), "token-de-teste");
+  assert.equal(urlDaApi(), API_PADRAO);
+});
+
+test("envia dados como JSON", async () => {
+  await requisitar("/gestao/algo", { metodo: "POST", dados: { nome: "Semear" } });
+
+  assert.equal(chamadas[0].method, "POST");
+  assert.equal(chamadas[0].headers["Content-Type"], "application/json");
+  assert.equal(chamadas[0].body, '{"nome":"Semear"}');
+});
+
+test("resposta sem corpo devolve null", async () => {
+  responder(204);
+
+  assert.equal(await requisitar("/gestao/algo", { metodo: "POST" }), null);
+});
+
+for (const [status, tipo] of [
+  [401, ERROS.NAO_AUTENTICADO],
+  [403, ERROS.SEM_PERMISSAO],
+  [404, ERROS.NAO_ENCONTRADO],
+  [503, ERROS.INDISPONIVEL],
+  [500, ERROS.FALHA],
+  [422, ERROS.FALHA],
+]) {
+  test(`status ${status} vira o erro "${tipo}"`, async () => {
+    responder(status, { detail: "Motivo da API" });
+
+    const erro = await falhaDe(requisitar("/gestao/programas"));
+
+    assert.ok(erro instanceof ErroApi);
+    assert.equal(erro.tipo, tipo);
+    assert.equal(erro.status, status);
+    assert.equal(erro.detalhe, "Motivo da API");
+    assert.ok(erro.message.length > 0);
+  });
+}
+
+test("erro sem JSON não traz detalhe", async () => {
+  responder(500, "Internal Server Error");
+
+  const erro = await falhaDe(requisitar("/gestao/programas"));
+
+  assert.equal(erro.tipo, ERROS.FALHA);
+  assert.equal(erro.detalhe, "");
+});
+
+test("detail que não é texto (erros de validação) não vira detalhe", async () => {
+  responder(422, { detail: [{ loc: ["body", "nome"], msg: "obrigatório" }] });
+
+  assert.equal((await falhaDe(requisitar("/gestao/programas"))).detalhe, "");
+});
+
+test("sem conexão vira erro de rede", async () => {
+  globalThis.fetch = async () => {
+    throw new TypeError("Failed to fetch");
+  };
+
+  const erro = await falhaDe(requisitar("/gestao/programas"));
+
+  assert.equal(erro.tipo, ERROS.REDE);
+  assert.equal(erro.status, 0);
+});
+
+test("servidor que não responde no tempo limite vira erro de rede", async () => {
+  globalThis.fetch = (url, { signal }) =>
+    new Promise((_, rejeitar) => signal.addEventListener("abort", () => rejeitar(new DOMException("abortado", "AbortError"))));
+
+  const erro = await falhaDe(requisitar("/gestao/programas", { tempoLimite: 10 }));
+
+  assert.equal(erro.tipo, ERROS.REDE);
+});
