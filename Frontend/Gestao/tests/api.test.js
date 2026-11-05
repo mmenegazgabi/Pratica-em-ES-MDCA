@@ -1,7 +1,26 @@
 // Cliente de API: endereço, código de acesso, corpo e tradução dos erros.
 import { beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { API_PADRAO, ERROS, ErroApi, esquecerAcesso, listarProgramas, requisitar, salvarAcesso, salvarServidor, urlDaApi } from "../base/api.js";
+import {
+  API_PADRAO,
+  ERROS,
+  ErroApi,
+  criarEspaco,
+  esquecerAcesso,
+  listarEquipe,
+  listarEspacos,
+  listarPapeis,
+  listarProgramas,
+  listarUsuarios,
+  registrarDesligamento,
+  requisitar,
+  salvarAcesso,
+  salvarServidor,
+  salvarUsuario,
+  urlDaApi,
+  usuarioSalvo,
+  vincularProfissional,
+} from "../base/api.js";
 
 let chamadas;
 let dados;
@@ -32,7 +51,57 @@ beforeEach(() => {
   };
   chamadas = [];
   esquecerAcesso();
+  salvarUsuario("");
   responder(200, [{ id: "p-1", nome: "Semear" }]);
+});
+
+test("envia o usuário salvo em X-Usuario-Id, numa chave própria de Gestão", async () => {
+  salvarUsuario("  jessica ");
+
+  await requisitar("/gestao/programas");
+
+  assert.equal(chamadas[0].headers["X-Usuario-Id"], "jessica");
+  assert.equal(dados.get("mdca.gestao.usuario"), "jessica");
+  assert.equal(usuarioSalvo(), "jessica");
+});
+
+test("sem usuário salvo não envia X-Usuario-Id", async () => {
+  await requisitar("/gestao/programas");
+
+  assert.equal("X-Usuario-Id" in chamadas[0].headers, false);
+});
+
+test("400 por falta de identificação vira o erro sem_usuario; outro 400 continua falha", async () => {
+  responder(400, { detail: "Identificação do usuário obrigatória." });
+  assert.equal((await falhaDe(requisitar("/gestao/usuarios"))).tipo, ERROS.SEM_USUARIO);
+
+  responder(400, { detail: "Papel inválido." });
+  const erro = await falhaDe(requisitar("/gestao/programas/p-1/equipe", { metodo: "POST" }));
+  assert.equal(erro.tipo, ERROS.FALHA);
+  assert.equal(erro.detalhe, "Papel inválido.");
+});
+
+test("rotas de equipe, espaços, usuários e papéis", async () => {
+  await listarEquipe("p 1");
+  await listarEquipe("p-1", { incluirDesligados: true });
+  await vincularProfissional("p-1", { usuario_id: "ana", papel_id: "coordenacao", data_entrada: "2026-03-01" });
+  await registrarDesligamento("p-1", "v/1", "2026-06-30");
+  await listarEspacos("p-1");
+  await criarEspaco("p-1", { nome: "Ateliê", capacidade: null });
+  await listarUsuarios();
+  await listarPapeis();
+
+  const feitas = chamadas.map((c) => [c.method, c.url.replace(API_PADRAO, ""), c.body ?? null]);
+  assert.deepEqual(feitas, [
+    ["GET", "/gestao/programas/p%201/equipe", null],
+    ["GET", "/gestao/programas/p-1/equipe?incluir_desligados=true", null],
+    ["POST", "/gestao/programas/p-1/equipe", '{"usuario_id":"ana","papel_id":"coordenacao","data_entrada":"2026-03-01"}'],
+    ["PATCH", "/gestao/programas/p-1/equipe/v%2F1/desligamento", '{"data_saida":"2026-06-30"}'],
+    ["GET", "/gestao/programas/p-1/espacos", null],
+    ["POST", "/gestao/programas/p-1/espacos", '{"nome":"Ateliê","capacidade":null}'],
+    ["GET", "/gestao/usuarios", null],
+    ["GET", "/gestao/papeis", null],
+  ]);
 });
 
 test("usa o servidor publicado e envia o código de acesso salvo", async () => {

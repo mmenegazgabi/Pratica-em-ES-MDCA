@@ -13,6 +13,7 @@ Gestao/
   auditoria.py    # registro de eventos na trilha única (log_auditoria)
   programas.py    # regras e consultas do domínio (uma por assunto)
   equipe.py
+  usuarios.py
   routers/        # rotas FastAPI, todas com prefixo /gestao
     __init__.py   # junta todos os routers de Gestão num só
   tests/          # testes do módulo, rodados pelo job backend-gestao do CI
@@ -38,6 +39,8 @@ Gestao/
 | `PATCH /gestao/programas/{programa_id}/equipe/{vinculo_id}/desligamento` | Registra a `data_saida`; o vínculo não é apagado | Coordenação vinculada ao programa, administração |
 | `GET /gestao/programas/{programa_id}/espacos` | Espaços do programa | Equipe ativa do programa, direção, administração |
 | `POST /gestao/programas/{programa_id}/espacos` | Cadastra um espaço: `nome`, `capacidade` opcional | Coordenação vinculada ao programa, administração |
+| `GET /gestao/usuarios` | Usuários da plataforma (ativos e desativados) com papéis da plataforma e vínculos ativos; alimenta "Usuários e acessos" e a escolha de quem vincular | Administração, coordenação ativa em algum programa |
+| `GET /gestao/papeis` | Catálogo de papéis (`id`, `nome`) | Qualquer usuário identificado |
 
 Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 409 (vínculo ativo repetido, desligamento já registrado, espaço com nome repetido),
@@ -53,15 +56,24 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
   da data de saída o acesso ao programa é bloqueado, e o vínculo fica no histórico.
 - Usuário inexistente ou desativado não acessa nenhum programa.
 - Toda negação grava em `log_auditoria` (módulo `gestao`, ação `acesso_negado`,
-  programa, método e rota) antes de responder 403.
+  programa, método e rota) antes de responder 403. Na lista de usuários o alvo é
+  `usuarios`, sem id.
 - Enquanto não há login, quem tem o token pode se identificar como qualquer usuário.
   A proteção real vem com a T-35 (login) e a T-33 (RBAC).
-- Ainda não há rota de cadastro de usuários: para começar, inclua um administrador
-  direto no banco:
+- Ainda não há rota de cadastro de usuários (a API só consulta): para começar, inclua
+  um administrador direto no banco. Para testar as telas de Gestão, vale incluir também
+  um programa, uma coordenação e uma educadora:
 
   ```sql
   INSERT INTO usuarios (id, nome) VALUES ('admin', 'Administração');
   INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('admin', 'administracao');
+
+  -- Opcional, para testar o frontend:
+  INSERT INTO projetos (id, nome) VALUES ('p-semear', 'Semear');
+  INSERT INTO usuarios (id, nome) VALUES ('ana', 'Ana Martins'), ('jessica', 'Jéssica Almeida');
+  INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) VALUES
+    ('v-ana', 'ana', 'p-semear', 'coordenacao', '2026-01-10'),
+    ('v-jessica', 'jessica', 'p-semear', 'educador', '2026-03-01');
   ```
 
 ## Testes
