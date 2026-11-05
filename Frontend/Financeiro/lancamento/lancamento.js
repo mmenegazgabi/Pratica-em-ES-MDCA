@@ -26,7 +26,7 @@ import {
 import { el, limpar } from "../base/dom.js";
 import { formatarData, formatarMoeda, tempoRelativo } from "../base/formatar.js";
 import { icone } from "../base/icones.js";
-import { escolherPapel, lerSessao } from "../base/sessao.js";
+import { lerSessao, usarPapelFixo } from "../base/sessao.js";
 import { lerSessao as lerSessaoDaPlataforma, sair as sairDaPlataforma, temPapel } from "../../Shared/plataforma.js";
 import {
   agruparDespesas,
@@ -172,7 +172,7 @@ function mostrarTela() {
   const plataforma = lerSessaoDaPlataforma();
   if (!plataforma) return irParaOInicio();
   if (!temPapel(plataforma, "educador")) return telaSoParaEducadores();
-  escolherPapel("educador"); // este app é sempre do educador, mesmo que a pessoa use outro papel no computador
+  usarPapelFixo("educador"); // sempre educador aqui, sem trocar o papel salvo para o computador
   const { nome, id } = rotaAtual();
   const rota = TELAS[nome] || TELAS[""];
   if (rota.aba && rota.aba !== "despesas") fecharAviso();

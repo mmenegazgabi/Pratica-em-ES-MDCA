@@ -167,10 +167,10 @@ describe("sessão da plataforma", { skip: SEM_JSDOM }, () => {
     assert.equal(tela.saidas(), 0);
   });
 
-  test("educador com outro papel em uso passa a usar o papel educador", async () => {
+  test("educador com outro papel salvo usa educador sem trocar o papel do computador", async () => {
     const tela = await abrirTela({ sessao: { papeis: ["coordenacao", "educador"], papel: "coordenacao", nome: "Marcos Vieira" } });
     await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
-    assert.equal(tela.window.localStorage.getItem("mdca.financeiro.papel"), "educador");
+    assert.equal(tela.window.localStorage.getItem("mdca.financeiro.papel"), "coordenacao");
     assert.equal(tela.de("GET", "/lancamentos")[0].headers["X-Papel-Usuario"], "educador");
   });
 

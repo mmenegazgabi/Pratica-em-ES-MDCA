@@ -14,6 +14,13 @@ export function papeisDoFinanceiro(sessaoPlataforma) {
   return Object.keys(PAPEIS).filter((papel) => temPapel(sessaoPlataforma, papel));
 }
 
+let papelFixo = null; // só em memória: o app do celular usa "educador" sem mexer no papel salvo do computador
+
+/** Faz lerSessao() usar `papel` (se a pessoa o tiver) nesta página, sem gravar nada. */
+export function usarPapelFixo(papel) {
+  papelFixo = PAPEIS[papel] ? papel : null;
+}
+
 function papelSalvo() {
   try {
     return localStorage.getItem(CHAVE_PAPEL_FINANCEIRO);
@@ -30,7 +37,7 @@ export function lerSessao() {
   const sessao = lerSessaoDaPlataforma();
   if (!sessao) return null;
   const papeis = papeisDoFinanceiro(sessao);
-  const salvo = papelSalvo();
+  const salvo = papelFixo || papelSalvo();
   const papel = papeis.includes(salvo) ? salvo : papeis.length === 1 ? papeis[0] : null;
   return { papel, nome: String(sessao.usuario.nome || ""), usuarioId: String(sessao.usuario.id || "") };
 }
