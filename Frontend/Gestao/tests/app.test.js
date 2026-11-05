@@ -19,11 +19,19 @@ Object.assign(globalThis, {
 });
 
 const chamadas = [];
+const RESPOSTAS = [
+  [/\/equipe(\?|$)/, [{ id: "v-1", usuario_id: "ana", nome: "Ana Martins", papel_id: "coordenacao", papel: "Coordenação", data_entrada: "2025-01-10", data_saida: null, ativo: true }]],
+  [/\/espacos$/, []],
+  [/\/gestao\/usuarios$/, [{ id: "ana", nome: "Ana Martins", email: null, ativo: true, papeis: [], vinculos: [] }]],
+  [/\/gestao\/programas$/, [{ id: "p-1", nome: "Semear" }]],
+];
 globalThis.fetch = async (url, opcoes = {}) => {
   chamadas.push({ url, ...opcoes });
-  return new Response(JSON.stringify([{ id: "p-1", nome: "Semear" }]), { status: 200 });
+  const corpo = RESPOSTAS.find(([padrao]) => padrao.test(url))?.[1] ?? [];
+  return new Response(JSON.stringify(corpo), { status: 200 });
 };
 localStorage.setItem("mdca.financeiro.token", "token-de-teste");
+localStorage.setItem("mdca.gestao.usuario", "ana");
 
 await import("../app.js");
 
@@ -53,6 +61,23 @@ test("Programas carrega pela API, sem o aviso de demonstração", async () => {
   assert.equal($("#tela-api tbody td").textContent, "Semear");
   assert.equal($(".demo-banner"), null);
   assert.equal($(".sidebar .nav a.active").textContent, "Programas e turmas");
+});
+
+test("Equipe e espaços de um programa do cadastro carrega pela API, com o usuário salvo", async () => {
+  chamadas.length = 0;
+  await irPara("#/programas/p-1/equipe");
+
+  const urls = chamadas.map((c) => c.url.replace(/^https?:\/\/[^/]+/, ""));
+  assert.ok(urls.includes("/gestao/programas/p-1/equipe?incluir_desligados=true"));
+  assert.ok(urls.includes("/gestao/programas/p-1/espacos"));
+  assert.ok(chamadas.every((c) => c.headers["X-Usuario-Id"] === "ana"));
+  assert.equal($("#tela-api tbody strong").textContent, "Ana Martins");
+  assert.equal($("#main .subtitle").textContent, "Semear");
+  assert.equal($(".demo-banner"), null);
+});
+
+test("o menu do usuário mostra o usuário usado na API", () => {
+  assert.match($(".api-user").textContent, /Usuário na API: ana/);
 });
 
 test("detalhe de programa continua na demonstração", async () => {
@@ -85,4 +110,24 @@ test("rota fora do perfil mostra acesso restrito", async () => {
   await irPara("#/pessoas");
 
   assert.equal($("#main h1").textContent, "Acesso restrito");
+});
+
+test("Usuários e acessos fica restrito fora da administração, sem chamar a API", async () => {
+  chamadas.length = 0;
+  await irPara("#/usuarios");
+
+  assert.equal($("#main h1").textContent, "Acesso restrito");
+  assert.equal(chamadas.length, 0);
+});
+
+test("na administração, Usuários e acessos carrega pela API, sem o aviso de demonstração", async () => {
+  await irPara("#/inicio");
+  $('[data-action="persona:admin"]').click();
+  await esperar();
+  chamadas.length = 0;
+  await irPara("#/usuarios");
+
+  assert.equal(chamadas.at(-1).url.endsWith("/gestao/usuarios"), true);
+  assert.equal($("#tela-api tbody strong").textContent, "Ana Martins");
+  assert.equal($(".demo-banner"), null);
 });
