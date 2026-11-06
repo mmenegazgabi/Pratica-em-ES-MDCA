@@ -98,7 +98,7 @@ function liberarImagens() {
   urlsDeImagem = [];
 }
 
-/** Comprovante protegido pela API: baixa com o código de acesso e mostra. */
+/** Comprovante protegido pela API: baixa com o token da sessão e mostra. */
 async function preencherPrevia(caixa, caminho, minhaVez) {
   if (!caminho) return;
   const { blob } = await baixarArquivo(caminho);

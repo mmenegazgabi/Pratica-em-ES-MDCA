@@ -4,7 +4,7 @@ POST /rascunhos                    -> guarda só o comprovante
 GET  /rascunhos                    -> rascunhos de quem está logado
 POST /rascunhos/{id}/completar     -> vira lançamento pendente e o rascunho some
 
-Quem está logado vem do cabeçalho provisório ``X-Usuario-Id`` (até a US-08).
+Quem está logado vem da sessão do login único (ou de ``X-Usuario-Id`` no modo serviço).
 """
 
 from datetime import date, datetime

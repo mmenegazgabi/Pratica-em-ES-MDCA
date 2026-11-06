@@ -10,10 +10,12 @@ Cada módulo vive em sua própria subpasta de domínio dentro de `Backend/` e
 Backend/
   Financeiro/   # backend do Módulo Financeiro — dono: time Financeiro
   Gestao/       # backend do Módulo de Gestão   — dono: time de Gestão
+  Acesso/       # login único, sessões e administração de pessoas (docs/login.md)
   Shared/       # código de backend comum aos dois módulos
 Frontend/
   Financeiro/   # frontend do Módulo Financeiro — dono: time Financeiro
   Gestao/       # frontend do Módulo de Gestão   — dono: time de Gestão
+  Admin/        # administração de pessoas e papéis (docs/login.md)
   Shared/       # código de frontend comum aos dois módulos
 ```
 

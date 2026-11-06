@@ -74,9 +74,9 @@ curl -X POST https://<api>/lancamentos \
 - Aprovado ou já rejeitado: HTTP 409; o motivo original é mantido.
 - A rejeição **não altera o saldo**, e um lançamento rejeitado não pode mais ser aprovado.
 
-## Autenticação (provisória até a US-08)
+## Autenticação
 
-Enquanto não existe login de usuários, as rotas exigem um token de serviço:
+As rotas aceitam a sessão do login único (`docs/login.md`) ou, no modo serviço, o token de serviço:
 
 ```
 Authorization: Bearer <FINANCEIRO_API_TOKEN>
@@ -85,8 +85,8 @@ Authorization: Bearer <FINANCEIRO_API_TOKEN>
 - O valor fica na variável de ambiente `FINANCEIRO_API_TOKEN` do Cloud Run e no
   `Backend/.env` local. **Nunca no repositório nem no frontend publicado.**
 - Sem a variável configurada, as rotas respondem 503: a API falha fechada.
-- Quando a US-08 existir, só o corpo de `Backend/Financeiro/autenticacao.py`
-  muda para validar o usuário logado. As rotas continuam iguais.
+- A sessão do login único é validada em `Backend/Financeiro/autenticacao.py`; o token de
+  serviço continua valendo para testes e scripts.
 
 Gerar um token:
 

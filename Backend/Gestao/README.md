@@ -46,10 +46,13 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 409 (vínculo ativo repetido, desligamento já registrado, espaço com nome repetido),
 400 (usuário ou papel inexistente, saída antes da entrada) e 422 (corpo inválido).
 
-## Acesso às rotas de programa (provisório até a T-33 e a T-35)
+## Acesso às rotas de programa (provisório até a T-33)
 
-- Quem chama é identificado pelo cabeçalho `X-Usuario-Id`, junto com o token de
-  serviço, como no Financeiro. Sem ele, a resposta é 400.
+- O backend aceita a sessão do login único (`docs/login.md`): com o token da sessão,
+  quem chama é o dono dela. Também aceita o token de serviço com o cabeçalho
+  `X-Usuario-Id`, como no Financeiro (sem ele, 400). O **front da Gestão ainda não
+  migrou**: continua pedindo o código de acesso (token de serviço) e enviando
+  `X-Usuario-Id`.
 - Os papéis vêm do banco, não de cabeçalho: os da plataforma em `usuarios_papeis`
   (direção e administração) e os do programa em `vinculos_equipe`.
 - **Vínculo ativo** é o que não tem data de saída ou tem a saída no futuro. A partir
@@ -58,10 +61,10 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 - Toda negação grava em `log_auditoria` (módulo `gestao`, ação `acesso_negado`,
   programa, método e rota) antes de responder 403. Na lista de usuários o alvo é
   `usuarios`, sem id.
-- Enquanto não há login, quem tem o token pode se identificar como qualquer usuário.
-  A proteção real vem com a T-35 (login) e a T-33 (RBAC).
-- Ainda não há rota de cadastro de usuários (a API só consulta): para começar, inclua
-  um administrador direto no banco. Para testar as telas de Gestão, vale incluir também
+- No modo serviço, quem tem o token pode se identificar como qualquer usuário; a
+  proteção real vem quando o front migrar para a sessão e com a T-33 (RBAC).
+- O cadastro de pessoas e papéis da plataforma é feito na tela Administração (ou com
+  `python -m Acesso.criar_admin`, veja `docs/login.md`). Para testar as telas de Gestão, vale incluir também
   um programa, uma coordenação e uma educadora:
 
   ```sql
