@@ -10,10 +10,11 @@ from sqlalchemy.engine import Connection
 
 from Acesso import admin, auditoria, codigos, sessoes, usuarios
 from Acesso.identidade import Identidade
+from Acesso.routers.banco import RotaComBanco
 from Financeiro.autenticacao import exigir_autenticacao
 from Gestao.banco import obter_conexao
 
-router = APIRouter(prefix="/admin/usuarios", tags=["admin"])
+router = APIRouter(prefix="/admin/usuarios", tags=["admin"], route_class=RotaComBanco)
 
 PAPEL_ADMINISTRACAO = "administracao"
 
@@ -36,6 +37,8 @@ class NovaPessoa(BaseModel):
 
 class EdicaoPessoa(BaseModel):
     nome: Optional[str] = Field(default=None, max_length=200)
+    # Quem já existia antes do login pode não ter e-mail; sem ele, não entra.
+    email: Optional[str] = Field(default=None, max_length=320)
     papeis: Optional[List[str]] = None
     ativo: Optional[bool] = None
 
@@ -65,6 +68,13 @@ def exigir_administracao(
     raise HTTPException(status_code=403, detail=SEM_ACESSO)
 
 
+def _validar_email(email: str) -> str:
+    email = usuarios.normalizar_email(email)
+    if "@" not in email or email.startswith("@") or email.endswith("@"):
+        raise HTTPException(status_code=400, detail=EMAIL_INVALIDO)
+    return email
+
+
 def _validar_papeis(conexao: Connection, papeis: List[str]) -> List[str]:
     papeis = sorted(set(papeis))
     if not papeis:
@@ -87,11 +97,9 @@ def criar(
     conexao: Connection = Depends(obter_conexao),
 ) -> dict:
     nome = corpo.nome.strip()
-    email = usuarios.normalizar_email(corpo.email)
     if not nome:
         raise HTTPException(status_code=400, detail=NOME_VAZIO)
-    if "@" not in email or email.startswith("@") or email.endswith("@"):
-        raise HTTPException(status_code=400, detail=EMAIL_INVALIDO)
+    email = _validar_email(corpo.email)
     papeis = _validar_papeis(conexao, corpo.papeis)
     if usuarios.por_email(conexao, email) is not None:
         raise HTTPException(status_code=409, detail=EMAIL_REPETIDO)
@@ -144,11 +152,23 @@ def editar(
         nome = corpo.nome.strip()
         if not nome:
             raise HTTPException(status_code=400, detail=NOME_VAZIO)
+    email = None
+    if corpo.email is not None:
+        email = _validar_email(corpo.email)
+        if email == (atual["email"] or "").lower():
+            email = None
+        else:
+            outra = usuarios.por_email(conexao, email)
+            if outra is not None and outra.id != usuario_id:
+                raise HTTPException(status_code=409, detail=EMAIL_REPETIDO)
 
     alteracoes = {}
     if nome is not None and nome != atual["nome"]:
         conexao.execute(sa.text("UPDATE usuarios SET nome = :n WHERE id = :id"), {"n": nome, "id": usuario_id})
         alteracoes["nome"] = nome
+    if email is not None:
+        conexao.execute(sa.text("UPDATE usuarios SET email = :e WHERE id = :id"), {"e": email, "id": usuario_id})
+        alteracoes["email"] = email
     ids_atuais = sorted(p["id"] for p in atual["papeis"])
     if papeis is not None and papeis != ids_atuais:
         admin.definir_papeis(conexao, usuario_id, papeis)

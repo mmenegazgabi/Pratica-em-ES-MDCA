@@ -11,9 +11,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.engine import Connection
 
 from Acesso import auditoria, codigos, senhas, sessoes, usuarios
+from Acesso.routers.banco import RotaComBanco
 from Gestao.banco import obter_conexao
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth"], route_class=RotaComBanco)
 
 _bearer = HTTPBearer(auto_error=False)
 

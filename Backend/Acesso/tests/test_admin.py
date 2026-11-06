@@ -131,3 +131,31 @@ def test_codigo_de_pessoa_desativada_400(banco, cliente):
     cliente.patch("/admin/usuarios/joao-silva", json={"ativo": False}, headers=h)
     r = cliente.post("/admin/usuarios/joao-silva/codigo", headers=h)
     assert r.status_code == 400 and r.json()["detail"] == "Reative a pessoa antes de gerar um código."
+
+
+def test_editar_email_de_pessoa_sem_email(banco, cliente):
+    h = _sessao(banco, cliente)
+    criar_usuario(banco, id="leo", nome="Leo", email=None, papeis=["educador"])
+    r = cliente.patch("/admin/usuarios/leo", json={"email": "  Leo@MDCA.org.br "}, headers=h)
+    assert r.status_code == 200 and r.json()["email"] == "leo@mdca.org.br"
+    linhas = _auditoria(banco, "usuario_editado")
+    assert len(linhas) == 1 and linhas[0].detalhes == {"email": "leo@mdca.org.br"}
+    # Com o e-mail, o código de primeiro acesso já serve.
+    codigo = cliente.post("/admin/usuarios/leo/codigo", headers=h).json()["codigo"]
+    pa = cliente.post(
+        "/auth/primeiro-acesso",
+        json={"email": "leo@mdca.org.br", "codigo": codigo, "senha": "outra-senha-9"},
+    )
+    assert pa.status_code == 200
+
+
+def test_editar_email_valida_e_recusa_repetido(banco, cliente):
+    h = _sessao(banco, cliente)
+    criar_usuario(banco, id="leo", nome="Leo", email="leo@mdca.org.br", papeis=["educador"])
+    r = cliente.patch("/admin/usuarios/leo", json={"email": "ADM@mdca.org.br"}, headers=h)
+    assert r.status_code == 409 and r.json()["detail"] == "Já existe uma pessoa com este e-mail."
+    assert cliente.patch("/admin/usuarios/leo", json={"email": "sem-arroba"}, headers=h).status_code == 400
+    # O próprio e-mail, só com outra caixa, não é repetido nem alteração.
+    r = cliente.patch("/admin/usuarios/leo", json={"email": "LEO@mdca.org.br"}, headers=h)
+    assert r.status_code == 200 and r.json()["email"] == "leo@mdca.org.br"
+    assert _auditoria(banco, "usuario_editado") == []

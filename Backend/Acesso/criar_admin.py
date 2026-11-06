@@ -4,7 +4,11 @@ Uso (com ``DATABASE_URL`` configurada)::
 
     python -m Acesso.criar_admin --nome "Maria Silva" --email maria@mdca.org.br
 
-Se já existir uma pessoa com o e-mail, ela é reaproveitada.
+Se já existir uma pessoa com o e-mail, ela é reaproveitada. Para promover alguém que
+já está em ``usuarios`` (por exemplo, cadastrado antes do login e ainda sem e-mail),
+use ``--id`` no lugar de ``--nome``; o e-mail informado passa a ser o dela::
+
+    python -m Acesso.criar_admin --id maria-silva --email maria@mdca.org.br
 """
 
 import argparse
@@ -21,13 +25,42 @@ from Acesso import auditoria, codigos, usuarios
 PAPEL_ADMIN = "administracao"
 
 
-def criar_admin(conexao: Connection, nome: str, email: str, agora: datetime) -> Tuple[str, str, datetime]:
-    """Garante a pessoa com o papel de administração e devolve (usuario_id, código, validade)."""
-    if not nome.strip():
-        raise ValueError("O nome não pode ficar em branco.")
+def _promover(conexao: Connection, usuario_id: str, email: str) -> None:
+    """Grava o e-mail na pessoa já cadastrada e a reativa, se preciso."""
+    alvo = conexao.execute(
+        sa.text("SELECT id FROM usuarios WHERE id = :id"), {"id": usuario_id}
+    ).first()
+    if alvo is None:
+        raise ValueError(f"Não existe pessoa com o id {usuario_id!r}.")
+    outra = usuarios.por_email(conexao, email)
+    if outra is not None and outra.id != usuario_id:
+        raise ValueError(f"O e-mail {email} já é de outra pessoa ({outra.id}).")
+    conexao.execute(
+        sa.text("UPDATE usuarios SET email = :e, ativo = true WHERE id = :id"),
+        {"e": email, "id": usuario_id},
+    )
+
+
+def criar_admin(
+    conexao: Connection,
+    nome: str,
+    email: str,
+    agora: datetime,
+    usuario_id: Optional[str] = None,
+) -> Tuple[str, str, datetime]:
+    """Garante a pessoa com o papel de administração e devolve (usuario_id, código, validade).
+
+    Com ``usuario_id``, promove essa pessoa (o nome é ignorado); sem ele, procura pelo
+    e-mail ou cria uma nova.
+    """
     email = usuarios.normalizar_email(email)
-    existente = usuarios.por_email(conexao, email)
-    if existente is not None:
+    if "@" not in email:
+        raise ValueError("Informe um e-mail válido.")
+    if usuario_id is not None:
+        _promover(conexao, usuario_id, email)
+    elif not nome.strip():
+        raise ValueError("O nome não pode ficar em branco.")
+    elif (existente := usuarios.por_email(conexao, email)) is not None:
         usuario_id = existente.id
         if not existente.ativo:
             conexao.execute(sa.text("UPDATE usuarios SET ativo = true WHERE id = :id"), {"id": usuario_id})
@@ -59,10 +92,12 @@ def criar_admin(conexao: Connection, nome: str, email: str, agora: datetime) -> 
 
 def main(argv: Optional[list] = None) -> int:
     parser = argparse.ArgumentParser(description="Cria a primeira administradora.")
-    parser.add_argument("--nome", required=True)
+    quem = parser.add_mutually_exclusive_group(required=True)
+    quem.add_argument("--nome", help="Nome da nova pessoa (ou da que já tem este e-mail).")
+    quem.add_argument("--id", help="Id de uma pessoa já cadastrada em usuarios, para promovê-la.")
     parser.add_argument("--email", required=True)
     args = parser.parse_args(argv)
-    if not args.nome.strip():
+    if args.nome is not None and not args.nome.strip():
         parser.error("--nome não pode ficar em branco.")
 
     url = os.getenv("DATABASE_URL", "")
@@ -73,7 +108,13 @@ def main(argv: Optional[list] = None) -> int:
 
     motor = sa.create_engine(url_sqlalchemy(url))
     with motor.connect() as conexao:
-        _, codigo, validade = criar_admin(conexao, args.nome, args.email, datetime.now(timezone.utc))
+        try:
+            _, codigo, validade = criar_admin(
+                conexao, args.nome or "", args.email, datetime.now(timezone.utc), usuario_id=args.id
+            )
+        except ValueError as erro:
+            print(erro, file=sys.stderr)
+            return 1
     print(f"Código de primeiro acesso: {codigo} (vale até {validade.astimezone().strftime('%d/%m/%Y %H:%M')})")
     return 0
 
