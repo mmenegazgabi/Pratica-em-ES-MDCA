@@ -71,3 +71,9 @@ Cloud Run somente após todos os testes passarem, usando credenciais temporária
 via Workload Identity Federation e verificando `/health` após o deploy.
 PRs não publicam o backend. Veja os detalhes em
 [docs/deploy-backend.md](docs/deploy-backend.md).
+
+## Documentação
+
+- [docs/relatorio-prestacao-contas.md](docs/relatorio-prestacao-contas.md) —
+  estrutura do relatório de prestação de contas (US-06): campos, origem no
+  banco e exemplo.
