@@ -11,7 +11,8 @@ Object.assign(globalThis, {
   sessionStorage: dom.window.sessionStorage,
 });
 const plataforma = await import("../../Shared/plataforma.js");
-const { API_PADRAO, entrar, primeiroAcesso, sair, lerSessao, urlDaApi, salvarUrlDaApi, temPapel, encerrarSessaoLocal } = plataforma;
+const { API_PADRAO, entrar, primeiroAcesso, sair, lerSessao, urlDaApi, salvarUrlDaApi, temPapel, encerrarSessaoLocal, atualizarUsuario } =
+  plataforma;
 
 const AMANHA = new Date(Date.now() + 86400000).toISOString();
 const ONTEM = new Date(Date.now() - 86400000).toISOString();
@@ -159,4 +160,61 @@ test("temPapel confere o id do papel", () => {
   assert.equal(temPapel(sessao, "administracao"), true);
   assert.equal(temPapel(sessao, "coordenacao"), false);
   assert.equal(temPapel(null, "administracao"), false);
+});
+
+// — atualizarUsuario: papéis trocados pela administração aparecem sem sair e entrar —
+
+function guardar(armazem, usuario = USUARIO) {
+  armazem.setItem("mdca.sessao", JSON.stringify({ token: "tok", expira_em: AMANHA, usuario }));
+}
+
+test("atualizarUsuario chama /auth/eu com o token e grava o papel novo no mesmo armazenamento", async () => {
+  guardar(sessionStorage);
+  const novo = { ...USUARIO, papeis: [...USUARIO.papeis, { id: "administracao", nome: "Administração" }] };
+  responder(200, novo);
+  const sessao = await atualizarUsuario();
+  assert.equal(chamadas.length, 1);
+  assert.equal(chamadas[0].url, `${API_PADRAO}/auth/eu`);
+  assert.equal(chamadas[0].headers.Authorization, "Bearer tok");
+  assert.deepEqual(sessao, { token: "tok", expira_em: AMANHA, usuario: novo });
+  assert.equal(temPapel(lerSessao(), "administracao"), true);
+  assert.equal(localStorage.getItem("mdca.sessao"), null);
+  assert.deepEqual(JSON.parse(sessionStorage.getItem("mdca.sessao")), { token: "tok", expira_em: AMANHA, usuario: novo });
+});
+
+test("atualizarUsuario tira o papel removido", async () => {
+  guardar(localStorage, { ...USUARIO, papeis: [...USUARIO.papeis, { id: "direcao", nome: "Diretoria" }] });
+  responder(200, USUARIO);
+  await atualizarUsuario();
+  assert.equal(temPapel(lerSessao(), "direcao"), false);
+  assert.equal(temPapel(lerSessao(), "coordenacao"), true);
+  assert.equal(JSON.parse(localStorage.getItem("mdca.sessao")).expira_em, AMANHA);
+});
+
+test("atualizarUsuario com 401 apaga a sessão e devolve null", async () => {
+  guardar(localStorage);
+  localStorage.setItem("mdca.financeiro.papel", "coordenacao");
+  responder(401, { detail: "Sessão inválida ou vencida." });
+  assert.equal(await atualizarUsuario(), null);
+  assert.equal(lerSessao(), null);
+  assert.equal(localStorage.getItem("mdca.financeiro.papel"), null);
+});
+
+test("atualizarUsuario sem rede ou com erro do servidor mantém a sessão guardada", async () => {
+  guardar(localStorage);
+  globalThis.fetch = async () => {
+    throw new TypeError("Failed to fetch");
+  };
+  assert.deepEqual(await atualizarUsuario(), { token: "tok", expira_em: AMANHA, usuario: USUARIO });
+  responder(503, { detail: "Banco de dados indisponível" });
+  assert.deepEqual(await atualizarUsuario(), { token: "tok", expira_em: AMANHA, usuario: USUARIO });
+  responder(200, ["não é um usuário"]);
+  assert.deepEqual(await atualizarUsuario(), { token: "tok", expira_em: AMANHA, usuario: USUARIO });
+  assert.deepEqual(lerSessao().usuario, USUARIO);
+});
+
+test("atualizarUsuario sem sessão não chama a API", async () => {
+  responder(200, USUARIO);
+  assert.equal(await atualizarUsuario(), null);
+  assert.equal(chamadas.length, 0);
 });

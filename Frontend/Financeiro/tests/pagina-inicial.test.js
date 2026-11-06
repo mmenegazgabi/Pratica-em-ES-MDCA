@@ -130,12 +130,13 @@ test("Sair chama /auth/sair com o token e volta para o login", async () => {
   localStorage.setItem("mdca.sessao", JSON.stringify({ token: "tok-sair", expira_em: AMANHA, usuario: usuario("Ana", ["coordenacao"]) }));
   localStorage.setItem("mdca.financeiro.papel", "coordenacao");
   abrir();
+  await esperar(); // /auth/eu sem rede: segue com a sessão guardada
   respostas.push([204]);
   $("sair").click();
   await esperar();
-  assert.equal(chamadas.length, 1);
-  assert.equal(chamadas[0].url, `${API}/auth/sair`);
-  assert.equal(chamadas[0].headers.Authorization, "Bearer tok-sair");
+  assert.equal(chamadas.length, 2);
+  assert.equal(chamadas[1].url, `${API}/auth/sair`);
+  assert.equal(chamadas[1].headers.Authorization, "Bearer tok-sair");
   assert.equal($("app").hidden, true);
   assert.equal($("login").hidden, false);
   assert.equal($("formEntrar").hidden, false);
@@ -224,4 +225,55 @@ test("botão de menu do celular abre e fecha a barra lateral", () => {
   assert.equal($("navToggle").getAttribute("aria-expanded"), "true");
   $("navToggle").click();
   assert.equal($("sidebar").classList.contains("is-open"), false);
+});
+
+// — papéis atualizados ao abrir a página (/auth/eu) —
+
+function guardarSessao(papeis) {
+  localStorage.setItem("mdca.sessao", JSON.stringify({ token: "tok-eu", expira_em: AMANHA, usuario: usuario("Ana", papeis) }));
+}
+
+test("ao abrir com sessão, /auth/eu traz o papel novo e o cartão Administração aparece", async () => {
+  guardarSessao(["coordenacao"]);
+  respostas.push([200, usuario("Ana", ["coordenacao", "administracao"])]);
+  abrir();
+  assert.equal($("cartaoAdmin").hidden, true, "primeiro mostra o que estava guardado");
+  await esperar();
+  assert.equal(chamadas.length, 1);
+  assert.equal(chamadas[0].url, `${API}/auth/eu`);
+  assert.equal(chamadas[0].headers.Authorization, "Bearer tok-eu");
+  assert.equal($("cartaoAdmin").hidden, false);
+  assert.equal($("navAdmin").hidden, false);
+  assert.equal(JSON.parse(localStorage.getItem("mdca.sessao")).usuario.papeis.length, 2);
+});
+
+test("papel tirado pela administração some ao abrir a página", async () => {
+  guardarSessao(["coordenacao", "administracao"]);
+  respostas.push([200, usuario("Ana", ["coordenacao"])]);
+  abrir();
+  assert.equal($("cartaoAdmin").hidden, false);
+  await esperar();
+  assert.equal($("cartaoAdmin").hidden, true);
+  assert.equal($("navAdmin").hidden, true);
+});
+
+test("/auth/eu com 401 apaga a sessão e volta para o login", async () => {
+  guardarSessao(["coordenacao"]);
+  respostas.push([401, { detail: "Sessão inválida ou vencida." }]);
+  abrir();
+  await esperar();
+  assert.equal($("app").hidden, true);
+  assert.equal($("login").hidden, false);
+  assert.equal($("formEntrar").hidden, false);
+  assert.equal(localStorage.getItem("mdca.sessao"), null);
+});
+
+test("/auth/eu sem rede mantém a sessão guardada e os módulos", async () => {
+  guardarSessao(["administracao"]);
+  abrir();
+  await esperar();
+  assert.equal(chamadas.length, 1);
+  assert.equal($("app").hidden, false);
+  assert.equal($("cartaoAdmin").hidden, false);
+  assert.notEqual(localStorage.getItem("mdca.sessao"), null);
 });

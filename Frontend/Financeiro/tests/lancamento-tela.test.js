@@ -403,4 +403,20 @@ describe("avisos e perfil", { skip: SEM_JSDOM }, () => {
     assert.equal(tela.de("POST", "/auth/sair").length, 1);
     assert.equal(tela.window.localStorage.getItem("mdca.sessao"), null);
   });
+
+  test("perfil de quem tem mais de um papel do Financeiro leva a Trocar papel no computador", async () => {
+    const tela = await abrirTela({ sessao: { ...SESSAO_EDUCADOR, papeis: ["educador", "coordenacao"] }, hash: "#/perfil" });
+    await esperar(() => tela.$("perfil-nome"), "perfil");
+    const link = tela.$("trocar-papel");
+    assert.ok(link, "link Trocar papel");
+    assert.equal(link.tagName, "A");
+    assert.equal(link.textContent, "Trocar papel");
+    assert.equal(link.getAttribute("href"), "../#/papel");
+  });
+
+  test("perfil de quem só é educador não mostra Trocar papel", async () => {
+    const tela = await abrirTela({ hash: "#/perfil" });
+    await esperar(() => tela.$("perfil-nome"), "perfil");
+    assert.equal(tela.$("trocar-papel"), null);
+  });
 });

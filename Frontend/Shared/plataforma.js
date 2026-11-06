@@ -74,8 +74,8 @@ function sessaoValida(dados) {
   );
 }
 
-/** Sessão salva neste navegador, ou null. Sessão vencida ou estragada é apagada. */
-export function lerSessao() {
+/** {nome do armazenamento, sessão} da sessão salva, ou null. Vencida ou estragada é apagada. */
+function sessaoGuardada() {
   for (const nome of ["localStorage", "sessionStorage"]) {
     const bruto = ler(nome, CHAVE_SESSAO);
     if (!bruto) continue;
@@ -90,9 +90,14 @@ export function lerSessao() {
       apagar(nome, CHAVE_SESSAO);
       continue;
     }
-    return { token: dados.token, expira_em: dados.expira_em, usuario: dados.usuario };
+    return { nome, sessao: { token: dados.token, expira_em: dados.expira_em, usuario: dados.usuario } };
   }
   return null;
+}
+
+/** Sessão salva neste navegador, ou null. Sessão vencida ou estragada é apagada. */
+export function lerSessao() {
+  return sessaoGuardada()?.sessao ?? null;
 }
 
 function salvarSessao(sessao, lembrar) {
@@ -163,6 +168,52 @@ export async function sair() {
     }
   }
   encerrarSessaoLocal();
+}
+
+function usuarioValido(dados) {
+  return (
+    dados &&
+    typeof dados === "object" &&
+    !Array.isArray(dados) &&
+    typeof dados.id === "string" &&
+    Array.isArray(dados.papeis)
+  );
+}
+
+/**
+ * Busca a pessoa em /auth/eu e regrava `usuario` na sessão (mesmo armazenamento, mesmo
+ * token e validade): papéis dados ou tirados pela administração valem sem sair e entrar.
+ * Devolve a sessão (atualizada, ou a guardada se o servidor não respondeu direito), ou
+ * null sem sessão ou quando o servidor recusou o token (401, a sessão é apagada).
+ */
+export async function atualizarUsuario() {
+  const guardada = sessaoGuardada();
+  if (!guardada) return null;
+  const { nome, sessao } = guardada;
+  let resposta;
+  try {
+    resposta = await fetch(`${urlDaApi()}/auth/eu`, { headers: { Authorization: `Bearer ${sessao.token}` } });
+  } catch {
+    return sessao; // sem conexão: segue com a sessão guardada
+  }
+  // Se a pessoa saiu ou entrou de novo enquanto isso, a resposta é de outra sessão.
+  const mesmaSessao = () => lerSessao()?.token === sessao.token;
+  if (resposta.status === 401) {
+    if (!mesmaSessao()) return lerSessao();
+    encerrarSessaoLocal();
+    return null;
+  }
+  if (!resposta.ok) return sessao;
+  let usuario;
+  try {
+    usuario = await resposta.json();
+  } catch {
+    usuario = null;
+  }
+  if (!usuarioValido(usuario) || !mesmaSessao()) return lerSessao();
+  const atualizada = { ...sessao, usuario };
+  gravar(nome, CHAVE_SESSAO, JSON.stringify(atualizada));
+  return atualizada;
 }
 
 export function temPapel(sessao, papel) {

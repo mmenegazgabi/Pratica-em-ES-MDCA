@@ -6,7 +6,7 @@ import { lerRota, rotaPermitida } from "./base/rotas.js";
 import { contadorDefinido, reaplicarContador } from "./base/contador.js";
 import { atualizarContadorDePendencias } from "./telas/inicio.js";
 import { PAPEIS, escolherPapel, itensDeMenu, lerSessao, papeisDoFinanceiro } from "./base/sessao.js";
-import { lerSessao as lerSessaoDaPlataforma, sair as sairDaPlataforma } from "../Shared/plataforma.js";
+import { atualizarUsuario, lerSessao as lerSessaoDaPlataforma, sair as sairDaPlataforma } from "../Shared/plataforma.js";
 
 const INICIO_DA_PLATAFORMA = "../";
 
@@ -132,8 +132,19 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
     return carregarTela(container, tela, parametros, sessao, minhaVez);
   }
 
+  /** Papéis dados ou tirados pela administração desde o login valem ao abrir a página. */
+  async function conferirPessoa() {
+    const antes = lerSessaoDaPlataforma();
+    if (!antes) return;
+    const atual = await atualizarUsuario();
+    if (!atual) return redirecionar(INICIO_DA_PLATAFORMA); // 401: sessão apagada
+    if (JSON.stringify(atual.usuario) !== JSON.stringify(antes.usuario)) mostrarTela();
+  }
+
   window.addEventListener("hashchange", mostrarTela);
-  return mostrarTela();
+  const primeira = mostrarTela();
+  conferirPessoa();
+  return primeira;
 }
 
 const raiz = typeof document !== "undefined" ? document.getElementById("app") : null;

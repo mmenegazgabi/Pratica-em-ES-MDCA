@@ -3,6 +3,7 @@
 // entram sempre por textContent.
 
 import {
+  atualizarUsuario,
   entrar,
   lerSessao,
   primeiroAcesso,
@@ -158,6 +159,13 @@ export function iniciar(documento = document) {
   const sessao = lerSessao();
   if (sessao) {
     mostrarModulos(sessao);
+    // A administração pode ter dado ou tirado papéis desde o login: confere em /auth/eu.
+    return atualizarUsuario().then((atual) => {
+      if ($("app").hidden) return; // a pessoa já saiu enquanto isso
+      if (atual) return mostrarModulos(atual);
+      mostrarLogin();
+      mostrarFormulario("entrar", false);
+    });
   } else {
     mostrarLogin();
     mostrarFormulario("entrar", false);

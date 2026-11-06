@@ -46,8 +46,13 @@ const ADMIN = [{ id: "administracao", nome: "Administração" }];
 
 let raiz;
 let destino;
+// Ao abrir, a tela confere a pessoa em /auth/eu; por padrão o servidor devolve a mesma da sessão.
+function euDaSessao() {
+  const guardada = localStorage.getItem("mdca.sessao");
+  return guardada ? [[200, JSON.parse(guardada).usuario]] : [];
+}
 async function abrir({ lista = PESSOAS } = {}) {
-  respostas = [[200, lista], [200, PAPEIS]];
+  respostas = [...euDaSessao(), [200, lista], [200, PAPEIS]];
   document.body.replaceChildren();
   raiz = document.createElement("div");
   document.body.append(raiz);
@@ -80,16 +85,17 @@ test("sessão sem administração mostra o aviso com link para o início", async
   await abrir();
   assert.match(raiz.textContent, /Esta área é só da administração\./);
   assert.equal(raiz.querySelector('a[href="../"]').textContent.trim().length > 0, true);
-  assert.equal(chamadas.length, 0);
+  assert.deepEqual(chamadas.map((c) => c.url), [`${API}/auth/eu`], "só confere a pessoa");
   assert.equal(destino, null);
 });
 
 test("lista as pessoas com situação traduzida, papéis e ações", async () => {
   sessaoDe(ADMIN);
   await abrir();
-  assert.equal(chamadas[0].url, `${API}/admin/usuarios`);
-  assert.equal(chamadas[0].headers.Authorization, "Bearer tok");
-  assert.equal(chamadas[1].url, `${API}/gestao/papeis`);
+  assert.equal(chamadas[0].url, `${API}/auth/eu`);
+  assert.equal(chamadas[1].url, `${API}/admin/usuarios`);
+  assert.equal(chamadas[1].headers.Authorization, "Bearer tok");
+  assert.equal(chamadas[2].url, `${API}/gestao/papeis`);
   assert.deepEqual(
     [...raiz.querySelectorAll("thead th")].map((th) => th.textContent).slice(0, 4),
     ["Nome", "E-mail", "Papéis", "Situação"],
@@ -126,7 +132,7 @@ test("401 apaga a sessão e redireciona", async () => {
 
 test("403 mostra o aviso da administração", async () => {
   sessaoDe(ADMIN);
-  respostas = [[403, { detail: "x" }], [200, PAPEIS]];
+  respostas = [...euDaSessao(), [403, { detail: "x" }], [200, PAPEIS]];
   raiz = document.createElement("div");
   iniciar(raiz, { redirecionar() {} });
   await esperar(20);
@@ -230,4 +236,124 @@ test("a lateral tem Voltar ao início e Sair", async () => {
   await esperar(20);
   assert.equal(localStorage.getItem("mdca.sessao"), null);
   assert.equal(destino, "../");
+});
+
+// — papéis atualizados ao abrir (/auth/eu) —
+
+test("papel de administração dado depois do login já abre a lista", async () => {
+  sessaoDe([{ id: "coordenacao", nome: "Coordenação" }]);
+  respostas = [
+    [200, { id: "u1", nome: "Ana Admin", email: "ana@mdca.org.br", papeis: [...ADMIN, { id: "coordenacao", nome: "Coordenação" }] }],
+    [200, PESSOAS],
+    [200, PAPEIS],
+  ];
+  raiz = document.createElement("div");
+  iniciar(raiz, { redirecionar() {} });
+  await esperar(20);
+  assert.equal(linhas().length, 3);
+  assert.equal(JSON.parse(localStorage.getItem("mdca.sessao")).usuario.papeis.length, 2);
+});
+
+test("papel de administração tirado depois do login mostra o aviso sem chamar a lista", async () => {
+  sessaoDe(ADMIN);
+  respostas = [[200, { id: "u1", nome: "Ana Admin", email: "ana@mdca.org.br", papeis: [{ id: "coordenacao", nome: "Coordenação" }] }]];
+  raiz = document.createElement("div");
+  iniciar(raiz, { redirecionar() {} });
+  await esperar(20);
+  assert.match(raiz.textContent, /Esta área é só da administração\./);
+  assert.equal(chamadas.length, 1);
+});
+
+test("/auth/eu sem rede segue com a sessão guardada", async () => {
+  sessaoDe(ADMIN);
+  respostas = [];
+  raiz = document.createElement("div");
+  destino = null;
+  const pronto = iniciar(raiz, { redirecionar: (d) => (destino = d) });
+  respostas.push([200, PESSOAS], [200, PAPEIS]); // a primeira chamada (/auth/eu) já falhou sem rede
+  await pronto;
+  await esperar(20);
+  assert.equal(destino, null);
+  assert.equal(linhas().length, 3);
+});
+
+// — e-mail na edição (pessoas cadastradas antes do login podem não ter) —
+
+test("Editar mostra o e-mail e só o envia quando muda", async () => {
+  sessaoDe(ADMIN);
+  const comDuda = [...PESSOAS, { id: "u4", nome: "Duda Antiga", email: null, ativo: true, papeis: [PAPEIS[1]], situacao: "aguardando_primeiro_acesso" }];
+  await abrir({ lista: comDuda });
+  botao("Editar", linhas()[1]).click();
+  let dlg = raiz.querySelector("dialog");
+  assert.equal(dlg.querySelector('input[name="email"]').value, "beto@mdca.org.br");
+  dlg.querySelector('input[name="nome"]').value = "Beto Silva";
+  respostas = [[200, { ...PESSOAS[1], nome: "Beto Silva" }], [200, comDuda], [200, PAPEIS]];
+  chamadas = [];
+  enviar(dlg.querySelector("form"));
+  await esperar(20);
+  assert.deepEqual(JSON.parse(chamadas[0].body), { nome: "Beto Silva" });
+
+  botao("Editar", linhas()[3]).click();
+  dlg = raiz.querySelector("dialog");
+  assert.equal(dlg.querySelector('input[name="email"]').value, "");
+  dlg.querySelector('input[name="email"]').value = "  duda@mdca.org.br ";
+  respostas = [[409, { detail: "Já existe uma pessoa com este e-mail." }]];
+  chamadas = [];
+  enviar(dlg.querySelector("form"));
+  await esperar(20);
+  assert.equal(chamadas[0].url, `${API}/admin/usuarios/u4`);
+  assert.deepEqual(JSON.parse(chamadas[0].body), { email: "duda@mdca.org.br" });
+  assert.match(raiz.querySelector("dialog").textContent, /Já existe uma pessoa com este e-mail\./);
+});
+
+test("Editar não aceita e-mail apagado", async () => {
+  sessaoDe(ADMIN);
+  await abrir();
+  botao("Editar", linhas()[1]).click();
+  const dlg = raiz.querySelector("dialog");
+  dlg.querySelector('input[name="email"]').value = " ";
+  chamadas = [];
+  enviar(dlg.querySelector("form"));
+  await esperar();
+  assert.equal(chamadas.length, 0);
+  assert.match(dlg.textContent, /Informe o e-mail\./);
+});
+
+// — Gerar código: um pedido por vez e sem diálogo de erro no 401 —
+
+test("Gerar código fica desabilitado durante o pedido", async () => {
+  sessaoDe(ADMIN);
+  await abrir();
+  let liberar;
+  const antes = globalThis.fetch;
+  globalThis.fetch = (url, opcoes = {}) => {
+    chamadas.push({ url, ...opcoes });
+    return new Promise((ok) => (liberar = () => ok(new Response(JSON.stringify({ codigo: "QQQQ-1111", codigo_expira_em: "2026-11-07T15:05:00Z" }), { status: 200 }))));
+  };
+  try {
+    chamadas = [];
+    const b = botao("Gerar código", linhas()[1]);
+    b.click();
+    assert.equal(b.disabled, true);
+    b.click();
+    await esperar();
+    assert.equal(chamadas.length, 1, "segundo clique não gera outro código");
+    globalThis.fetch = antes;
+    respostas = [[200, PESSOAS], [200, PAPEIS]];
+    liberar();
+    await esperar(20);
+    assert.match(raiz.querySelector("dialog").textContent, /QQQQ-1111/);
+  } finally {
+    globalThis.fetch = antes;
+  }
+});
+
+test("Gerar código com sessão vencida (401) redireciona sem abrir diálogo de erro", async () => {
+  sessaoDe(ADMIN);
+  await abrir();
+  respostas = [[401, { detail: "Autenticação obrigatória." }]];
+  botao("Gerar código", linhas()[1]).click();
+  await esperar(20);
+  assert.equal(destino, "../");
+  assert.equal(raiz.querySelector("dialog"), null);
 });

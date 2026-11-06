@@ -1,7 +1,7 @@
 // Administração de pessoas e papéis (T-35). Mesmo padrão do Financeiro: iniciar(raiz, { redirecionar }).
 import { el, limpar } from "../Financeiro/base/dom.js";
 import { logo } from "../Financeiro/base/logo.js";
-import { encerrarSessaoLocal, lerSessao, sair, temPapel, urlDaApi } from "../Shared/plataforma.js";
+import { atualizarUsuario, encerrarSessaoLocal, lerSessao, sair, temPapel, urlDaApi } from "../Shared/plataforma.js";
 
 const SITUACOES = {
   ativo: "Ativo",
@@ -25,8 +25,11 @@ function iniciais(nome) {
   return String(nome || "").trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() || "").join("");
 }
 
-export function iniciar(raiz, { redirecionar = (destino) => window.location.assign(destino) } = {}) {
-  const sessao = lerSessao();
+export async function iniciar(raiz, { redirecionar = (destino) => window.location.assign(destino) } = {}) {
+  if (!lerSessao()) return redirecionar("../");
+  // A administração pode ter dado ou tirado papéis desde o login: vale o que /auth/eu diz.
+  // Sem rede, segue com a sessão guardada; 401 apaga a sessão.
+  const sessao = await atualizarUsuario();
   if (!sessao) return redirecionar("../");
 
   raiz.classList.add("admin");
@@ -216,6 +219,8 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
   function dialogoEdicao(pessoa) {
     const nome = el("input", { id: "adm-nome", name: "nome", class: "entrada", type: "text", autocomplete: "off" });
     nome.value = pessoa.nome;
+    const email = el("input", { id: "adm-email", name: "email", class: "entrada", type: "email", autocomplete: "off", autocapitalize: "off" });
+    email.value = pessoa.email || "";
     const ativo = el("input", { type: "checkbox", name: "ativo", checked: pessoa.ativo });
     const erro = el("p", { class: "admin__erro", role: "alert", hidden: true });
     const form = el("form", { novalidate: true });
@@ -224,8 +229,8 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
     const idsAtuais = pessoa.papeis.map((p) => p.id);
     form.append(
       el("h2", { style: "font-size:15px;margin:0 0 4px" }, "Editar pessoa"),
-      el("p", { class: "admin__ajuda", style: "margin:0" }, pessoa.email),
       campo("Nome", nome),
+      campo("E-mail", email),
       el("div", { class: "campo" }, el("span", { class: "campo__rotulo" }, "Papéis"), caixasDePapeis(idsAtuais)),
       el("div", { class: "admin__papeis", style: "margin-top:14px" }, el("label", {}, ativo, "Conta ativa")),
       erro,
@@ -241,6 +246,10 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
       const novoNome = nome.value.trim();
       if (!novoNome) return falha("Informe o nome.");
       if (novoNome !== pessoa.nome) mudancas.nome = novoNome;
+      // Quem foi cadastrado antes do login pode não ter e-mail; sem ele, não entra.
+      const novoEmail = email.value.trim();
+      if (!novoEmail && pessoa.email) return falha("Informe o e-mail.");
+      if (novoEmail && novoEmail.toLowerCase() !== String(pessoa.email || "").toLowerCase()) mudancas.email = novoEmail;
       const novosPapeis = papeisMarcados(dialogo);
       if (!novosPapeis.length) return falha("Escolha ao menos um papel.");
       if ([...novosPapeis].sort().join() !== [...idsAtuais].sort().join()) mudancas.papeis = novosPapeis;
@@ -261,8 +270,17 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
     return { dialogo, foco: nome };
   }
 
-  async function gerarCodigo(pessoa) {
-    const resposta = await chamar("POST", `/admin/usuarios/${encodeURIComponent(pessoa.id)}/codigo`);
+  async function gerarCodigo(pessoa, botao) {
+    // Um pedido por vez: cada código novo invalida o anterior.
+    if (botao.disabled) return;
+    botao.disabled = true;
+    let resposta;
+    try {
+      resposta = await chamar("POST", `/admin/usuarios/${encodeURIComponent(pessoa.id)}/codigo`);
+    } finally {
+      botao.disabled = false;
+    }
+    if (resposta.status === 401) return; // chamar() já apagou a sessão e saiu da tela
     if (resposta.status === 200 && resposta.corpo?.codigo) {
       abrirDialogo(mostrarCodigo("Novo código", pessoa.nome, resposta.corpo.codigo, resposta.corpo.codigo_expira_em));
       carregarLista();
@@ -317,7 +335,7 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
                   el("button", { type: "button", class: "btn btn--sec btn--pequeno", onclick: () => abrir(dialogoEdicao(p)) }, "Editar"),
                   p.situacao === "desativado"
                     ? null
-                    : el("button", { type: "button", class: "btn btn--sec btn--pequeno", onclick: () => gerarCodigo(p) }, "Gerar código"),
+                    : el("button", { type: "button", class: "btn btn--sec btn--pequeno", onclick: (evento) => gerarCodigo(p, evento.currentTarget) }, "Gerar código"),
                 ),
               ),
             ),

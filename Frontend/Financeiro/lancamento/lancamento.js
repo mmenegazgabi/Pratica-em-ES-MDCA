@@ -6,7 +6,7 @@
 //   #/despesa/<lancamento>   Despesa (rejeitada: motivo + "Corrigir e reenviar")
 //   #/corrigir/<lancamento>  Mesmo formulário, preenchido, para reenviar
 //   #/avisos                 Notificações
-//   #/perfil                 Nome e sair
+//   #/perfil                 Nome, trocar papel (se tiver mais de um) e sair
 //
 // Entra pela sessão da plataforma (login único na página inicial, ../../).
 
@@ -26,7 +26,7 @@ import {
 import { el, limpar } from "../base/dom.js";
 import { formatarData, formatarMoeda, tempoRelativo } from "../base/formatar.js";
 import { icone } from "../base/icones.js";
-import { lerSessao, usarPapelFixo } from "../base/sessao.js";
+import { lerSessao, papeisDoFinanceiro, usarPapelFixo } from "../base/sessao.js";
 import { lerSessao as lerSessaoDaPlataforma, sair as sairDaPlataforma, temPapel } from "../../Shared/plataforma.js";
 import {
   agruparDespesas,
@@ -608,7 +608,11 @@ async function telaAvisos(_id, minhaVez) {
 
 function telaPerfil() {
   const sessao = lerSessao();
-  const email = lerSessaoDaPlataforma()?.usuario?.email || "";
+  const plataforma = lerSessaoDaPlataforma();
+  const email = plataforma?.usuario?.email || "";
+  // Com outro papel do Financeiro, a escolha é no computador (../#/papel vem antes do
+  // redirecionamento do educador para cá).
+  const variosPapeis = papeisDoFinanceiro(plataforma).length > 1;
 
   async function sair() {
     await sairDaPlataforma();
@@ -618,6 +622,7 @@ function telaPerfil() {
   montar(
     el("h1", { class: "titulo" }, "Perfil"),
     el("div", { class: "perfil" }, el("span", { class: "campo__rotulo" }, "Nome"), el("p", { id: "perfil-nome", class: "perfil__nome" }, sessao.nome), el("p", { id: "perfil-email", class: "ajuda" }, email)),
+    variosPapeis ? el("a", { id: "trocar-papel", class: "botao botao--sec", href: "../#/papel" }, "Trocar papel") : null,
     el("button", { type: "button", id: "botao-sair", class: "botao botao--perigo", onclick: sair }, "Sair deste aparelho"),
   );
 }
