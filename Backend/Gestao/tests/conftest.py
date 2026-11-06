@@ -80,11 +80,16 @@ def motor_de_teste():
 
 
 def _limpar(motor) -> None:
-    # CASCADE leva junto vínculos, espaços e papéis de usuários; a lista de papéis
-    # (preenchida pela migration) fica. TRUNCATE passa pelo trigger do log, que só
-    # barra UPDATE e DELETE.
+    # CASCADE leva junto vínculos, espaços, pessoas e papéis de usuários; a lista de
+    # papéis (preenchida pela migration) fica. Núcleos familiares e responsáveis não
+    # dependem de programa nem de usuário, por isso entram na lista. TRUNCATE passa pelo
+    # trigger do log, que só barra UPDATE e DELETE.
     with motor.begin() as conexao:
-        conexao.execute(sa.text("TRUNCATE projetos, usuarios, log_auditoria CASCADE"))
+        conexao.execute(
+            sa.text(
+                "TRUNCATE projetos, usuarios, log_auditoria, nucleos_familiares, responsaveis CASCADE"
+            )
+        )
 
 
 @pytest.fixture

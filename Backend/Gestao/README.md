@@ -15,6 +15,9 @@ Gestao/
   plano_de_acao.py  # objetivos, ações, metas, registros do realizado e painel
   equipe.py       # equipe e espaços de cada programa
   usuarios.py     # usuários e papéis da plataforma (só consulta)
+  pessoas.py      # pessoas atendidas, núcleos familiares, responsáveis e duplicidade (US-03)
+  autorizacoes.py # autorizações (uso de imagem): situação, revogação e uso externo
+  erros.py        # erros de regra do cadastro de pessoas, traduzidos em HTTP pelas rotas
   routers/        # rotas FastAPI, todas com prefixo /gestao
     __init__.py   # junta todos os routers de Gestão num só
   tests/          # testes do módulo, rodados pelo job backend-gestao do CI
@@ -78,6 +81,43 @@ Regras:
 Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 409 (vínculo ativo repetido, desligamento já registrado, espaço com nome repetido),
 400 (usuário ou papel inexistente, saída antes da entrada) e 422 (corpo inválido).
+
+### Pessoas atendidas (US-03)
+
+| Rota | O que faz |
+|---|---|
+| `GET /gestao/pessoas?programa_id=&busca=` | Pessoas dos programas em que a pessoa usuária atua (administração: todas); busca por nome, núcleo ou responsável |
+| `POST /gestao/pessoas/duplicidades` | Possíveis duplicados de um cadastro ainda não concluído (etapa de revisão); não grava nada |
+| `POST /gestao/pessoas` | Cadastra a pessoa com núcleo familiar (`nucleo_familiar_id` existente ou `nucleo_familiar_nome` novo) e responsáveis (`id` existente ou `nome` novo, com `parentesco` e `responsavel_legal`) |
+| `GET /gestao/pessoas/{pessoa_id}` | Detalhe com idade, núcleo, responsáveis, documentos e autorizações |
+| `POST /gestao/pessoas/{pessoa_id}/responsaveis` | Inclui um responsável |
+| `POST /gestao/pessoas/{pessoa_id}/documentos` | Registra os dados do documento (`tipo`, `nome_arquivo`, `tamanho`); o arquivo em si chega com as telas (T-49) |
+| `POST /gestao/pessoas/{pessoa_id}/autorizacoes` | Registra autorização (`tipo: uso_de_imagem`, `valida_ate`, `valida_de` opcional = hoje, `documento_id` opcional) |
+| `POST /gestao/pessoas/{pessoa_id}/autorizacoes/{autorizacao_id}/revogacao` | Revoga; fica na auditoria (`autorizacao_revogada`) |
+| `POST /gestao/pessoas/uso-de-imagem` | `{pessoa_ids, uso}`: uso externo só com autorização de imagem vigente de todos |
+| `GET /gestao/nucleos-familiares?busca=` | Núcleos com alguém nos programas em que a pessoa usuária atua |
+
+**Quem pode:** consultam quem tem vínculo ativo no programa da pessoa e a
+administração; a direção não vê cadastros individuais. Cadastram e alteram a
+coordenação e a assistência social vinculadas ao programa, e a administração.
+
+**Regras:**
+
+- **Possível duplicidade:** mesmo nome (sem diferenciar maiúsculas, espaços e acentos)
+  e, além disso, mesmo nascimento **ou** mesmo responsável. O `POST /gestao/pessoas`
+  responde **409** com `detail.codigo = "possivel_duplicidade"` e `detail.candidatos`, e
+  não grava nada. Para cadastrar mesmo assim, reenvie com `confirmar_duplicidade: true`;
+  a confirmação fica na auditoria (`duplicidade_confirmada`).
+- **Responsável legal:** menor de 18 anos sem nenhum responsável com
+  `responsavel_legal: true` → **400**.
+- **Situação da autorização** (calculada, não gravada): `revogada` se tem revogação,
+  `vencida` se `valida_ate` já passou, senão `vigente`. O início da validade não pode
+  estar no futuro.
+- **Uso externo de imagem:** liberado só se cada pessoa tem ao menos uma autorização de
+  imagem vigente; senão **409** com `detail.codigo = "uso_de_imagem_bloqueado"` e
+  `detail.bloqueios` (motivo `vencida`, `revogada` ou `sem_autorizacao`). Uso interno é
+  sempre liberado. A mesma regra (`autorizacoes.verificar_uso_de_imagem`) serve às
+  evidências de atividade (T-56).
 
 ## Acesso às rotas de programa (provisório até a T-33 e a T-35)
 

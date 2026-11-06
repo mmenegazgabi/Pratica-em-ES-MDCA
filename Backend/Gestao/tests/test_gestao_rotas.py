@@ -11,6 +11,9 @@ def test_rotas_de_gestao_aparecem_no_openapi_junto_com_as_do_financeiro(cliente)
     assert "/gestao/programas/{programa_id}/espacos" in rotas
     assert "/gestao/usuarios" in rotas
     assert "/gestao/papeis" in rotas
+    assert "/gestao/pessoas" in rotas
+    assert "/gestao/pessoas/{pessoa_id}" in rotas
+    assert "/gestao/pessoas/uso-de-imagem" in rotas
     assert "/orcamentos" in rotas
     assert "/health" in rotas
 
