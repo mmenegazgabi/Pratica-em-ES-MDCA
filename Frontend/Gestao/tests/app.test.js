@@ -87,6 +87,14 @@ test("detalhe de programa continua na demonstração", async () => {
   assert.equal($("#tela-api"), null);
 });
 
+test("Visão integrada carrega pela API, sem o aviso de demonstração", async () => {
+  await irPara("#/integracao");
+
+  assert.equal($(".demo-banner"), null);
+  assert.ok($("#tela-api"));
+  assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/programas")));
+});
+
 test("seletor de módulo leva ao Financeiro e o logo ao menu inicial", () => {
   const financas = [...document.querySelectorAll(".seg a")].find((a) => a.textContent === "Finanças");
 

@@ -186,3 +186,13 @@ export const criarEspaco = (programaId, dados) =>
 // Usuários e papéis da plataforma (T-40).
 export const listarUsuarios = () => requisitar("/gestao/usuarios");
 export const listarPapeis = () => requisitar("/gestao/papeis");
+
+// Visão integrada da execução física e financeira (T-78 · US-12).
+/** filtros: { inicio?, fim? } em AAAA-MM-DD; a parte financeira vem null para quem não a vê. */
+export function obterVisaoIntegrada(programaId, { inicio = "", fim = "" } = {}) {
+  const busca = new URLSearchParams();
+  if (inicio) busca.set("inicio", inicio);
+  if (fim) busca.set("fim", fim);
+  const consulta = busca.toString();
+  return requisitar(`${programa(programaId)}/visao-integrada${consulta ? `?${consulta}` : ""}`);
+}
