@@ -93,6 +93,24 @@ def papeis_do_usuario(
     return globais, no_programa
 
 
+# Visão integrada (T-78): quem vê os valores financeiros do programa. Provisório até a
+# matriz de permissões do Financeiro (T-37) e o RBAC (T-33).
+PAPEIS_QUE_VEEM_FINANCEIRO_DE_TODOS = {"direcao", "administracao"}
+PAPEIS_QUE_VEEM_FINANCEIRO_DO_PROGRAMA = {"coordenacao"}
+
+
+def ve_valores_financeiros(
+    conexao: Connection, usuario_id: str, programa_id: str, hoje: Optional[date] = None
+) -> bool:
+    papeis = papeis_do_usuario(conexao, usuario_id, programa_id, hoje or date.today())
+    if papeis is None:
+        return False
+    globais, no_programa = papeis
+    return bool(globais & PAPEIS_QUE_VEEM_FINANCEIRO_DE_TODOS) or bool(
+        no_programa & PAPEIS_QUE_VEEM_FINANCEIRO_DO_PROGRAMA
+    )
+
+
 def verificar_acesso(
     conexao: Connection,
     usuario_id: str,
