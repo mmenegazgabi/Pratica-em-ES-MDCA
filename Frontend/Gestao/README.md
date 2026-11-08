@@ -31,7 +31,10 @@ Gestao/
 
 | Tela | Rota da API | Situação |
 |---|---|---|
-| Programas (lista) | `GET /gestao/programas` | ligada (T-00g) |
+| Programas (lista, com identificador e vigência) | `GET /gestao/programas` | ligada (T-00g; colunas da T-45) |
+| Novo programa (`#/programas/novo`) e Editar programa (`#/programas/{id}/editar`) | `POST /gestao/programas`, `PATCH /gestao/programas/{id}` | ligada (T-45) |
+| Programa: resumo, convênios e vagas (`#/programas/{id}`) | `GET /gestao/programas/{id}`, `…/convenios`, `…/vagas` | ligada (T-45) |
+| Plano e metas (`#/programas/{id}/plano`) | `…/objetivos`, `…/acoes`, `…/metas`, `…/metas/{meta}/registros`, `…/painel` | ligada (T-45) |
 | Equipe e espaços do programa (`#/programas/{id}/equipe`) | `…/equipe`, `…/equipe/{vinculo}/desligamento`, `…/espacos`, `/gestao/usuarios`, `/gestao/papeis` | ligada (T-40) |
 | Usuários e acessos (administração) | `GET /gestao/usuarios` | ligada, só consulta (T-40) |
 | Demais telas | — | demonstração, até a US de cada uma |
@@ -40,7 +43,14 @@ Gestao/
   o histórico (quem saiu aparece como Desligado) e os espaços. Coordenação e
   administração veem os botões de vincular, desligar (com data de saída obrigatória) e
   cadastrar espaço. Os programas fictícios do protótipo (`p1`…) continuam na
-  demonstração, e o detalhe completo do programa chega com a US-02 (T-45).
+  demonstração.
+- **Programas (T-45):** cada programa do cadastro real tem as abas Resumo, Plano e metas
+  e Equipe e espaços. O cadastro bloqueia o envio quando falta campo obrigatório e mostra
+  a recusa da API (ex.: identificador repetido). No plano, cada meta mostra planejado,
+  realizado e percentual; a ação mostra a média dos percentuais das suas metas, porque
+  metas da mesma ação podem ter unidades diferentes. Os botões de cadastro, edição e
+  registro aparecem para coordenação e administração; quem gerencia de fato será
+  conferido pela API na T-87.
 - **Usuários e acessos:** contas com perfis da plataforma e vínculos ativos. Criar e
   editar contas ainda não têm rota na API.
 

@@ -5,7 +5,8 @@
  * só controlam a interface, quem protege os dados é a API.
  */
 import { ABAS, DESCRICOES, MENU, PAPEIS, lerPapel, menuDoPapel, pode, rotaPermitida, salvarPapel } from './base/papeis.js';
-import { mostrarProgramas } from './telas/programas.js';
+import { mostrarCadastroDePrograma, mostrarEdicaoDePrograma, mostrarPrograma, mostrarProgramas } from './telas/programas.js';
+import { mostrarPlano } from './telas/plano.js';
 import { mostrarEquipe } from './telas/equipe.js';
 import { mostrarUsuarios } from './telas/usuarios.js';
 import { listarProgramas, salvarUsuario, usuarioSalvo } from './base/api.js';
@@ -193,7 +194,13 @@ function programsApiPage(){return head('Programas','Cadastro de programas e proj
 /* Telas ligadas à API da US-01 (T-40). O detalhe completo do programa chega com a US-02;
  * por ora, um programa do cadastro real abre direto em Equipe e espaços. */
 const teamApiRoute=(s,id,tab)=>s==='programas'&&id&&id!=='novo'&&tab==='equipe'&&!prog(id);
-function teamApiPage(id){return head('Equipe e espaços','Programa '+id,link('Voltar aos programas','/programas'))+'<div id="tela-api"></div>'}
+function teamApiPage(id){return head('Equipe e espaços','Programa '+id,link('Voltar aos programas','/programas'))+programApiTabs(id,'equipe')+'<div id="tela-api"></div>'}
+/* Programas do cadastro real (T-45 · US-02): detalhe, plano e metas, cadastro e edição pela API.
+ * Os programas fictícios do protótipo (p1, p2…) continuam na demonstração. */
+const programApiRoute=(s,id,tab)=>s==='programas'&&id&&id!=='novo'&&!prog(id)&&(!tab||['resumo','plano','editar'].includes(tab));
+function programApiTabs(id,active){return tabs([['Resumo','/programas/'+id,'resumo'],['Plano e metas','/programas/'+id+'/plano','plano'],['Equipe e espaços','/programas/'+id+'/equipe','equipe']],active)}
+function programApiPage(id,tab){if(tab==='editar')return can('manage')?head('Editar programa','Programa '+id,link('Voltar ao programa','/programas/'+id))+'<div id="tela-api"></div>':denied();return head(tab==='plano'?'Plano e metas':'Programa','Programa '+id,can('manage')?link('Editar programa','/programas/'+id+'/editar'):'')+programApiTabs(id,tab||'resumo')+'<div id="tela-api"></div>'}
+function newProgramApiPage(){return can('manage')?head('Novo programa','Cadastro no registro canônico, compartilhado com o Financeiro.',link('Voltar','/programas'))+'<div id="tela-api"></div>':denied()}
 function usersApiPage(){return head('Usuários e acessos','Contas, perfis e programas de cada pessoa usuária da plataforma.')+'<div id="tela-api"></div>'}
 function showProgramName(id){listarProgramas().then(ps=>{const p=ps?.find(x=>x.id===id),sub=$('#main .subtitle');if(p&&sub)sub.textContent=p.nome}).catch(()=>{})}
 function apiUserForm(){const entrada=document.createElement('input');entrada.type='text';entrada.autocomplete='username';entrada.value=usuarioSalvo();abrirFormulario({titulo:'Seu usuário na API',campos:[campo('f-usuario-api','Seu usuário',entrada,{largo:true,dica:'Identificador da sua conta na plataforma (ex.: jessica). Fica salvo só neste aparelho, até o login.'})],validar:()=>entrada.value.trim()?'':'Informe seu usuário.',enviar:async()=>salvarUsuario(entrada.value),aoConcluir:()=>{render();toast('Usuário da API: '+usuarioSalvo()+'.')}})}
@@ -337,12 +344,12 @@ let mapVisited=false;
 try{mapVisited=!previewMode&&sessionStorage.getItem('mdca-map-visited')==='1'}catch{}
 function mapReturn(){return !previewMode&&mapVisited?'<a class="map-return no-print" href="#/mapa">← Voltar ao mapa de telas</a>':''}
 
-function render(){const [s='inicio',id,tab,step]=route();const programsApi=['programas','projetos'].includes(s)&&!id&&permittedRoute(s),teamApi=teamApiRoute(s,id,tab)&&permittedRoute(s),usersApi=s==='usuarios'&&permittedRoute(s),apiScreen=programsApi||teamApi||usersApi;mapObserver?.disconnect();if(refreshAlerts())save();if(s==='mapa'&&!previewMode){mapVisited=true;try{sessionStorage.setItem('mdca-map-visited','1')}catch{}}if(s==='login'){$('#app').innerHTML=mapReturn()+login();document.title='MDCA · Login';return}let content;if(!permittedRoute(s))content=denied();else switch(s){
+function render(){const [s='inicio',id,tab,step]=route();const programsApi=['programas','projetos'].includes(s)&&!id&&permittedRoute(s),teamApi=teamApiRoute(s,id,tab)&&permittedRoute(s),programApi=programApiRoute(s,id,tab)&&permittedRoute(s),newProgramApi=s==='programas'&&id==='novo'&&permittedRoute(s),usersApi=s==='usuarios'&&permittedRoute(s),apiScreen=programsApi||teamApi||programApi||newProgramApi||usersApi;mapObserver?.disconnect();if(refreshAlerts())save();if(s==='mapa'&&!previewMode){mapVisited=true;try{sessionStorage.setItem('mdca-map-visited','1')}catch{}}if(s==='login'){$('#app').innerHTML=mapReturn()+login();document.title='MDCA · Login';return}let content;if(!permittedRoute(s))content=denied();else switch(s){
  case 'plataforma':content=platformPage();break;
   case 'mobile':content=mobilePreviewPage();break;
  case 'projetos':content=programsApiPage();break;
  case 'inicio':content=dashboard();break;
- case 'programas':content=teamApi?teamApiPage(id):id==='novo'?programForm():tab==='editar'?programForm(id):id?programDetail(id,tab):programsApiPage();break;
+ case 'programas':content=teamApi?teamApiPage(id):newProgramApi?newProgramApiPage():programApi?programApiPage(id,tab):id==='novo'?programForm():tab==='editar'?programForm(id):id?programDetail(id,tab):programsApiPage();break;
  case 'pessoas':content=id==='nova'||tab==='editar'||tab==='cadastro'?personForm(id==='nova'?'':id,Number(step)||1):id?personDetail(id,tab):peoplePage();break;
  case 'turmas':content=id==='nova'?classForm():tab==='editar'?classForm(id):id?classDetail(id,tab):classesPage();break;
  case 'atividades':content=id==='nova'||tab==='registro'?activityWizard(id,Number(step)||1):id?activityDetail(id):activitiesPage();break;
@@ -361,7 +368,7 @@ function render(){const [s='inicio',id,tab,step]=route();const programsApi=['pro
  case 'mapa':content=mapPage();break;
  case 'acesso-negado':content=denied();break;
  default:content=head('Página não encontrada','Este endereço não faz parte do protótipo.',link('Voltar ao início','/inicio','primary'));
- }$('#app').innerHTML=s==='mapa'?'<main id="main" class="map-canvas">'+content+'</main>':mapReturn()+shell(content,s,!apiScreen);document.title='MDCA · '+($('#main h1')?.textContent||'Gestão');if(programsApi)mostrarProgramas($('#tela-api'));if(teamApi){showProgramName(id);mostrarEquipe($('#tela-api'),id,{podeGerenciar:can('manage'),avisar:toast})}if(usersApi)mostrarUsuarios($('#tela-api'));if(s==='atendimentos'&&id&&id!=='novo'&&!tab&&canReadRecord(find('records',id)))audit('Consulta','Atendimento '+id,find('records',id).program);if(s==='rede'&&id&&id!=='novo'&&canReadReferral(find('referrals',id)))audit('Consulta','Rede de proteção '+id,find('referrals',id).program);if(s==='mapa'){const fit=()=>$$('.map-preview').forEach(el=>el.style.setProperty('--scale',el.clientWidth/1320));fit();window.requestAnimationFrame(fit);mapObserver=new ResizeObserver(fit);$$('.map-preview').forEach(el=>mapObserver.observe(el))}
+ }$('#app').innerHTML=s==='mapa'?'<main id="main" class="map-canvas">'+content+'</main>':mapReturn()+shell(content,s,!apiScreen);document.title='MDCA · '+($('#main h1')?.textContent||'Gestão');if(programsApi)mostrarProgramas($('#tela-api'),{podeCadastrar:can('manage')});if(newProgramApi&&$('#tela-api'))mostrarCadastroDePrograma($('#tela-api'),{ir:go,avisar:toast});if(programApi&&$('#tela-api')){showProgramName(id);const opcoes={podeGerenciar:can('manage'),avisar:toast};if(tab==='plano')mostrarPlano($('#tela-api'),id,opcoes);else if(tab==='editar')mostrarEdicaoDePrograma($('#tela-api'),id,{ir:go,avisar:toast});else mostrarPrograma($('#tela-api'),id,opcoes)}if(teamApi){showProgramName(id);mostrarEquipe($('#tela-api'),id,{podeGerenciar:can('manage'),avisar:toast})}if(usersApi)mostrarUsuarios($('#tela-api'));if(s==='atendimentos'&&id&&id!=='novo'&&!tab&&canReadRecord(find('records',id)))audit('Consulta','Atendimento '+id,find('records',id).program);if(s==='rede'&&id&&id!=='novo'&&canReadReferral(find('referrals',id)))audit('Consulta','Rede de proteção '+id,find('referrals',id).program);if(s==='mapa'){const fit=()=>$$('.map-preview').forEach(el=>el.style.setProperty('--scale',el.clientWidth/1320));fit();window.requestAnimationFrame(fit);mapObserver=new ResizeObserver(fit);$$('.map-preview').forEach(el=>mapObserver.observe(el))}
 }
 function modalForm(title,id,fields,extra='',submit='Salvar'){dialog(title,'<form id="'+id+'">'+extra+'<div id="form-error" role="alert"></div><div class="form-grid">'+fields+'</div><div class="actions" style="justify-content:flex-end;margin-top:24px">'+btn('Cancelar','close')+'<button class="btn primary" type="submit">'+submit+'</button></div></form>')}
 function setRole(next){role=next;salvarPapel(next);programFilter='all';activityDraft=null;personDraft=null;reportDraft=null;switchingRole=true;try{render()}finally{switchingRole=false}}
