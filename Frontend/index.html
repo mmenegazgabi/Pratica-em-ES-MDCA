@@ -480,16 +480,33 @@
         toggle.setAttribute('aria-expanded', String(isOpen));
       });
 
-      // Entrada provisória: até existir o login no backend (US-08), a tela só confere se
-      // e-mail e senha foram preenchidos e guarda o e-mail neste navegador.
-      var CHAVE = 'mdca.plataforma.entrada';
+      // Login único (T-35 · US-08): e-mail e senha vão para POST /auth/entrar, que
+      // devolve o token de sessão. A sessão fica em 'mdca.sessao' (localStorage com
+      // "Manter conectado", senão sessionStorage) e é lida pelos módulos para chamar a API.
+      var CHAVE = 'mdca.sessao';
+      var CHAVE_ANTIGA = 'mdca.plataforma.entrada'; // entrada provisória de antes da T-35
+      var API_PADRAO = 'https://pratica-em-es-mdca-547285598829.southamerica-east1.run.app';
       var $ = function (id) { return document.getElementById(id); };
 
+      function urlDaApi() {
+        var api = '';
+        try { api = localStorage.getItem('mdca.financeiro.api') || ''; } catch (e) {}
+        return (api || API_PADRAO).replace(/\/+$/, '');
+      }
+      function apagarSessao() {
+        try {
+          [localStorage, sessionStorage].forEach(function (s) { s.removeItem(CHAVE); s.removeItem(CHAVE_ANTIGA); });
+        } catch (e) {}
+      }
       function ler() {
-        try { return localStorage.getItem(CHAVE) || sessionStorage.getItem(CHAVE); } catch (e) { return null; }
+        var sessao = null;
+        try { sessao = JSON.parse(localStorage.getItem(CHAVE) || sessionStorage.getItem(CHAVE) || 'null'); } catch (e) {}
+        if (!sessao || !sessao.token || !(new Date(sessao.expira_em) > new Date())) return null;
+        return sessao;
       }
       function mostrar() {
         var entrou = !!ler();
+        if (!entrou) apagarSessao();
         $('login').hidden = entrou;
         $('app').hidden = !entrou;
         document.title = entrou ? 'Sistema MDCA' : 'Entrar · Sistema MDCA';
@@ -508,19 +525,48 @@
         $(campo === 'email' ? 'loginEmail' : 'loginSenha').focus();
       }
 
+      var enviando = false;
       $('formEntrar').addEventListener('submit', function (evento) {
         evento.preventDefault();
+        if (enviando) return;
         var email = $('loginEmail').value.trim();
+        var senha = $('loginSenha').value;
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return erro('Informe um e-mail válido.', 'email');
-        if (!$('loginSenha').value) return erro('Informe a senha.', 'senha');
-        try {
-          ($('loginLembrar').checked ? localStorage : sessionStorage).setItem(CHAVE, email);
-        } catch (e) { /* sem armazenamento: entra só nesta visita */ }
-        $('loginSenha').value = '';
-        $('loginErro').hidden = true;
-        $('app').hidden = false;
-        $('login').hidden = true;
-        document.title = 'Sistema MDCA';
+        if (!senha) return erro('Informe a senha.', 'senha');
+
+        var botao = $('formEntrar').querySelector('button[type="submit"]');
+        enviando = true;
+        botao.disabled = true;
+        botao.textContent = 'Entrando…';
+        fetch(urlDaApi() + '/auth/entrar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ email: email, senha: senha })
+        })
+          .then(function (resposta) {
+            if (resposta.ok) return resposta.json();
+            if (resposta.status === 401) throw new Error('E-mail ou senha inválidos.');
+            if (resposta.status === 503) throw new Error('O login está indisponível no momento. Tente de novo mais tarde.');
+            throw new Error('Não foi possível entrar. Tente de novo.');
+          })
+          .then(function (sessao) {
+            apagarSessao();
+            try {
+              ($('loginLembrar').checked ? localStorage : sessionStorage).setItem(CHAVE, JSON.stringify(sessao));
+            } catch (e) { /* sem armazenamento: a sessão não fica salva */ }
+            $('loginSenha').value = '';
+            $('loginErro').hidden = true;
+            mostrar();
+          })
+          .catch(function (falha) {
+            var texto = falha instanceof TypeError ? 'Não foi possível falar com o servidor. Verifique a conexão.' : falha.message;
+            erro(texto, 'senha');
+          })
+          .then(function () {
+            enviando = false;
+            botao.disabled = false;
+            botao.textContent = 'Entrar';
+          });
       });
       $('formEsqueci').addEventListener('submit', function (evento) {
         evento.preventDefault();
@@ -535,7 +581,7 @@
         this.textContent = ver ? 'Ocultar' : 'Mostrar';
       });
       $('sair').addEventListener('click', function () {
-        try { localStorage.removeItem(CHAVE); sessionStorage.removeItem(CHAVE); } catch (e) {}
+        apagarSessao();
         mostrar();
         trocarForm(false);
       });
