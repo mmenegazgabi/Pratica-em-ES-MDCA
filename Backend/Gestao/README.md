@@ -9,7 +9,8 @@ Dono: time de Gestão.
 ```
 Gestao/
   banco.py        # conexão com o PostgreSQL (DATABASE_URL), via Depends(obter_conexao)
-  acesso.py       # quem pode consultar e gerenciar cada programa (provisório até a T-33)
+  acesso.py       # quem pode consultar e gerenciar cada programa (provisório até a T-33);
+                  # regras documentadas em docs/permissoes-gestao.md
   auditoria.py    # registro de eventos na trilha única (log_auditoria)
   programas.py    # programas, convênios e vagas (regras e consultas, um arquivo por assunto)
   plano_de_acao.py  # objetivos, ações, metas, registros do realizado e painel
