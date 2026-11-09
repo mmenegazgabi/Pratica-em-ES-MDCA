@@ -90,6 +90,20 @@ a lista de pessoas e a busca de núcleos trazem só os programas da pessoa usuá
 a Direção, as duas voltam vazias, sem 403. O programa que vale é sempre o da pessoa
 cadastrada.
 
+### Atividades, chamada e evidências (US-05)
+
+| Ação | Coordenação | Educador | Assist. social | Psicólogo | Direção | Administração |
+|---|---|---|---|---|---|---|
+| Consultar a agenda de encontros (sem nomes) | Programa | Programa | Programa | Programa | Todos | Todos |
+| Registrar encontro com a chamada e enviar evidência | Programa | Programa | — | — | — | Todos |
+| Consultar o encontro com a chamada e baixar evidência | Programa | Programa | Programa | Programa | — | Todos |
+
+Rotas: `GET /gestao/programas/{id}/agenda`, `POST …/turmas/{turma}/atividades`,
+`GET …/atividades/{id}`, `POST …/atividades/{id}/evidencias` e
+`GET …/evidencias/{id}/arquivo`. A chamada e as evidências mostram crianças e
+adolescentes, então consultá-las segue a regra de pessoas (a Direção não vê). Todo
+download de evidência é registrado na auditoria (`download_evidencia`).
+
 ### Programas e plano de ação (US-02): pendente da T-33
 
 | Ação | Hoje |
@@ -105,7 +119,7 @@ gerencia todos, Direção e o restante da equipe só consultam.
 
 ### Ainda sem rota na API
 
-Atividades e frequência, atendimentos técnicos (social e psicológico), relatórios,
+Frequência consolidada, atendimentos técnicos (social e psicológico), relatórios,
 alertas, rede e a consulta à trilha de auditoria ainda não têm API. A permissão de
 cada um entra nesta matriz junto com a US correspondente. Por enquanto, as telas
 dessas funcionalidades são só demonstração, com o menu por perfil em
@@ -138,6 +152,7 @@ PAPEIS_COM_TODAS_AS_PESSOAS = {"administracao"}
 PAPEIS_QUE_CADASTRAM_PESSOAS = {"coordenacao", "assistente_social"}
 PAPEIS_QUE_VEEM_FINANCEIRO_DE_TODOS = {"direcao", "administracao"}
 PAPEIS_QUE_VEEM_FINANCEIRO_DO_PROGRAMA = {"coordenacao"}
+PAPEIS_QUE_REGISTRAM_ATIVIDADES = {"coordenacao", "educador"}
 ```
 
 Qualquer vínculo ativo no programa, de qualquer papel, permite consultar o programa e
