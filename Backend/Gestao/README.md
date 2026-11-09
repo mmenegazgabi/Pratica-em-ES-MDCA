@@ -18,6 +18,7 @@ Gestao/
   pessoas.py      # pessoas atendidas, núcleos familiares, responsáveis e duplicidade (US-03)
   autorizacoes.py # autorizações (uso de imagem): situação, revogação e uso externo
   trajetoria.py   # linha do tempo da pessoa atendida (T-49)
+  turmas.py       # turmas, matrículas, lista de espera e conflito de horário (US-04)
   erros.py        # erros de regra do cadastro de pessoas, traduzidos em HTTP pelas rotas
   routers/        # rotas FastAPI, todas com prefixo /gestao
     __init__.py   # junta todos os routers de Gestão num só
@@ -122,6 +123,32 @@ coordenação e a assistência social vinculadas ao programa, e a administraçã
   `detail.bloqueios` (motivo `vencida`, `revogada` ou `sem_autorizacao`). Uso interno é
   sempre liberado. A mesma regra (`autorizacoes.verificar_uso_de_imagem`) serve às
   evidências de atividade (T-56).
+
+### Turmas e matrículas (US-04)
+
+Todas em `/gestao/programas/{programa_id}`:
+
+| Rota | O que faz | Quem pode |
+|---|---|---|
+| `GET …/turmas` | Turmas com local, responsável, horário, vagas, matrículas ativas e lista de espera (só contagens) | Quem consulta o programa |
+| `POST …/turmas` | Cadastra: `nome`, `espaco_id`, `responsavel_id`, `capacidade`, `dias_semana` (1 = segunda … 7 = domingo), `hora_inicio`, `hora_fim` | Quem gerencia |
+| `GET …/turmas/{turma_id}` | Matrículas ativas, lista de espera em ordem (`posicao_espera`) e desligadas | Regra das pessoas (US-03): a direção recebe 403 |
+| `PATCH …/turmas/{turma_id}` | Edita só os campos enviados; a capacidade não fica abaixo das ativas (409) | Quem gerencia |
+| `POST …/turmas/{turma_id}/matriculas` | `pessoa_id`: matricula se há vaga; turma lotada, entra na lista de espera | Quem gerencia |
+| `POST …/turmas/{turma_id}/lista-de-espera/chamada` | Passa o primeiro da fila para a turma; 409 se lotada ou sem fila | Quem gerencia |
+| `PATCH …/turmas/{turma_id}/matriculas/{matricula_id}/desligamento` | `data_saida` e `motivo` obrigatórios (400 sem eles); a matrícula fica no histórico | Quem gerencia |
+
+Regras:
+
+- O local é um espaço do próprio programa, e o responsável precisa ter vínculo ativo na
+  equipe do programa (**400**). Campo obrigatório ausente: **400** com a lista do que falta.
+- Nome repetido no programa: **409**. A pessoa precisa ser do mesmo programa da turma
+  (**400**) e não pode ter outra inscrição em aberto na mesma turma (**409**).
+- **Conflito de horário:** outra matrícula ativa da pessoa em turma com dia em comum e
+  horário sobreposto. A inscrição é salva, os conflitos voltam em `conflitos` e ficam em
+  `log_auditoria` (ação `conflito_de_horario`), como alerta para a coordenação. O detalhe
+  da turma mostra os conflitos de cada matrícula ativa.
+- Matrícula, lista de espera e desligamento entram na trajetória da pessoa.
 
 ## Acesso às rotas de programa
 

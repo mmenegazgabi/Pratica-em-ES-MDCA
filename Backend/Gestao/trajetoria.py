@@ -6,10 +6,11 @@ Por enquanto a linha do tempo junta o que o cadastro já guarda:
 - responsáveis vinculados depois do cadastro;
 - documentos registrados;
 - autorizações registradas, revogadas e vencidas (o vencimento entra na data em que a
-  autorização deixou de valer, sem nada gravado para isso).
+  autorização deixou de valer, sem nada gravado para isso);
+- turmas (US-04): inscrição na lista de espera, matrícula e desligamento com o motivo.
 
-Frequência (US-05), atendimentos (US-07), rede de proteção (US-08) e matrículas (US-04)
-entram aqui quando cada uma existir, com o sigilo de cada registro.
+Frequência (US-05), atendimentos (US-07) e rede de proteção (US-08) entram aqui quando
+cada uma existir, com o sigilo de cada registro.
 """
 
 from dataclasses import dataclass
@@ -23,6 +24,7 @@ CADASTRO = "cadastro"
 RESPONSAVEL = "responsavel"
 DOCUMENTO = "documento"
 AUTORIZACAO = "autorizacao"
+MATRICULA = "matricula"
 
 NOMES_DE_AUTORIZACAO = {"uso_de_imagem": "uso de imagem"}
 
@@ -133,6 +135,41 @@ def trajetoria(conexao: Connection, pessoa_id: str, *, hoje: Optional[date] = No
                     tipo=AUTORIZACAO,
                     titulo=f"Autorização de {nome} vencida",
                     descricao=f"Valeu até {_data_br(a.valida_ate)}. Renove para voltar a permitir o uso externo.",
+                )
+            )
+
+    for m in conexao.execute(
+        sa.text(
+            """
+            SELECT t.nome AS turma, m.inscrito_em, m.data_entrada, m.data_saida, m.motivo_saida
+            FROM matriculas m JOIN turmas t ON t.id = m.turma_id
+            WHERE m.pessoa_id = :id
+            """
+        ),
+        {"id": pessoa_id},
+    ):
+        # Quem não entrou no dia da inscrição esperou vaga.
+        esperou = m.data_entrada is None or m.data_entrada > m.inscrito_em.astimezone(fuso).date()
+        if esperou:
+            eventos.append(
+                Evento(data=m.inscrito_em, tipo=MATRICULA, titulo=f"Lista de espera da turma {m.turma}", descricao="Inscrição aguardando vaga.")
+            )
+        if m.data_entrada is not None:
+            eventos.append(
+                Evento(
+                    data=m.inscrito_em if not esperou else _meia_noite(m.data_entrada, fuso),
+                    tipo=MATRICULA,
+                    titulo=f"Matrícula na turma {m.turma}",
+                    descricao="Chamada da lista de espera." if esperou else "Entrada na turma.",
+                )
+            )
+        if m.data_saida is not None:
+            eventos.append(
+                Evento(
+                    data=_meia_noite(m.data_saida, fuso),
+                    tipo=MATRICULA,
+                    titulo=f"Desligamento da turma {m.turma}",
+                    descricao=m.motivo_saida,
                 )
             )
 
