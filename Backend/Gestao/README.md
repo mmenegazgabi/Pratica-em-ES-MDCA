@@ -43,9 +43,10 @@ Sobre o cadastro canônico de Programas/Projetos
 
 | Rota | O que faz |
 |---|---|
-| `GET /gestao/programas` | Lista os programas (id e nome) |
+| `GET /gestao/programas` | Lista os programas (id, nome, identificador e vigência) |
 | `POST /gestao/programas` | Cadastra um programa: `nome`, `identificador`, `publico`, `responsavel`, `vigencia_inicio`, `vigencia_fim` e `descricao` opcional |
 | `GET /gestao/programas/{id}` | Dados completos do programa |
+| `PATCH /gestao/programas/{id}` | Edita os dados do programa: só os campos enviados mudam, e o resultado segue as regras do cadastro (um programa antigo, só com nome, precisa ganhar os obrigatórios) |
 | `GET`/`POST …/{id}/convenios` | Convênios e parcerias: `nome`, `concedente` e vigência opcionais |
 | `GET`/`POST …/{id}/vagas` | Vagas ofertadas: `descricao` e `quantidade` |
 | `GET`/`POST …/{id}/objetivos` | Objetivos do plano de ação: `descricao` |

@@ -80,11 +80,30 @@ test("o menu do usuário mostra o usuário usado na API", () => {
   assert.match($(".api-user").textContent, /Usuário na API: ana/);
 });
 
-test("detalhe de programa continua na demonstração", async () => {
+test("detalhe de programa fictício do protótipo continua na demonstração", async () => {
   await irPara("#/programas/p1");
 
   assert.ok($(".demo-banner"));
   assert.equal($("#tela-api"), null);
+});
+
+test("programa do cadastro real abre pela API, com as abas Resumo, Plano e metas e Equipe", async () => {
+  await irPara("#/programas/p-1/plano");
+
+  assert.equal($(".demo-banner"), null);
+  assert.ok($("#tela-api"));
+  assert.equal($("#main h1").textContent, "Plano e metas");
+  assert.deepEqual(
+    [...document.querySelectorAll("#main .tabs a")].map((a) => a.getAttribute("href")),
+    ["#/programas/p-1", "#/programas/p-1/plano", "#/programas/p-1/equipe"],
+  );
+});
+
+test("Novo programa abre o formulário ligado à API, sem o aviso de demonstração", async () => {
+  await irPara("#/programas/novo");
+
+  assert.equal($(".demo-banner"), null);
+  assert.ok($('#tela-api form [name="identificador"]'));
 });
 
 test("seletor de módulo leva ao Financeiro e o logo ao menu inicial", () => {
