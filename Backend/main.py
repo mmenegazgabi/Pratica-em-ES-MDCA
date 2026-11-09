@@ -11,6 +11,7 @@ from Financeiro.routers.notificacoes import router as notificacoes_router
 from Financeiro.routers.orcamentos import router as orcamentos_router
 from Financeiro.routers.projetos import router as projetos_router
 from Financeiro.routers.rascunhos import router as rascunhos_router
+from Financeiro.routers.relatorios import router as relatorios_router
 from Financeiro.validacao import registrar_erro_de_validacao
 from Gestao.routers import router as gestao_router
 from Shared.infra_api import router as infra_router
@@ -27,6 +28,7 @@ app.include_router(notificacoes_router)
 app.include_router(rascunhos_router)
 app.include_router(projetos_router)
 app.include_router(dashboard_router)
+app.include_router(relatorios_router)
 app.include_router(gestao_router)
 origins = [origin.strip() for origin in os.getenv(
     "CORS_ORIGINS", "http://localhost:8080,http://127.0.0.1:8080"
@@ -36,6 +38,8 @@ app.add_middleware(
     allow_origins=origins,
     allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Papel-Usuario", "X-Usuario-Id"],
+    # T-25: a tela de relatórios lê o nome do arquivo baixado.
+    expose_headers=["Content-Disposition"],
 )
 
 if __name__ == "__main__":
