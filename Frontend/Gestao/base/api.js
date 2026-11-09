@@ -38,15 +38,29 @@ const MENSAGENS = {
   [ERROS.FALHA]: "O servidor não conseguiu atender o pedido. Tente de novo.",
 };
 
-/** Erro de uma chamada; `tipo` é um de ERROS e `detalhe` traz o `detail` da API, quando houver. */
+/**
+ * Erro de uma chamada; `tipo` é um de ERROS e `detalhe` traz o texto do `detail` da API,
+ * quando houver. Quando o `detail` é um objeto ({codigo, mensagem, ...}, como no cadastro
+ * de pessoas), `detalhe` é a mensagem e `dados` traz o objeto inteiro.
+ */
 export class ErroApi extends Error {
-  constructor(tipo, status = 0, detalhe = "") {
+  constructor(tipo, status = 0, detalhe = "", dados = null) {
     super(MENSAGENS[tipo] || MENSAGENS[ERROS.FALHA]);
     this.name = "ErroApi";
     this.tipo = tipo;
     this.status = status;
     this.detalhe = detalhe;
+    this.dados = dados;
   }
+}
+
+function lerDetalhe(corpo) {
+  const detail = corpo?.detail;
+  if (typeof detail === "string") return { detalhe: detail, dados: null };
+  if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+    return { detalhe: typeof detail.mensagem === "string" ? detail.mensagem : "", dados: detail };
+  }
+  return { detalhe: "", dados: null };
 }
 
 function tipoDoStatus(status, detalhe) {
@@ -153,8 +167,8 @@ export async function requisitar(caminho, { metodo = "GET", dados, tempoLimite =
   }
 
   if (!resposta.ok) {
-    const detalhe = typeof corpo?.detail === "string" ? corpo.detail : "";
-    throw new ErroApi(tipoDoStatus(resposta.status, detalhe), resposta.status, detalhe);
+    const { detalhe, dados } = lerDetalhe(corpo);
+    throw new ErroApi(tipoDoStatus(resposta.status, detalhe), resposta.status, detalhe, dados);
   }
   return corpo;
 }
@@ -186,3 +200,39 @@ export const criarEspaco = (programaId, dados) =>
 // Usuários e papéis da plataforma (T-40).
 export const listarUsuarios = () => requisitar("/gestao/usuarios");
 export const listarPapeis = () => requisitar("/gestao/papeis");
+
+// Pessoas atendidas, famílias e autorizações (T-48 · US-03; telas da T-49).
+const pessoa = (id) => `/gestao/pessoas/${encodeURIComponent(id)}`;
+
+/** filtros: { programaId?, busca? } */
+export function listarPessoas({ programaId = "", busca = "" } = {}) {
+  const parametros = new URLSearchParams();
+  if (programaId) parametros.set("programa_id", programaId);
+  if (busca.trim()) parametros.set("busca", busca.trim());
+  const consulta = parametros.toString();
+  return requisitar(`/gestao/pessoas${consulta ? `?${consulta}` : ""}`);
+}
+
+export const obterPessoa = (id) => requisitar(pessoa(id));
+export const obterTrajetoria = (id) => requisitar(`${pessoa(id)}/trajetoria`);
+
+/** dados: { programa_id, nome, data_nascimento, responsaveis } — possíveis duplicados, sem gravar nada. */
+export const verificarDuplicidade = (dados) => requisitar("/gestao/pessoas/duplicidades", { metodo: "POST", dados });
+
+/** dados: os da duplicidade e mais núcleo, telefone, observação e confirmar_duplicidade. */
+export const cadastrarPessoa = (dados) => requisitar("/gestao/pessoas", { metodo: "POST", dados });
+
+/** dados: { nome, parentesco?, telefone?, responsavel_legal } */
+export const incluirResponsavel = (id, dados) => requisitar(`${pessoa(id)}/responsaveis`, { metodo: "POST", dados });
+
+/** dados: { tipo, nome_arquivo, tamanho? } — só os dados do arquivo, que ainda não é enviado. */
+export const registrarDocumento = (id, dados) => requisitar(`${pessoa(id)}/documentos`, { metodo: "POST", dados });
+
+/** dados: { tipo: "uso_de_imagem", valida_de?, valida_ate, documento_id? } */
+export const registrarAutorizacao = (id, dados) => requisitar(`${pessoa(id)}/autorizacoes`, { metodo: "POST", dados });
+
+export const revogarAutorizacao = (id, autorizacaoId) =>
+  requisitar(`${pessoa(id)}/autorizacoes/${encodeURIComponent(autorizacaoId)}/revogacao`, { metodo: "POST" });
+
+export const buscarNucleos = (busca = "") =>
+  requisitar(`/gestao/nucleos-familiares${busca.trim() ? `?busca=${encodeURIComponent(busca.trim())}` : ""}`);
