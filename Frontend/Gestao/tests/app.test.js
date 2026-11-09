@@ -87,6 +87,14 @@ test("detalhe de programa fictício do protótipo continua na demonstração", a
   assert.equal($("#tela-api"), null);
 });
 
+test("Visão integrada carrega pela API, sem o aviso de demonstração", async () => {
+  await irPara("#/integracao");
+
+  assert.equal($(".demo-banner"), null);
+  assert.ok($("#tela-api"));
+  assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/programas")));
+});
+
 test("programa do cadastro real abre pela API, com as abas Resumo, Plano e metas e Equipe", async () => {
   await irPara("#/programas/p-1/plano");
 

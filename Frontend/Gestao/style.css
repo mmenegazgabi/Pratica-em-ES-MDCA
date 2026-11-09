@@ -456,3 +456,14 @@ h1[tabindex="-1"]:focus{outline:none}
 .plano-acao .table-wrap{margin-top:10px}
 .meta-percentual{min-width:110px}
 .meta-percentual .progress{margin-top:6px}
+
+/* Visão integrada (T-79): filtros, resumo do programa e as duas execuções lado a lado. */
+.integrada-filtros .filter-control{min-height:38px}
+.integrada-resumo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 16px}
+.integrada-grid{align-items:start}
+.integrada-stats{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:16px}
+.integrada-vinculo{margin-top:16px;font-size:12px}
+.integrada-grid .meta-percentual{min-width:110px}
+.integrada-grid .meta-percentual .progress{margin-top:6px}
+.integrada-grid td small{display:block;color:var(--color-neutral-700)}
+@media (max-width:760px){.integrada-grid{grid-template-columns:1fr}}
