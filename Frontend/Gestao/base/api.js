@@ -331,3 +331,26 @@ export const revogarAutorizacao = (id, autorizacaoId) =>
 
 export const buscarNucleos = (busca = "") =>
   requisitar(`/gestao/nucleos-familiares${busca.trim() ? `?busca=${encodeURIComponent(busca.trim())}` : ""}`);
+
+// Turmas, matrículas e lista de espera (T-52 · US-04; telas da T-53).
+const turma = (programaId, turmaId) => `${programa(programaId)}/turmas/${encodeURIComponent(turmaId)}`;
+
+export const listarTurmas = (programaId) => requisitar(`${programa(programaId)}/turmas`);
+export const obterTurma = (programaId, turmaId) => requisitar(turma(programaId, turmaId));
+
+/** dados: { nome, espaco_id, responsavel_id, capacidade, dias_semana: [1..7], hora_inicio, hora_fim } */
+export const cadastrarTurma = (programaId, dados) => requisitar(`${programa(programaId)}/turmas`, { metodo: "POST", dados });
+
+/** Só os campos enviados mudam. */
+export const editarTurma = (programaId, turmaId, dados) => requisitar(turma(programaId, turmaId), { metodo: "PATCH", dados });
+
+/** Matricula se há vaga; com a turma lotada, a resposta vem com situação "espera". */
+export const inscreverNaTurma = (programaId, turmaId, pessoaId) =>
+  requisitar(`${turma(programaId, turmaId)}/matriculas`, { metodo: "POST", dados: { pessoa_id: pessoaId } });
+
+export const chamarListaDeEspera = (programaId, turmaId) =>
+  requisitar(`${turma(programaId, turmaId)}/lista-de-espera/chamada`, { metodo: "POST" });
+
+/** dados: { data_saida, motivo } — os dois obrigatórios. */
+export const desligarMatricula = (programaId, turmaId, matriculaId, dados) =>
+  requisitar(`${turma(programaId, turmaId)}/matriculas/${encodeURIComponent(matriculaId)}/desligamento`, { metodo: "PATCH", dados });

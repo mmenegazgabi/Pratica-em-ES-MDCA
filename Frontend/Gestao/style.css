@@ -481,3 +481,11 @@ h1[tabindex="-1"]:focus{outline:none}
 .pessoa-cabecalho h2{margin:0 0 4px}
 @media (max-width:760px){.pessoa-responsavel{grid-template-columns:1fr}}
 .pessoa-cadastro .field > .btn{justify-self:start;align-self:flex-start;width:auto}
+
+/* Turmas e matrículas ligadas à API (T-53) */
+.turma-dias{border:0;padding:0;margin:0}
+.turma-dias legend{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.turma-dias__lista{display:flex;flex-wrap:wrap;gap:6px 16px}
+.turma-dia{margin:0}
+.turma-resumo h2{margin:0 0 4px}
+.turma-cadastro .info-box{margin:0 0 12px}
