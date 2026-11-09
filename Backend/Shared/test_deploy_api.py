@@ -81,3 +81,24 @@ def test_private_r2_bucket_does_not_require_public_url():
     }, clear=True):
         config = get_r2_config()
     assert config.public_url == ""
+
+
+def test_relatorio_de_prestacao_de_contas_e_servido_pelo_deploy_app():
+    # T-25 · US-06: rota publicada e nome do arquivo liberado para o navegador.
+    client = TestClient(load_deploy_app())
+    headers = {"Authorization": "Bearer token-deploy", "X-Papel-Usuario": "coordenacao"}
+    with patch.dict(os.environ, {"FINANCEIRO_API_TOKEN": "token-deploy"}):
+        projeto = client.post("/projetos", json={"nome": "Relatorio Deploy"}, headers=headers)
+        resposta = client.get(
+            "/relatorios/prestacao-contas",
+            params={
+                "projeto_id": projeto.json()["id"],
+                "data_inicio": "2026-01-01",
+                "data_fim": "2026-06-30",
+                "formato": "xlsx",
+            },
+            headers={**headers, "Origin": "http://localhost:8080"},
+        )
+    assert resposta.status_code == 200
+    assert resposta.content.startswith(b"PK")
+    assert "content-disposition" in resposta.headers["access-control-expose-headers"].lower()

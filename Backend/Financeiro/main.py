@@ -8,6 +8,7 @@ if __package__:
     from .routers.orcamentos import router as orcamentos_router
     from .routers.projetos import router as projetos_router
     from .routers.rascunhos import router as rascunhos_router
+    from .routers.relatorios import router as relatorios_router
     from .validacao import registrar_erro_de_validacao
 else:
     from routers.comprovantes import router as comprovantes_router
@@ -17,6 +18,7 @@ else:
     from routers.orcamentos import router as orcamentos_router
     from routers.projetos import router as projetos_router
     from routers.rascunhos import router as rascunhos_router
+    from routers.relatorios import router as relatorios_router
     from validacao import registrar_erro_de_validacao
 
 app = FastAPI(title="MDCA — Financeiro")
@@ -29,6 +31,7 @@ app.include_router(notificacoes_router)
 app.include_router(rascunhos_router)
 app.include_router(projetos_router)
 app.include_router(dashboard_router)
+app.include_router(relatorios_router)
 
 
 if __name__ == "__main__":
