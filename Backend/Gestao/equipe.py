@@ -63,7 +63,7 @@ class Espaco:
 _SELECIONAR_VINCULOS = """
     SELECT v.id, v.usuario_id, u.nome, v.papel_id, p.nome AS papel,
            v.data_entrada, v.data_saida,
-           (v.data_saida IS NULL OR v.data_saida > :hoje) AS ativo
+           (u.ativo AND (v.data_saida IS NULL OR v.data_saida > :hoje)) AS ativo
     FROM vinculos_equipe v
     JOIN usuarios u ON u.id = v.usuario_id
     JOIN papeis p ON p.id = v.papel_id
@@ -85,7 +85,9 @@ def listar_equipe(
     incluir_desligados: bool = False,
     hoje: Optional[date] = None,
 ) -> List[Vinculo]:
-    filtro = "" if incluir_desligados else "AND (v.data_saida IS NULL OR v.data_saida > :hoje)"
+    # Conta desativada não acessa o programa (acesso.py), então também não é opção de
+    # responsável; o vínculo continua no histórico, com ``ativo`` falso.
+    filtro = "" if incluir_desligados else "AND u.ativo AND (v.data_saida IS NULL OR v.data_saida > :hoje)"
     linhas = conexao.execute(
         sa.text(
             f"""
