@@ -8,18 +8,24 @@
 // As rotas de programa também exigem saber QUEM chama (cabeçalho X-Usuario-Id, com o
 // id da tabela `usuarios`). Até o login, a pessoa informa o próprio usuário na tela de
 // acesso; ele fica salvo só neste aparelho, numa chave própria de Gestão.
+//
+// Login único (T-35): quando a pessoa entra pela tela inicial da plataforma, a sessão
+// fica em "mdca.sessao". Com ela, toda chamada leva o token de sessão e a API sabe quem
+// é a pessoa; o código de acesso e o X-Usuario-Id só são usados sem sessão.
 
 export const API_PADRAO = "https://pratica-em-es-mdca-547285598829.southamerica-east1.run.app";
 
 const CHAVE_TOKEN = "mdca.financeiro.token";
 const CHAVE_API = "mdca.financeiro.api";
 const CHAVE_USUARIO = "mdca.gestao.usuario";
+const CHAVE_SESSAO = "mdca.sessao";
 const TEMPO_LIMITE_MS = 15000;
 // Texto do 400 da API quando falta o X-Usuario-Id (Financeiro/autenticacao.py).
 const FALTA_USUARIO = "Identificação do usuário obrigatória.";
 
 export const ERROS = Object.freeze({
   REDE: "rede",
+  SESSAO_EXPIRADA: "sessao_expirada",
   NAO_AUTENTICADO: "nao_autenticado",
   SEM_USUARIO: "sem_usuario",
   SEM_PERMISSAO: "sem_permissao",
@@ -30,6 +36,7 @@ export const ERROS = Object.freeze({
 
 const MENSAGENS = {
   [ERROS.REDE]: "Não foi possível falar com o servidor. Verifique a conexão e tente de novo.",
+  [ERROS.SESSAO_EXPIRADA]: "Sua sessão expirou. Entre de novo para continuar.",
   [ERROS.NAO_AUTENTICADO]: "Informe o código de acesso para carregar estes dados.",
   [ERROS.SEM_USUARIO]: "Informe seu usuário para carregar estes dados.",
   [ERROS.SEM_PERMISSAO]: "Seu perfil não tem acesso a estes dados.",
@@ -104,11 +111,37 @@ export function esquecerAcesso() {
   gravar(CHAVE_TOKEN, "");
 }
 
+/**
+ * Sessão do login único ({ token, expira_em, usuario: { id, nome, email, papeis } }),
+ * ou `null` sem sessão ou com ela expirada. A tela inicial grava em localStorage
+ * ("Manter conectado") ou em sessionStorage.
+ */
+export function sessaoAtiva() {
+  let sessao = null;
+  try {
+    sessao = JSON.parse(localStorage.getItem(CHAVE_SESSAO) || sessionStorage.getItem(CHAVE_SESSAO) || "null");
+  } catch {
+    return null;
+  }
+  if (!sessao?.token || !(new Date(sessao.expira_em) > new Date())) return null;
+  return sessao;
+}
+
+/** Apaga a sessão do login único deste navegador (sair, ou sessão recusada pela API). */
+export function encerrarSessao() {
+  try {
+    localStorage.removeItem(CHAVE_SESSAO);
+    sessionStorage.removeItem(CHAVE_SESSAO);
+  } catch {
+    /* navegador sem armazenamento */
+  }
+}
+
 let usuarioEmMemoria = "";
 
-/** Id do usuário (tabela `usuarios`) enviado em X-Usuario-Id; vazio se não informado. */
+/** Id do usuário (tabela `usuarios`): o da sessão ou o enviado em X-Usuario-Id; vazio se nenhum. */
 export function usuarioSalvo() {
-  return usuarioEmMemoria || ler(CHAVE_USUARIO);
+  return sessaoAtiva()?.usuario?.id || usuarioEmMemoria || ler(CHAVE_USUARIO);
 }
 
 export function salvarUsuario(usuario) {
@@ -122,10 +155,16 @@ export function salvarUsuario(usuario) {
  */
 export async function requisitar(caminho, { metodo = "GET", dados, tempoLimite = TEMPO_LIMITE_MS } = {}) {
   const cabecalhos = { Accept: "application/json" };
-  const token = tokenSalvo();
-  if (token) cabecalhos.Authorization = `Bearer ${token}`;
-  const usuario = usuarioSalvo();
-  if (usuario) cabecalhos["X-Usuario-Id"] = usuario;
+  const sessao = sessaoAtiva();
+  if (sessao) {
+    // Com sessão, o token diz quem é a pessoa: nada de código de acesso nem X-Usuario-Id.
+    cabecalhos.Authorization = `Bearer ${sessao.token}`;
+  } else {
+    const token = tokenSalvo();
+    if (token) cabecalhos.Authorization = `Bearer ${token}`;
+    const usuario = usuarioSalvo();
+    if (usuario) cabecalhos["X-Usuario-Id"] = usuario;
+  }
   const opcoes = { method: metodo, headers: cabecalhos };
   if (dados !== undefined) {
     cabecalhos["Content-Type"] = "application/json";
@@ -154,6 +193,11 @@ export async function requisitar(caminho, { metodo = "GET", dados, tempoLimite =
 
   if (!resposta.ok) {
     const detalhe = typeof corpo?.detail === "string" ? corpo.detail : "";
+    if (sessao && resposta.status === 401) {
+      // Token expirado, conta desativada ou login desligado no servidor.
+      encerrarSessao();
+      throw new ErroApi(ERROS.SESSAO_EXPIRADA, 401, detalhe);
+    }
     throw new ErroApi(tipoDoStatus(resposta.status, detalhe), resposta.status, detalhe);
   }
   return corpo;
