@@ -17,6 +17,7 @@ Gestao/
   usuarios.py     # usuários e papéis da plataforma (só consulta)
   pessoas.py      # pessoas atendidas, núcleos familiares, responsáveis e duplicidade (US-03)
   autorizacoes.py # autorizações (uso de imagem): situação, revogação e uso externo
+  trajetoria.py   # linha do tempo da pessoa atendida (T-49)
   erros.py        # erros de regra do cadastro de pessoas, traduzidos em HTTP pelas rotas
   routers/        # rotas FastAPI, todas com prefixo /gestao
     __init__.py   # junta todos os routers de Gestão num só
@@ -92,8 +93,9 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 | `POST /gestao/pessoas/duplicidades` | Possíveis duplicados de um cadastro ainda não concluído (etapa de revisão); não grava nada |
 | `POST /gestao/pessoas` | Cadastra a pessoa com núcleo familiar (`nucleo_familiar_id` existente ou `nucleo_familiar_nome` novo) e responsáveis (`id` existente ou `nome` novo, com `parentesco` e `responsavel_legal`) |
 | `GET /gestao/pessoas/{pessoa_id}` | Detalhe com idade, núcleo, responsáveis, documentos e autorizações |
+| `GET /gestao/pessoas/{pessoa_id}/trajetoria` | Linha do tempo, do mais recente ao mais antigo: cadastro, responsáveis incluídos depois, documentos e autorizações (registro, revogação e vencimento). Frequência, atendimentos e matrículas entram com as US delas (T-49) |
 | `POST /gestao/pessoas/{pessoa_id}/responsaveis` | Inclui um responsável |
-| `POST /gestao/pessoas/{pessoa_id}/documentos` | Registra os dados do documento (`tipo`, `nome_arquivo`, `tamanho`); o arquivo em si chega com as telas (T-49) |
+| `POST /gestao/pessoas/{pessoa_id}/documentos` | Registra os dados do documento (`tipo`, `nome_arquivo`, `tamanho`); o envio do arquivo ainda não existe: as telas da T-49 registram só esses dados |
 | `POST /gestao/pessoas/{pessoa_id}/autorizacoes` | Registra autorização (`tipo: uso_de_imagem`, `valida_ate`, `valida_de` opcional = hoje, `documento_id` opcional) |
 | `POST /gestao/pessoas/{pessoa_id}/autorizacoes/{autorizacao_id}/revogacao` | Revoga; fica na auditoria (`autorizacao_revogada`) |
 | `POST /gestao/pessoas/uso-de-imagem` | `{pessoa_ids, uso}`: uso externo só com autorização de imagem vigente de todos |

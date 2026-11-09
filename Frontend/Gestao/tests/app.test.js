@@ -24,6 +24,7 @@ const RESPOSTAS = [
   [/\/espacos$/, []],
   [/\/gestao\/usuarios$/, [{ id: "ana", nome: "Ana Martins", email: null, ativo: true, papeis: [], vinculos: [] }]],
   [/\/gestao\/programas$/, [{ id: "p-1", nome: "Semear" }]],
+  [/\/gestao\/pessoas$/, [{ id: "pe-lara", nome: "Lara Oliveira", data_nascimento: "2013-05-12", programa_id: "p-1", programa: "Semear", nucleo_familiar: { id: "f-1", nome: "Oliveira" }, responsaveis: [], situacao: "ativo", autorizacao_imagem: "vigente" }]],
 ];
 globalThis.fetch = async (url, opcoes = {}) => {
   chamadas.push({ url, ...opcoes });
@@ -83,6 +84,19 @@ test("o menu do usuário mostra o usuário usado na API", () => {
 test("detalhe de programa fictício do protótipo continua na demonstração", async () => {
   await irPara("#/programas/p1");
 
+  assert.ok($(".demo-banner"));
+  assert.equal($("#tela-api"), null);
+});
+
+test("Pessoas e famílias carrega pela API; pessoas fictícias do protótipo seguem na demonstração", async () => {
+  chamadas.length = 0;
+  await irPara("#/pessoas");
+
+  assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/pessoas")));
+  assert.equal($("#tela-api tbody a").textContent, "Lara Oliveira");
+  assert.equal($(".demo-banner"), null);
+
+  await irPara("#/pessoas/u1");
   assert.ok($(".demo-banner"));
   assert.equal($("#tela-api"), null);
 });

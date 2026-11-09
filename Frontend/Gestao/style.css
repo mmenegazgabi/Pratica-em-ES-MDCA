@@ -467,3 +467,17 @@ h1[tabindex="-1"]:focus{outline:none}
 .integrada-grid .meta-percentual .progress{margin-top:6px}
 .integrada-grid td small{display:block;color:var(--color-neutral-700)}
 @media (max-width:760px){.integrada-grid{grid-template-columns:1fr}}
+
+/* Pessoas e famílias ligadas à API (T-49) */
+.stack{display:grid;gap:18px}
+.pessoas-filtros .filters{width:100%}
+.pessoas-filtros input[type=search]{flex:1;min-width:200px}
+.pessoa-cadastro .wide{grid-column:1/-1}
+.pessoa-cadastro .field-label{font-size:12px;font-weight:600;color:var(--ink)}
+.pessoa-cadastro .info-box{margin:8px 0}
+.pessoa-responsavel{display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:8px;align-items:center;margin-bottom:8px}
+.pessoa-documento{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.pessoa-duplicados ul{margin:8px 0 0;padding-left:18px}
+.pessoa-cabecalho h2{margin:0 0 4px}
+@media (max-width:760px){.pessoa-responsavel{grid-template-columns:1fr}}
+.pessoa-cadastro .field > .btn{justify-self:start;align-self:flex-start;width:auto}

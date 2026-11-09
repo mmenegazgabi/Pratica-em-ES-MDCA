@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Connection
 
 from Financeiro.autenticacao import exigir_usuario
-from Gestao import auditoria, autorizacoes, pessoas
+from Gestao import auditoria, autorizacoes, pessoas, trajetoria
 from Gestao.acesso import (
     AcessoAPessoas,
     exigir_cadastro_na_pessoa,
@@ -162,6 +162,14 @@ class BloqueioSaida(_Saida):
     motivo: str
 
 
+class EventoSaida(_Saida):
+    data: datetime
+    # cadastro, responsavel, documento ou autorizacao (crescem com as próximas US).
+    tipo: str
+    titulo: str
+    descricao: str
+
+
 class UsoDeImagemSaida(BaseModel):
     liberado: bool
     bloqueios: List[BloqueioSaida]
@@ -266,6 +274,16 @@ def obter_pessoa(
     conexao: Connection = Depends(obter_conexao),
 ):
     return pessoas.obter(conexao, pessoa_id)
+
+
+@router.get("/pessoas/{pessoa_id}/trajetoria", response_model=List[EventoSaida])
+def obter_trajetoria(
+    pessoa_id: str,
+    _acesso: AcessoAPessoas = Depends(exigir_consulta_a_pessoa),
+    conexao: Connection = Depends(obter_conexao),
+):
+    """Linha do tempo da pessoa, do mais recente para o mais antigo (T-49)."""
+    return trajetoria.trajetoria(conexao, pessoa_id)
 
 
 @router.post("/pessoas/{pessoa_id}/responsaveis", response_model=PessoaSaida, status_code=201)
