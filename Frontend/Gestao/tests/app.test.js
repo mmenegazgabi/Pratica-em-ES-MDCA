@@ -24,6 +24,7 @@ const RESPOSTAS = [
   [/\/espacos$/, []],
   [/\/gestao\/usuarios$/, [{ id: "ana", nome: "Ana Martins", email: null, ativo: true, papeis: [], vinculos: [] }]],
   [/\/gestao\/programas$/, [{ id: "p-1", nome: "Semear" }]],
+  [/\/gestao\/programas\/p-1\/turmas$/, [{ id: "t-9", programa_id: "p-1", nome: "Oficina de arte", espaco: "Ateliê", responsavel: "Jéssica", capacidade: 2, ativas: 2, em_espera: 1, vagas_livres: 0, dias_semana: [1, 3], hora_inicio: "14:00:00", hora_fim: "16:00:00" }]],
   [/\/gestao\/pessoas$/, [{ id: "pe-lara", nome: "Lara Oliveira", data_nascimento: "2013-05-12", programa_id: "p-1", programa: "Semear", nucleo_familiar: { id: "f-1", nome: "Oliveira" }, responsaveis: [], situacao: "ativo", autorizacao_imagem: "vigente" }]],
 ];
 globalThis.fetch = async (url, opcoes = {}) => {
@@ -109,7 +110,7 @@ test("Visão integrada carrega pela API, sem o aviso de demonstração", async (
   assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/programas")));
 });
 
-test("programa do cadastro real abre pela API, com as abas Resumo, Plano e metas e Equipe", async () => {
+test("programa do cadastro real abre pela API, com as abas Resumo, Plano e metas, Equipe e Turmas", async () => {
   await irPara("#/programas/p-1/plano");
 
   assert.equal($(".demo-banner"), null);
@@ -117,7 +118,7 @@ test("programa do cadastro real abre pela API, com as abas Resumo, Plano e metas
   assert.equal($("#main h1").textContent, "Plano e metas");
   assert.deepEqual(
     [...document.querySelectorAll("#main .tabs a")].map((a) => a.getAttribute("href")),
-    ["#/programas/p-1", "#/programas/p-1/plano", "#/programas/p-1/equipe"],
+    ["#/programas/p-1", "#/programas/p-1/plano", "#/programas/p-1/equipe", "#/turmas/p-1"],
   );
 });
 
@@ -126,6 +127,21 @@ test("Novo programa abre o formulário ligado à API, sem o aviso de demonstraç
 
   assert.equal($(".demo-banner"), null);
   assert.ok($('#tela-api form [name="identificador"]'));
+});
+
+test("Turmas carrega pela API por programa; turmas fictícias do protótipo seguem na demonstração", async () => {
+  chamadas.length = 0;
+  await irPara("#/turmas");
+  await esperar();
+
+  assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/programas/p-1/turmas")));
+  assert.equal($("#tela-api tbody a").textContent, "Oficina de arte");
+  assert.match($("#tela-api tbody").textContent, /2 de 2.*Turma lotada.*1 na espera/);
+  assert.equal($(".demo-banner"), null);
+
+  await irPara("#/turmas/t1");
+  assert.ok($(".demo-banner"));
+  assert.equal($("#tela-api"), null);
 });
 
 test("seletor de módulo leva ao Financeiro e o logo ao menu inicial", () => {
