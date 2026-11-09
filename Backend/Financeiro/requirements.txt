@@ -4,3 +4,7 @@ pytest
 httpx
 python-multipart
 boto3
+# T-24 · US-06: relatório de prestação de contas (PDF, XLSX) e leitura do PDF nos testes
+reportlab>=4.2,<6.0
+openpyxl>=3.1,<4.0
+pypdf>=5.0,<8.0
