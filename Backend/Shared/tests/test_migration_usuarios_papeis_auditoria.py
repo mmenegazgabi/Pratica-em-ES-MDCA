@@ -100,7 +100,8 @@ def test_migration_cria_as_quatro_tabelas_com_colunas_esperadas(migrated_db):
     colunas = {
         tabela: {c["name"] for c in inspetor.get_columns(tabela)} for tabela in TABELAS
     }
-    assert colunas["usuarios"] == {"id", "nome", "email", "ativo", "criado_em"}
+    # Later migrations may add columns to usuarios (senha_hash, T-35).
+    assert {"id", "nome", "email", "ativo", "criado_em"} <= colunas["usuarios"]
     assert colunas["papeis"] == {"id", "nome"}
     assert colunas["usuarios_papeis"] == {"usuario_id", "papel_id", "atribuido_em"}
     assert colunas["log_auditoria"] == {

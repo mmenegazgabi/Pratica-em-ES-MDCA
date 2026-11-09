@@ -30,8 +30,9 @@ Gestao/
   [`Backend/Shared/migrations`](../Shared/migrations) (head único, compartilhado com
   o Financeiro). O código de Gestão só lê e grava.
 - Sem `DATABASE_URL` configurada ou com o banco fora do ar, as rotas respondem 503.
-- Autenticação provisória: o mesmo token de serviço do Financeiro
-  (`FINANCEIRO_API_TOKEN`), até o login único (T-35) e o RBAC (T-33).
+- Autenticação: o token de sessão do login único (T-35, veja
+  [`docs/login-unico.md`](../../docs/login-unico.md)) ou, durante a transição, o token de
+  serviço do Financeiro (`FINANCEIRO_API_TOKEN`).
 
 ## Rotas
 
@@ -42,9 +43,10 @@ Sobre o cadastro canônico de Programas/Projetos
 
 | Rota | O que faz |
 |---|---|
-| `GET /gestao/programas` | Lista os programas (id e nome) |
+| `GET /gestao/programas` | Lista os programas (id, nome, identificador e vigência) |
 | `POST /gestao/programas` | Cadastra um programa: `nome`, `identificador`, `publico`, `responsavel`, `vigencia_inicio`, `vigencia_fim` e `descricao` opcional |
 | `GET /gestao/programas/{id}` | Dados completos do programa |
+| `PATCH /gestao/programas/{id}` | Edita os dados do programa: só os campos enviados mudam, e o resultado segue as regras do cadastro (um programa antigo, só com nome, precisa ganhar os obrigatórios) |
 | `GET`/`POST …/{id}/convenios` | Convênios e parcerias: `nome`, `concedente` e vigência opcionais |
 | `GET`/`POST …/{id}/vagas` | Vagas ofertadas: `descricao` e `quantidade` |
 | `GET`/`POST …/{id}/objetivos` | Objetivos do plano de ação: `descricao` |
@@ -119,10 +121,12 @@ coordenação e a assistência social vinculadas ao programa, e a administraçã
   sempre liberado. A mesma regra (`autorizacoes.verificar_uso_de_imagem`) serve às
   evidências de atividade (T-56).
 
-## Acesso às rotas de programa (provisório até a T-33 e a T-35)
+## Acesso às rotas de programa
 
-- Quem chama é identificado pelo cabeçalho `X-Usuario-Id`, junto com o token de
-  serviço, como no Financeiro. Sem ele, a resposta é 400.
+- Quem chama vem do **token de sessão** do login único (T-35). Sem sessão, durante a
+  transição, vale o cabeçalho `X-Usuario-Id` junto com o token de serviço, como no
+  Financeiro; sem nenhum dos dois, a resposta é 400. Com token de sessão, o
+  `X-Usuario-Id` é ignorado.
 - Os papéis vêm do banco, não de cabeçalho: os da plataforma em `usuarios_papeis`
   (direção e administração) e os do programa em `vinculos_equipe`.
 - **Vínculo ativo** é o que não tem data de saída ou tem a saída no futuro. A partir
@@ -131,11 +135,13 @@ coordenação e a assistência social vinculadas ao programa, e a administraçã
 - Toda negação grava em `log_auditoria` (módulo `gestao`, ação `acesso_negado`,
   programa, método e rota) antes de responder 403. Na lista de usuários o alvo é
   `usuarios`, sem id.
-- Enquanto não há login, quem tem o token pode se identificar como qualquer usuário.
-  A proteção real vem com a T-35 (login) e a T-33 (RBAC).
+- Pelo caminho antigo (token de serviço + `X-Usuario-Id`), quem tem o token ainda pode
+  se identificar como qualquer usuário; esse caminho sai quando os dois frontends
+  usarem o login.
 - Ainda não há rota de cadastro de usuários (a API só consulta): para começar, inclua
-  um administrador direto no banco. Para testar as telas de Gestão, vale incluir também
-  um programa, uma coordenação e uma educadora:
+  um administrador direto no banco. Para entrar pelo login, a conta precisa de e-mail e
+  de senha, definida com `scripts/definir-senha.py <email>`. Para testar as telas de
+  Gestão, vale incluir também um programa, uma coordenação e uma educadora:
 
   ```sql
   INSERT INTO usuarios (id, nome) VALUES ('admin', 'Administração');

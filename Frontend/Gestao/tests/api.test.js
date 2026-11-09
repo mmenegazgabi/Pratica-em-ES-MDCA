@@ -6,6 +6,7 @@ import {
   ERROS,
   ErroApi,
   criarEspaco,
+  encerrarSessao,
   esquecerAcesso,
   listarEquipe,
   listarEspacos,
@@ -17,6 +18,7 @@ import {
   salvarAcesso,
   salvarServidor,
   salvarUsuario,
+  sessaoAtiva,
   urlDaApi,
   usuarioSalvo,
   vincularProfissional,
@@ -24,6 +26,7 @@ import {
 
 let chamadas;
 let dados;
+let dadosDaAba;
 
 function responder(status, corpo) {
   globalThis.fetch = async (url, opcoes = {}) => {
@@ -48,6 +51,12 @@ beforeEach(() => {
     getItem: (k) => (dados.has(k) ? dados.get(k) : null),
     setItem: (k, v) => dados.set(k, String(v)),
     removeItem: (k) => dados.delete(k),
+  };
+  dadosDaAba = new Map();
+  globalThis.sessionStorage = {
+    getItem: (k) => (dadosDaAba.has(k) ? dadosDaAba.get(k) : null),
+    setItem: (k, v) => dadosDaAba.set(k, String(v)),
+    removeItem: (k) => dadosDaAba.delete(k),
   };
   chamadas = [];
   esquecerAcesso();
@@ -215,4 +224,65 @@ test("servidor que não responde no tempo limite vira erro de rede", async () =>
   const erro = await falhaDe(requisitar("/gestao/programas", { tempoLimite: 10 }));
 
   assert.equal(erro.tipo, ERROS.REDE);
+});
+
+// --- Login único (T-35) ------------------------------------------------------
+
+const daquiAUmaHora = () => new Date(Date.now() + 3600_000).toISOString();
+const SESSAO = () => ({
+  token: "mdca1.carga.assinatura",
+  expira_em: daquiAUmaHora(),
+  usuario: { id: "ana", nome: "Ana Martins", email: "ana@mdca.org.br", papeis: ["coordenacao"] },
+});
+
+test("com sessão, manda o token da sessão e não manda o código nem X-Usuario-Id", async () => {
+  salvarAcesso("codigo-antigo");
+  salvarUsuario("jessica");
+  dados.set("mdca.sessao", JSON.stringify(SESSAO()));
+
+  await listarProgramas();
+
+  assert.equal(chamadas[0].headers.Authorization, "Bearer mdca1.carga.assinatura");
+  assert.equal("X-Usuario-Id" in chamadas[0].headers, false);
+  assert.equal(usuarioSalvo(), "ana");
+});
+
+test("sessão guardada só nesta aba (sem 'Manter conectado') também vale", async () => {
+  dadosDaAba.set("mdca.sessao", JSON.stringify(SESSAO()));
+
+  await listarProgramas();
+
+  assert.equal(chamadas[0].headers.Authorization, "Bearer mdca1.carga.assinatura");
+});
+
+test("sessão expirada ou malformada é ignorada e volta o código de acesso", async () => {
+  salvarAcesso("codigo");
+  dados.set("mdca.sessao", JSON.stringify({ ...SESSAO(), expira_em: "2020-01-01T00:00:00Z" }));
+  assert.equal(sessaoAtiva(), null);
+  dados.set("mdca.sessao", "{não é json");
+  assert.equal(sessaoAtiva(), null);
+
+  await listarProgramas();
+
+  assert.equal(chamadas[0].headers.Authorization, "Bearer codigo");
+});
+
+test("401 com sessão apaga a sessão e pede para entrar de novo", async () => {
+  dados.set("mdca.sessao", JSON.stringify(SESSAO()));
+  responder(401, { detail: "Autenticação obrigatória." });
+
+  const erro = await falhaDe(listarProgramas());
+
+  assert.equal(erro.tipo, ERROS.SESSAO_EXPIRADA);
+  assert.match(erro.message, /Entre de novo/);
+  assert.equal(dados.has("mdca.sessao"), false);
+});
+
+test("encerrarSessao apaga a sessão dos dois armazenamentos", () => {
+  dados.set("mdca.sessao", JSON.stringify(SESSAO()));
+  dadosDaAba.set("mdca.sessao", JSON.stringify(SESSAO()));
+
+  encerrarSessao();
+
+  assert.equal(sessaoAtiva(), null);
 });

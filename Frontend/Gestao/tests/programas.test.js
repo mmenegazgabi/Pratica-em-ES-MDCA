@@ -38,25 +38,35 @@ test("mostra Carregando enquanto a API não responde", async () => {
   assert.equal(container.querySelector('[role="status"]'), null);
 });
 
-test("lista os programas na ordem da API, com nome e identificador", async () => {
+test("lista os programas na ordem da API, com nome, identificador e vigência", async () => {
   await mostrarProgramas(container, {
     buscar: async () => [
-      { id: "p-2", nome: "Casa de Convivência" },
-      { id: "p-1", nome: "Semear" },
+      { id: "p-2", nome: "Casa de Convivência", identificador: "CASA", vigencia_inicio: "2026-02-02", vigencia_fim: "2026-12-18" },
+      { id: "p-1", nome: "Semear", identificador: null, vigencia_inicio: null, vigencia_fim: null },
     ],
   });
 
   const linhas = [...container.querySelectorAll("tbody tr")].map((tr) => [...tr.cells].map((c) => c.textContent));
+  // Programa antigo, criado só com nome, aparece sem identificador nem vigência.
   assert.deepEqual(linhas, [
-    ["Casa de Convivência", "p-2", "Equipe e espaços"],
-    ["Semear", "p-1", "Equipe e espaços"],
+    ["Casa de Convivência", "CASA", "02/02/2026 a 18/12/2026", "Equipe e espaços"],
+    ["Semear", "—", "—", "Equipe e espaços"],
   ]);
 });
 
-test("cada programa leva à sua Equipe e espaços, com o id codificado", async () => {
+test("cada programa abre o seu detalhe e a sua Equipe e espaços, com o id codificado", async () => {
   await mostrarProgramas(container, { buscar: async () => [{ id: "p 1/x", nome: "Semear" }] });
 
-  assert.equal(container.querySelector("tbody a").getAttribute("href"), "#/programas/p%201%2Fx/equipe");
+  const links = [...container.querySelectorAll("tbody a")].map((a) => a.getAttribute("href"));
+  assert.deepEqual(links, ["#/programas/p%201%2Fx", "#/programas/p%201%2Fx/equipe"]);
+});
+
+test("o botão de novo programa só aparece para quem cadastra", async () => {
+  await mostrarProgramas(container, { buscar: async () => [] });
+  assert.equal(container.querySelector('a[href="#/programas/novo"]'), null);
+
+  await mostrarProgramas(container, { podeCadastrar: true, buscar: async () => [] });
+  assert.ok(container.querySelector('a[href="#/programas/novo"]'));
 });
 
 test("sem usuário identificado (400) pede o usuário e mantém o código salvo", async () => {

@@ -124,10 +124,28 @@ function pedirCodigo(erro, tentarDeNovo) {
   );
 }
 
+// Login único (T-35): a sessão já foi apagada por api.js; o caminho é entrar de novo
+// pela tela inicial da plataforma, não pedir código.
+function sessaoExpirada(erro) {
+  return el(
+    "section",
+    { class: "card estado estado--restrito" },
+    el(
+      "div",
+      { class: "empty", role: "alert" },
+      el("h2", {}, "Sessão encerrada"),
+      el("p", {}, erro.message),
+      el("a", { class: "btn primary", href: "../" }, "Entrar de novo"),
+    ),
+  );
+}
+
 const PEDE_IDENTIFICACAO = [ERROS.NAO_AUTENTICADO, ERROS.SEM_USUARIO];
-export const ehRestrito = (erro) => [...PEDE_IDENTIFICACAO, ERROS.SEM_PERMISSAO].includes(erro?.tipo);
+export const ehRestrito = (erro) =>
+  [...PEDE_IDENTIFICACAO, ERROS.SEM_PERMISSAO, ERROS.SESSAO_EXPIRADA].includes(erro?.tipo);
 
 export function acessoRestrito(erro, tentarDeNovo) {
+  if (erro.tipo === ERROS.SESSAO_EXPIRADA) return sessaoExpirada(erro);
   return PEDE_IDENTIFICACAO.includes(erro.tipo) ? pedirCodigo(erro, tentarDeNovo) : semPermissao(erro);
 }
 
