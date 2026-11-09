@@ -1,3 +1,5 @@
 -r requirements.txt
 pytest
 httpx
+# T-24 · US-06: lê o PDF gerado nos testes de paridade PDF x XLSX
+pypdf>=5.0,<8.0

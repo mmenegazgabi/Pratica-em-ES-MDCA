@@ -11,6 +11,11 @@ dependem dela continuam iguais.
 
 A verificação falha fechada: sem token configurado no servidor, nenhuma
 requisição é aceita.
+
+Login único (T-35 · US-08): o ``Authorization: Bearer`` também aceita o token de
+sessão devolvido por ``POST /auth/entrar`` (``Shared/sessao.py``). Com ele, quem
+chama vem do token, e não do cabeçalho ``X-Usuario-Id``. O código de acesso continua
+valendo enquanto os frontends migram para o login.
 """
 
 import hmac
@@ -21,35 +26,44 @@ from typing import Optional
 from fastapi import Depends, Header, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from Shared import sessao
+
 VARIAVEL_TOKEN = "FINANCEIRO_API_TOKEN"
 
 _esquema_bearer = HTTPBearer(
     auto_error=False,
-    description="Token de serviço do Financeiro (provisório até a US-08).",
+    description="Token de sessão (POST /auth/entrar) ou código de acesso do Financeiro.",
 )
+
+
+def _token_recebido(credenciais: Optional[HTTPAuthorizationCredentials]) -> str:
+    return credenciais.credentials if credenciais else ""
 
 
 def exigir_autenticacao(
     credenciais: Optional[HTTPAuthorizationCredentials] = Depends(_esquema_bearer),
 ) -> str:
     token_esperado = os.getenv(VARIAVEL_TOKEN, "")
-    if not token_esperado:
+    if not token_esperado and not sessao.chave_configurada():
         raise HTTPException(
             status_code=503,
             detail="Autenticação da API não configurada no servidor.",
         )
 
-    token_recebido = credenciais.credentials if credenciais else ""
-    if not token_recebido or not hmac.compare_digest(
+    token_recebido = _token_recebido(credenciais)
+    if token_recebido and token_esperado and hmac.compare_digest(
         token_recebido.encode(), token_esperado.encode()
     ):
-        raise HTTPException(
-            status_code=401,
-            detail="Autenticação obrigatória.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        return "servico-financeiro"
+    # Token de sessão: válido, não expirado e com a conta ainda ativa no banco.
+    if token_recebido and sessao.usuario_da_sessao(token_recebido):
+        return "sessao"
 
-    return "servico-financeiro"
+    raise HTTPException(
+        status_code=401,
+        detail="Autenticação obrigatória.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 # --- Papel do usuário (T-15 · US-04) ----------------------------------------
@@ -99,8 +113,16 @@ USUARIO_TAMANHO_MAXIMO = 100
 
 def obter_usuario(
     usuario: Optional[str] = Header(None, alias=CABECALHO_USUARIO),
+    credenciais: Optional[HTTPAuthorizationCredentials] = Depends(_esquema_bearer),
 ) -> Optional[str]:
-    """Usuário informado no cabeçalho, ou ``None`` quando ausente."""
+    """Usuário do token de sessão; sem ele, o do cabeçalho; ``None`` quando ausente.
+
+    Com token de sessão o cabeçalho é ignorado: não dá para se passar por outra pessoa.
+    A conta ativa já foi conferida por ``exigir_autenticacao``.
+    """
+    da_sessao = sessao.ler_token(_token_recebido(credenciais))
+    if da_sessao is not None:
+        return da_sessao
     usuario = (usuario or "").strip()
     if not usuario:
         return None
