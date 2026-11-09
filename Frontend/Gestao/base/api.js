@@ -186,3 +186,44 @@ export const criarEspaco = (programaId, dados) =>
 // Usuários e papéis da plataforma (T-40).
 export const listarUsuarios = () => requisitar("/gestao/usuarios");
 export const listarPapeis = () => requisitar("/gestao/papeis");
+
+// Programas, convênios, vagas e plano de ação (API da T-44; edição da T-45).
+export const obterPrograma = (programaId) => requisitar(programa(programaId));
+
+/** dados: { nome, identificador, publico, responsavel, vigencia_inicio, vigencia_fim, descricao? } */
+export const cadastrarPrograma = (dados) => requisitar("/gestao/programas", { metodo: "POST", dados });
+
+/** Só os campos enviados mudam; o programa resultante segue as regras do cadastro. */
+export const editarPrograma = (programaId, dados) => requisitar(programa(programaId), { metodo: "PATCH", dados });
+
+export const listarConvenios = (programaId) => requisitar(`${programa(programaId)}/convenios`);
+
+/** dados: { nome, concedente?, vigencia_inicio?, vigencia_fim? } */
+export const cadastrarConvenio = (programaId, dados) =>
+  requisitar(`${programa(programaId)}/convenios`, { metodo: "POST", dados });
+
+export const listarVagas = (programaId) => requisitar(`${programa(programaId)}/vagas`);
+
+/** dados: { descricao, quantidade } */
+export const cadastrarVagas = (programaId, dados) => requisitar(`${programa(programaId)}/vagas`, { metodo: "POST", dados });
+
+export const listarObjetivos = (programaId) => requisitar(`${programa(programaId)}/objetivos`);
+
+/** dados: { descricao } */
+export const cadastrarObjetivo = (programaId, dados) =>
+  requisitar(`${programa(programaId)}/objetivos`, { metodo: "POST", dados });
+
+export const listarAcoes = (programaId) => requisitar(`${programa(programaId)}/acoes`);
+
+/** dados: { objetivo_id, descricao, periodo_inicio, periodo_fim, resultado_esperado, periodicidade } */
+export const cadastrarAcao = (programaId, dados) => requisitar(`${programa(programaId)}/acoes`, { metodo: "POST", dados });
+
+/** dados: { acao_id, descricao, valor_planejado, unidade? } */
+export const cadastrarMeta = (programaId, dados) => requisitar(`${programa(programaId)}/metas`, { metodo: "POST", dados });
+
+/** dados: { data, valor_realizado, observacao? } */
+export const registrarRealizado = (programaId, metaId, dados) =>
+  requisitar(`${programa(programaId)}/metas/${encodeURIComponent(metaId)}/registros`, { metodo: "POST", dados });
+
+/** { programa_id, metas: [{ meta_id, descricao, unidade, acao_id, acao, objetivo_id, objetivo, planejado, realizado, percentual }] } */
+export const obterPainel = (programaId) => requisitar(`${programa(programaId)}/painel`);

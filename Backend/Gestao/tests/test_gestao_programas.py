@@ -17,10 +17,34 @@ def test_lista_programas_gravados_no_banco_em_ordem_alfabetica(cliente, cabecalh
     resposta = cliente.get("/gestao/programas", headers=cabecalhos)
 
     assert resposta.status_code == 200
+    # Programas antigos, criados só com nome, vêm sem identificador nem vigência.
+    vazio = {"identificador": None, "vigencia_inicio": None, "vigencia_fim": None}
     assert resposta.json() == [
-        {"id": "p-2", "nome": "casa de convivência"},
-        {"id": "p-3", "nome": "Oficina"},
-        {"id": "p-1", "nome": "Semear"},
+        {"id": "p-2", "nome": "casa de convivência", **vazio},
+        {"id": "p-3", "nome": "Oficina", **vazio},
+        {"id": "p-1", "nome": "Semear", **vazio},
+    ]
+
+
+def test_lista_traz_identificador_e_vigencia_do_programa(cliente, cabecalhos, banco):
+    with banco.begin() as conexao:
+        conexao.execute(
+            sa.text(
+                "INSERT INTO projetos (id, nome, identificador, vigencia_inicio, vigencia_fim) "
+                "VALUES ('p-1', 'Semear', 'SEMEAR', '2026-02-02', '2026-12-18')"
+            )
+        )
+
+    resposta = cliente.get("/gestao/programas", headers=cabecalhos)
+
+    assert resposta.json() == [
+        {
+            "id": "p-1",
+            "nome": "Semear",
+            "identificador": "SEMEAR",
+            "vigencia_inicio": "2026-02-02",
+            "vigencia_fim": "2026-12-18",
+        }
     ]
 
 
