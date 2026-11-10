@@ -43,6 +43,7 @@ Gestao/
 | Atividades e frequência (`#/atividades`, `#/atividades/{programa}`) | `…/agenda` | ligada (T-57) |
 | Registrar o encontro, em 4 passos (`#/atividades/{programa}/registro/{turma}?data=`) | `…/turmas/{turma}` (lista), `…/turmas/{turma}/atividades`, `…/atividades/{id}/evidencias` (pela fila) | ligada (T-57) |
 | Registros no dispositivo · fila local (`#/sincronizacao`) | a fila do aparelho | ligada (T-57) |
+| Alertas e busca ativa (`#/alertas`, `#/alertas/{id}`) | `GET /gestao/alertas`, `GET /gestao/alertas/{id}`, `…/acoes`, `…/encerramento` | ligada (T-60) |
 | Demais telas | — | demonstração, até a US de cada uma |
 
 - **Equipe e espaços:** aberta pelo link de cada programa na lista. Mostra a equipe com

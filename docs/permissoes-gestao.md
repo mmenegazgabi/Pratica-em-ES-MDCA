@@ -117,6 +117,10 @@ Rotas: `GET /gestao/alertas`, `GET /gestao/alertas/{id}`, `POST …/acoes` e
 geração e cada ação e encerramento ficam na auditoria. Como no protótipo, educadores e
 direção não veem os alertas (o resultado dos contatos com a família é sensível).
 
+Na trajetória da pessoa (T-60), quem vê o cadastro vê também que houve o alerta, cada
+ação de busca ativa e o encerramento; o resultado das ações e a justificativa do
+encerramento só aparecem para quem acompanha os alertas do programa.
+
 ### Programas e plano de ação (US-02): pendente da T-33
 
 | Ação | Hoje |

@@ -96,7 +96,7 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 | `POST /gestao/pessoas/duplicidades` | Possíveis duplicados de um cadastro ainda não concluído (etapa de revisão); não grava nada |
 | `POST /gestao/pessoas` | Cadastra a pessoa com núcleo familiar (`nucleo_familiar_id` existente ou `nucleo_familiar_nome` novo) e responsáveis (`id` existente ou `nome` novo, com `parentesco` e `responsavel_legal`) |
 | `GET /gestao/pessoas/{pessoa_id}` | Detalhe com idade, núcleo, responsáveis, documentos e autorizações |
-| `GET /gestao/pessoas/{pessoa_id}/trajetoria` | Linha do tempo, do mais recente ao mais antigo: cadastro, responsáveis incluídos depois, documentos e autorizações (registro, revogação e vencimento). Frequência, atendimentos e matrículas entram com as US delas (T-49) |
+| `GET /gestao/pessoas/{pessoa_id}/trajetoria` | Linha do tempo, do mais recente ao mais antigo: cadastro, responsáveis incluídos depois, documentos e autorizações (registro, revogação e vencimento), matrículas (US-04) e alertas de infrequência com a busca ativa e o encerramento (US-06, T-60: o resultado das ações e a justificativa só para quem acompanha os alertas do programa). Frequência e atendimentos entram com as US delas (T-49) |
 | `POST /gestao/pessoas/{pessoa_id}/responsaveis` | Inclui um responsável |
 | `POST /gestao/pessoas/{pessoa_id}/documentos` | Registra os dados do documento (`tipo`, `nome_arquivo`, `tamanho`); o envio do arquivo ainda não existe: as telas da T-49 registram só esses dados |
 | `POST /gestao/pessoas/{pessoa_id}/autorizacoes` | Registra autorização (`tipo: uso_de_imagem`, `valida_ate`, `valida_de` opcional = hoje, `documento_id` opcional) |

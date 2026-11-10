@@ -22,6 +22,7 @@ const ARQUIVOS = [
   "base/fila.js",
   "base/formulario.js",
   "base/papeis.js",
+  "telas/alertas.js",
   "telas/atividades.js",
   "telas/equipe.js",
   "telas/pessoas.js",

@@ -411,6 +411,15 @@ def exigir_registro_de_atividade(
     return verificar_registro_de_atividade(conexao, usuario_id, programa_id, requisicao=requisicao)
 
 
+def acompanha_alertas(conexao: Connection, usuario_id: str, programa_id: str, *, hoje: Optional[date] = None) -> bool:
+    """Se o usuário acompanha os alertas do programa, sem registrar nada (só para decidir o que mostrar)."""
+    papeis = papeis_do_usuario(conexao, usuario_id, programa_id, hoje or date.today())
+    if papeis is None:
+        return False
+    globais, no_programa = papeis
+    return bool(globais & PAPEIS_QUE_GERENCIAM_TODOS) or bool(no_programa & PAPEIS_QUE_ACOMPANHAM_ALERTAS)
+
+
 def verificar_acompanhamento_de_alertas(
     conexao: Connection,
     usuario_id: str,
@@ -425,10 +434,7 @@ def verificar_acompanhamento_de_alertas(
         raise HTTPException(status_code=404, detail=PROGRAMA_NAO_ENCONTRADO)
     papeis = papeis_do_usuario(conexao, usuario_id, programa_id, hoje or date.today())
     globais, no_programa = papeis or (set(), set())
-    acompanha = papeis is not None and (
-        bool(globais & PAPEIS_QUE_GERENCIAM_TODOS) or bool(no_programa & PAPEIS_QUE_ACOMPANHAM_ALERTAS)
-    )
-    if not acompanha:
+    if not acompanha_alertas(conexao, usuario_id, programa_id, hoje=hoje):
         _registrar_negacao(
             conexao,
             usuario_id,
