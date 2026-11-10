@@ -152,3 +152,22 @@ antes do merge.
 
 Se algo der errado depois do merge, reverter o front basta: o backend segue aceitando
 o token de serviço.
+
+### Estado da produção (10/11/2026)
+
+O banco de produção recebeu a migration `c2d8e4f6a1b3` (persistência do Financeiro) da
+branch `feature/E3-integracao-financeiro-banco` antes de ela entrar na main. Por isso o
+`alembic upgrade head` da main não roda lá ("Can't locate revision c2d8e4f6a1b3"), e as
+tabelas `sessoes` e `codigos_acesso` foram criadas à mão, com o mesmo código da
+`b7d4e2a9c1f0` (o `alembic_version` continua em `c2d8e4f6a1b3`).
+
+Para alinhar, quando a E3 for juntada com a main:
+
+1. As duas linhas de migrations saem da `6bd565cae094`: a do login (`b7d4e2a9c1f0`) e a
+   da persistência (`c2d8e4f6a1b3`). Junte-as com uma migration de junção, sem
+   operações: `.venv/bin/alembic -c Shared/alembic.ini merge -m "junta login e
+   persistência do Financeiro" b7d4e2a9c1f0 c2d8e4f6a1b3`.
+2. Em produção, `.venv/bin/alembic -c Shared/alembic.ini upgrade head`: a
+   `b7d4e2a9c1f0` vê as tabelas e não recria nada, e a de junção só atualiza o
+   `alembic_version`.
+3. Daqui para frente, migrations só vão para produção a partir da main.

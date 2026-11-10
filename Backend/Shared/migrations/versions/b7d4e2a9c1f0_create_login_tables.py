@@ -20,8 +20,23 @@ depends_on: Union[str, Sequence[str], None] = None
 
 # T-35: login único. A coluna usuarios.senha_hash vem da 62959ecab341; aqui ficam as
 # sessões e os códigos de primeiro acesso, guardados só como hash (SHA-256).
-def upgrade() -> None:
+#
+# Idempotente: em 10/11/2026 as duas tabelas foram criadas à mão no banco de produção,
+# que estava numa migration de outra branch (c2d8e4f6a1b3, persistência do Financeiro)
+# e não conseguia rodar esta. Quando as duas linhas de migrations se juntarem, esta
+# roda lá sem erro e sem recriar nada.
+def _existe(tabela: str) -> bool:
+    return sa.inspect(op.get_bind()).has_table(tabela)
 
+
+def upgrade() -> None:
+    if not _existe("sessoes"):
+        _criar_sessoes()
+    if not _existe("codigos_acesso"):
+        _criar_codigos_acesso()
+
+
+def _criar_sessoes() -> None:
     op.create_table(
         "sessoes",
         sa.Column("token_hash", sa.Text(), nullable=False),
@@ -33,6 +48,8 @@ def upgrade() -> None:
     )
     op.create_index("ix_sessoes_usuario_id", "sessoes", ["usuario_id"])
 
+
+def _criar_codigos_acesso() -> None:
     op.create_table(
         "codigos_acesso",
         sa.Column("id", sa.BigInteger(), sa.Identity(always=False), nullable=False),
