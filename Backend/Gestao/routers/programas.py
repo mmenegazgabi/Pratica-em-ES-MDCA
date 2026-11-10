@@ -39,6 +39,8 @@ class ProgramaEntrada(BaseModel):
     vigencia_inicio: Optional[date] = None
     vigencia_fim: Optional[date] = None
     descricao: Optional[str] = Field(default=None, max_length=2000)
+    # Faltas consecutivas que geram alerta de infrequência (US-06); padrão 3.
+    limite_faltas: Optional[int] = None
 
 
 class ProgramaDetalhadoSaida(BaseModel):
@@ -54,6 +56,7 @@ class ProgramaDetalhadoSaida(BaseModel):
     vigencia_fim: Optional[date]
     descricao: Optional[str]
     status: str
+    limite_faltas: int
 
 
 class ConvenioEntrada(BaseModel):

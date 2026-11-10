@@ -27,6 +27,8 @@ def test_cadastra_programa_completo_e_consulta_pelo_id(cliente, cabecalhos, banc
         "id": programa["id"],
         **PROGRAMA,
         "status": "ativo",
+        # Padrão do protótipo para o alerta de infrequência (US-06).
+        "limite_faltas": 3,
     }
     consulta = cliente.get(f"/gestao/programas/{programa['id']}", headers=cabecalhos)
     assert consulta.status_code == 200
@@ -281,3 +283,27 @@ def test_edicao_de_programa_inexistente_404(cliente, cabecalhos, banco):
 
 def test_edicao_sem_autenticacao_401(cliente):
     assert cliente.patch("/gestao/programas/qualquer", json={"nome": "X"}).status_code == 401
+
+
+# --- Limite de faltas (US-06) ---------------------------------------------------------
+
+
+def test_limite_de_faltas_no_cadastro_e_na_edicao(cliente, cabecalhos, banco):
+    programa = cadastrar(cliente, cabecalhos, limite_faltas=2).json()
+    assert programa["limite_faltas"] == 2
+
+    editado = cliente.patch(f"/gestao/programas/{programa['id']}", json={"limite_faltas": 5}, headers=cabecalhos)
+
+    assert editado.status_code == 200
+    assert editado.json()["limite_faltas"] == 5
+    assert editado.json()["nome"] == programa["nome"]
+
+
+@pytest.mark.parametrize("limite", [0, -1, None], ids=["zero", "negativo", "vazio"])
+def test_limite_de_faltas_precisa_ser_positivo(cliente, cabecalhos, banco, limite):
+    programa = cadastrar(cliente, cabecalhos).json()
+
+    resposta = cliente.patch(f"/gestao/programas/{programa['id']}", json={"limite_faltas": limite}, headers=cabecalhos)
+
+    assert resposta.status_code == 400
+    assert resposta.json()["detail"] == "O limite de faltas precisa ser de pelo menos 1."

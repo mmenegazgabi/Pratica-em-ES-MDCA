@@ -43,6 +43,10 @@ class Conflito(ErroDeCadastro):
     status = 409
 
 
+# Padrão do protótipo: alerta a partir de 3 faltas consecutivas.
+LIMITE_FALTAS_PADRAO = 3
+
+
 @dataclass(frozen=True)
 class Programa:
     id: str
@@ -64,6 +68,8 @@ class ProgramaDetalhado:
     vigencia_fim: Optional[date]
     descricao: Optional[str]
     status: str
+    # Faltas consecutivas que geram alerta de infrequência (US-06).
+    limite_faltas: int = LIMITE_FALTAS_PADRAO
 
 
 @dataclass(frozen=True)
@@ -120,7 +126,7 @@ def buscar_programa(conexao: Connection, programa_id: str) -> ProgramaDetalhado:
         sa.text(
             """
             SELECT id, nome, identificador, publico, responsavel,
-                   vigencia_inicio, vigencia_fim, descricao, status
+                   vigencia_inicio, vigencia_fim, descricao, status, limite_faltas
             FROM projetos WHERE id = :id
             """
         ),
@@ -141,10 +147,13 @@ def cadastrar_programa(
     vigencia_inicio: Optional[date],
     vigencia_fim: Optional[date],
     descricao: Optional[str] = None,
+    limite_faltas: Optional[int] = None,
 ) -> ProgramaDetalhado:
     nome, identificador = texto(nome), texto(identificador)
     publico, responsavel = texto(publico), texto(responsavel)
     _validar_programa(nome, identificador, publico, responsavel, vigencia_inicio, vigencia_fim)
+    limite_faltas = LIMITE_FALTAS_PADRAO if limite_faltas is None else limite_faltas
+    _validar_limite(limite_faltas)
 
     programa_id = str(uuid.uuid4())
     try:
@@ -154,9 +163,9 @@ def cadastrar_programa(
                 sa.text(
                     """
                     INSERT INTO projetos (id, nome, identificador, publico, responsavel,
-                                          vigencia_inicio, vigencia_fim, descricao)
+                                          vigencia_inicio, vigencia_fim, descricao, limite_faltas)
                     VALUES (:id, :nome, :identificador, :publico, :responsavel,
-                            :inicio, :fim, :descricao)
+                            :inicio, :fim, :descricao, :limite_faltas)
                     """
                 ),
                 {
@@ -168,6 +177,7 @@ def cadastrar_programa(
                     "inicio": vigencia_inicio,
                     "fim": vigencia_fim,
                     "descricao": texto(descricao),
+                    "limite_faltas": limite_faltas,
                 },
             )
     except IntegrityError as erro:
@@ -196,7 +206,13 @@ def _validar_programa(nome, identificador, publico, responsavel, vigencia_inicio
         raise DadosInvalidos("O fim da vigência não pode ser anterior ao início.")
 
 
+def _validar_limite(limite_faltas: Optional[int]) -> None:
+    if limite_faltas is None or limite_faltas < 1:
+        raise DadosInvalidos("O limite de faltas precisa ser de pelo menos 1.")
+
+
 CAMPOS_EDITAVEIS = (
+    "limite_faltas",
     "nome",
     "identificador",
     "publico",
@@ -225,6 +241,7 @@ def editar_programa(conexao: Connection, programa_id: str, alteracoes: dict) -> 
         dados["vigencia_inicio"],
         dados["vigencia_fim"],
     )
+    _validar_limite(dados["limite_faltas"])
     try:
         with conexao.begin_nested():
             conexao.execute(
@@ -233,7 +250,7 @@ def editar_programa(conexao: Connection, programa_id: str, alteracoes: dict) -> 
                     UPDATE projetos SET nome = :nome, identificador = :identificador,
                         publico = :publico, responsavel = :responsavel,
                         vigencia_inicio = :vigencia_inicio, vigencia_fim = :vigencia_fim,
-                        descricao = :descricao
+                        descricao = :descricao, limite_faltas = :limite_faltas
                     WHERE id = :id
                     """
                 ),

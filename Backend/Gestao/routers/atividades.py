@@ -32,7 +32,7 @@ from Financeiro.comprovantes import (
     validar_comprovante,
 )
 from Financeiro.routers.comprovantes import obter_armazenamento
-from Gestao import atividades, auditoria
+from Gestao import alertas, atividades, auditoria
 from Gestao.acesso import (
     Acesso,
     exigir_consulta_ao_programa,
@@ -209,6 +209,18 @@ def registrar_atividade(
         )
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    if criada:
+        # US-06: quem atingiu o limite de faltas do programa ganha um alerta para a equipe.
+        for alerta_id in alertas.avaliar_chamada(conexao, atividade.id):
+            auditoria.registrar(
+                conexao,
+                usuario_id=None,
+                acao="alerta_infrequencia",
+                alvo_tipo="alerta",
+                alvo_id=alerta_id,
+                descricao="Alerta automático de infrequência",
+                detalhes={"programa_id": acesso.programa_id, "turma_id": turma_id, "atividade_id": atividade.id},
+            )
     conexao.commit()
     if not criada:
         resposta.status_code = 200
