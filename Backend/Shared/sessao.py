@@ -25,16 +25,17 @@ import os
 import secrets
 import time
 from datetime import datetime, timezone
-from functools import lru_cache
 from typing import Optional, Tuple
 
 from fastapi import HTTPException
+
+# Reexportados: sessao_api.py e o Financeiro usam sessao.conectar e sessao.BANCO_INDISPONIVEL.
+from Shared.banco import BANCO_INDISPONIVEL, conectar  # noqa: F401
 
 VARIAVEL_CHAVE = "SESSAO_CHAVE"
 DURACAO_SESSAO = 8 * 60 * 60  # segundos
 # Prefixo que diferencia um token de sessão do código de acesso.
 PREFIXO_TOKEN = "mdca1"
-BANCO_INDISPONIVEL = "Banco de dados indisponível"
 
 # scrypt: custo recomendado para senhas interativas (n=2^14, r=8, p=1).
 _SCRYPT_N, _SCRYPT_R, _SCRYPT_P, _SCRYPT_TAMANHO = 2**14, 8, 1, 32
@@ -133,34 +134,8 @@ def ler_token(token: str, agora: Optional[float] = None) -> Optional[str]:
 # --- Banco -------------------------------------------------------------------
 
 
-@lru_cache(maxsize=1)
-def _motor(url: str):
-    # Mesma regra de Gestao/banco.py: URLs postgres puras usam o psycopg 3. Importado
-    # aqui dentro para quem não usa token (testes do Financeiro) não precisar do SQLAlchemy.
-    from sqlalchemy import create_engine
-    from sqlalchemy.engine import make_url
-
-    parsed = make_url(url)
-    if parsed.drivername in ("postgresql", "postgres"):
-        parsed = parsed.set(drivername="postgresql+psycopg")
-    return create_engine(
-        parsed.render_as_string(hide_password=False),
-        pool_pre_ping=True,
-        connect_args={"connect_timeout": 10},
-    )
-
-
-def conectar():
-    """Conexão SQLAlchemy com o banco da ``DATABASE_URL``; 503 se não houver banco."""
-    from sqlalchemy.exc import SQLAlchemyError
-
-    url = os.getenv("DATABASE_URL", "")
-    if not url:
-        raise HTTPException(status_code=503, detail=BANCO_INDISPONIVEL)
-    try:
-        return _motor(url).connect()
-    except SQLAlchemyError as erro:
-        raise HTTPException(status_code=503, detail=BANCO_INDISPONIVEL) from erro
+# A conexão é a mesma da Gestão e do Financeiro: ``conectar`` (e o pool) vêm de
+# Shared/banco.py.
 
 
 def usuario_da_sessao(token: str) -> Optional[str]:

@@ -241,18 +241,19 @@ def test_aprovado_nao_pode_ser_rejeitado_depois():
     assert [n["tipo"] for n in notificacoes()] == ["lancamento_aprovado"]
 
 
-def test_rota_antiga_de_aprovacao_tambem_bloqueia_dupla_aprovacao():
-    # POST /orcamentos/{id}/lancamentos/{id}/aprovar (T-07) ainda existe;
-    # aprovar por ela depois do PATCH não pode debitar de novo.
+def test_rota_antiga_de_aprovacao_sem_login_foi_removida():
+    # POST /orcamentos/{id}/lancamentos/{id}/aprovar (T-07) não pedia login e saiu;
+    # chamá-la não aprova nem debita nada.
     orcamento_id = criar_orcamento(1000)
     lancamento_id = lancar(orcamento_id, 300)
-    aprovar(lancamento_id)
 
     resposta = client.post(
         f"/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/aprovar"
     )
 
-    assert resposta.status_code == 409
+    assert resposta.status_code in (404, 405)
+    assert saldo(orcamento_id) == 1000
+    assert aprovar(lancamento_id).status_code == 200
     assert saldo(orcamento_id) == 700
 
 

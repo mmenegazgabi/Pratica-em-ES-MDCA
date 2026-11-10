@@ -16,7 +16,8 @@ from pydantic import BaseModel
 if __package__ == "routers":
     from autenticacao import exigir_usuario
     from comprovantes import ArmazenamentoComprovantes
-    from rascunhos import Rascunho, RascunhoNaoEncontrado, caixa_de_rascunhos
+    from persistencia import obter_repositorio
+    from rascunhos import Rascunho, RascunhoNaoEncontrado
     from routers.comprovantes import obter_armazenamento
     from routers.lancamentos import (
         LancamentoCriado,
@@ -28,7 +29,8 @@ if __package__ == "routers":
 else:
     from ..autenticacao import exigir_usuario
     from ..comprovantes import ArmazenamentoComprovantes
-    from ..rascunhos import Rascunho, RascunhoNaoEncontrado, caixa_de_rascunhos
+    from ..persistencia import obter_repositorio
+    from ..rascunhos import Rascunho, RascunhoNaoEncontrado
     from .comprovantes import obter_armazenamento
     from .lancamentos import (
         LancamentoCriado,
@@ -66,11 +68,12 @@ async def criar_rascunho(
     comprovante: Optional[UploadFile] = File(None),
     armazenamento: ArmazenamentoComprovantes = Depends(obter_armazenamento),
     autor_id: str = Depends(exigir_usuario),
+    repositorio=Depends(obter_repositorio),
 ) -> RascunhoSaida:
     chave, content_type, nome_original, tamanho = await _receber_comprovante(
         comprovante, armazenamento
     )
-    rascunho = caixa_de_rascunhos.criar(
+    rascunho = repositorio.guardar_rascunho(
         Rascunho(
             autor_id=autor_id,
             comprovante_chave=chave,
@@ -79,12 +82,15 @@ async def criar_rascunho(
             tamanho=tamanho,
         )
     )
+    repositorio.confirmar()
     return _saida(rascunho)
 
 
 @router.get("", response_model=List[RascunhoSaida])
-def listar_rascunhos(autor_id: str = Depends(exigir_usuario)) -> List[RascunhoSaida]:
-    return [_saida(r) for r in caixa_de_rascunhos.do_autor(autor_id)]
+def listar_rascunhos(
+    autor_id: str = Depends(exigir_usuario), repositorio=Depends(obter_repositorio)
+) -> List[RascunhoSaida]:
+    return [_saida(r) for r in repositorio.rascunhos_do_autor(autor_id)]
 
 
 @router.post("/{rascunho_id}/completar", response_model=LancamentoCriado, status_code=201)
@@ -96,25 +102,30 @@ def completar_rascunho(
     categoria: str = Form(...),
     data_despesa: date = Form(...),
     autor_id: str = Depends(exigir_usuario),
+    repositorio=Depends(obter_repositorio),
 ) -> LancamentoCriado:
     rascunho = next(
-        (r for r in caixa_de_rascunhos.do_autor(autor_id) if r.id == rascunho_id), None
+        (r for r in repositorio.rascunhos_do_autor(autor_id) if r.id == rascunho_id), None
     )
     if rascunho is None:
         raise HTTPException(status_code=404, detail="Rascunho não encontrado")
 
-    # Valida antes de retirar: dado inválido não pode consumir o rascunho.
-    orcamento = _buscar_orcamento(orcamento_id)
+    # Valida antes de retirar: dado inválido não pode consumir o rascunho. Com trava,
+    # como na criação do lançamento.
+    orcamento = _buscar_orcamento(repositorio, orcamento_id, para_alterar=True)
     descricao = _validar_dados_da_despesa(
         orcamento, valor, descricao, categoria, data_despesa
     )
     try:
-        caixa_de_rascunhos.retirar(rascunho_id, autor_id)
+        repositorio.retirar_rascunho(rascunho_id, autor_id)
     except RascunhoNaoEncontrado as erro:
         raise HTTPException(status_code=404, detail=str(erro)) from erro
 
-    return _criar_lancamento(
-        orcamento, valor, descricao, categoria, data_despesa,
+    # Retirar o rascunho e criar o lançamento são confirmados juntos: ou os dois, ou nenhum.
+    criado = _criar_lancamento(
+        repositorio, orcamento, valor, descricao, categoria, data_despesa,
         rascunho.comprovante_chave, rascunho.content_type,
         rascunho.nome_original, rascunho.tamanho, autor_id,
     )
+    repositorio.confirmar()
+    return criado

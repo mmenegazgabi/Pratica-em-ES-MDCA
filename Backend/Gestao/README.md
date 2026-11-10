@@ -8,7 +8,7 @@ Dono: time de Gestão.
 
 ```
 Gestao/
-  banco.py        # conexão com o PostgreSQL (DATABASE_URL), via Depends(obter_conexao)
+  banco.py        # conexão com o PostgreSQL: reexporta Shared/banco.py (a mesma do Financeiro)
   acesso.py       # quem pode consultar e gerenciar cada programa (provisório até a T-33);
                   # regras documentadas em docs/permissoes-gestao.md
   auditoria.py    # registro de eventos na trilha única (log_auditoria)

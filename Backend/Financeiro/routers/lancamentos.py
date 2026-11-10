@@ -54,7 +54,6 @@ if __package__ == "routers":
         limpar_nome_original,
         validar_comprovante,
     )
-    from notificacoes import caixa_de_notificacoes
     from orcamento import (
         AprovacaoInvalida,
         ConciliacaoInvalida,
@@ -63,8 +62,9 @@ if __package__ == "routers":
         Orcamento,
         StatusLancamento,
     )
+    from persistencia import obter_repositorio
     from routers.comprovantes import obter_armazenamento
-    from routers.orcamentos import _buscar_orcamento, _orcamentos
+    from routers.orcamentos import _buscar_orcamento
 else:
     from ..autenticacao import (
         Papel,
@@ -81,7 +81,6 @@ else:
         limpar_nome_original,
         validar_comprovante,
     )
-    from ..notificacoes import caixa_de_notificacoes
     from ..orcamento import (
         AprovacaoInvalida,
         ConciliacaoInvalida,
@@ -90,8 +89,9 @@ else:
         Orcamento,
         StatusLancamento,
     )
+    from ..persistencia import obter_repositorio
     from .comprovantes import obter_armazenamento
-    from .orcamentos import _buscar_orcamento, _orcamentos
+    from .orcamentos import _buscar_orcamento
 
 router = APIRouter(
     prefix="/lancamentos",
@@ -181,6 +181,7 @@ def _validar_dados_da_despesa(
 
 
 def _criar_lancamento(
+    repositorio,
     orcamento: Orcamento,
     valor: float,
     descricao: str,
@@ -204,6 +205,7 @@ def _criar_lancamento(
             autor_id=autor_id,
         )
     )
+    repositorio.salvar_lancamento(orcamento, lancamento)
     return LancamentoCriado(
         id=lancamento.id,
         orcamento_id=orcamento.id,
@@ -233,24 +235,33 @@ async def criar_lancamento(
     comprovante: Optional[UploadFile] = File(None),
     armazenamento: ArmazenamentoComprovantes = Depends(obter_armazenamento),
     autor_id: Optional[str] = Depends(obter_usuario),
+    repositorio=Depends(obter_repositorio),
 ) -> LancamentoCriado:
     # 1. Comprovante obrigatório
     conteudo = await _ler_comprovante(comprovante)
 
-    # 2 e 3. Orçamento e dados da despesa
-    orcamento = _buscar_orcamento(orcamento_id)
+    # 2 e 3. Orçamento e dados da despesa (sem trava: o envio do arquivo para o R2
+    # não deve segurar o orçamento)
+    orcamento = _buscar_orcamento(repositorio, orcamento_id)
     descricao = _validar_dados_da_despesa(
         orcamento, valor, descricao, categoria, data_despesa
     )
 
-    # 4 e 5. Tipo e tamanho do arquivo, salva e registra como pendente
+    # 4. Tipo e tamanho do arquivo, e salva
     chave, content_type, nome_original, tamanho = _guardar_comprovante(
         conteudo, comprovante.filename, armazenamento
     )
-    return _criar_lancamento(
-        orcamento, valor, descricao, categoria, data_despesa,
+
+    # 5. Relê com trava e confere de novo: a coordenação pode ter mudado as categorias
+    # ou a vigência enquanto o arquivo subia. Aí registra como pendente.
+    orcamento = _buscar_orcamento(repositorio, orcamento_id, para_alterar=True)
+    _validar_dados_da_despesa(orcamento, valor, descricao, categoria, data_despesa)
+    criado = _criar_lancamento(
+        repositorio, orcamento, valor, descricao, categoria, data_despesa,
         chave, content_type, nome_original, tamanho, autor_id,
     )
+    repositorio.confirmar()
+    return criado
 
 
 # --- PATCH /lancamentos/{id}/aprovar (T-15 · US-04) --------------------------
@@ -265,25 +276,32 @@ class LancamentoAprovado(BaseModel):
     saldo_orcamento: float
 
 
-def _buscar_orcamento_do_lancamento(lancamento_id: str) -> Orcamento:
-    for orcamento in _orcamentos:
-        if any(l.id == lancamento_id for l in orcamento.lancamentos):
-            return orcamento
-    raise HTTPException(status_code=404, detail="Lançamento não encontrado")
+def _buscar_orcamento_do_lancamento(
+    repositorio, lancamento_id: str, para_alterar: bool = False
+) -> Orcamento:
+    orcamento = repositorio.buscar_orcamento_do_lancamento(
+        lancamento_id, para_alterar=para_alterar
+    )
+    if orcamento is None:
+        raise HTTPException(status_code=404, detail="Lançamento não encontrado")
+    return orcamento
 
 
 @router.patch("/{lancamento_id}/aprovar", response_model=LancamentoAprovado)
 def aprovar_lancamento(
     lancamento_id: str,
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
+    repositorio=Depends(obter_repositorio),
 ) -> LancamentoAprovado:
-    orcamento = _buscar_orcamento_do_lancamento(lancamento_id)
+    orcamento = _buscar_orcamento_do_lancamento(repositorio, lancamento_id, para_alterar=True)
     try:
         lancamento = orcamento.aprovar_lancamento(lancamento_id)
     except AprovacaoInvalida as erro:
         raise HTTPException(status_code=409, detail=str(erro)) from erro
 
-    caixa_de_notificacoes.notificar_resultado(lancamento)
+    repositorio.salvar_lancamento(orcamento, lancamento)
+    repositorio.notificar_resultado(lancamento)
+    repositorio.confirmar()
 
     return LancamentoAprovado(
         id=lancamento.id,
@@ -335,8 +353,9 @@ def rejeitar_lancamento(
     lancamento_id: str,
     payload: Optional[RejeicaoPayload] = Body(None),
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
+    repositorio=Depends(obter_repositorio),
 ) -> LancamentoRejeitado:
-    orcamento = _buscar_orcamento_do_lancamento(lancamento_id)
+    orcamento = _buscar_orcamento_do_lancamento(repositorio, lancamento_id, para_alterar=True)
 
     motivo = ((payload.motivo if payload else None) or "").strip()
     if not motivo:
@@ -354,7 +373,9 @@ def rejeitar_lancamento(
     except LancamentoInvalido as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
 
-    caixa_de_notificacoes.notificar_resultado(lancamento)
+    repositorio.salvar_lancamento(orcamento, lancamento)
+    repositorio.notificar_resultado(lancamento)
+    repositorio.confirmar()
 
     return LancamentoRejeitado(
         id=lancamento.id,
@@ -404,6 +425,7 @@ def listar_lancamentos(
         )
     ),
     usuario: Optional[str] = Depends(obter_usuario),
+    repositorio=Depends(obter_repositorio),
 ) -> List[LancamentoResumo]:
     """Lançamentos de todos os orçamentos, dos mais antigos para os mais novos.
 
@@ -419,7 +441,7 @@ def listar_lancamentos(
 
     itens = [
         (orcamento, lancamento)
-        for orcamento in _orcamentos
+        for orcamento in repositorio.listar_orcamentos()
         if orcamento_id is None or orcamento.id == orcamento_id
         for lancamento in orcamento.lancamentos
         if (status is None or lancamento.status == status)
@@ -453,13 +475,19 @@ def listar_lancamentos(
 
 
 @router.get("/{lancamento_id}", response_model=LancamentoDetalhe)
-def obter_lancamento(lancamento_id: str) -> LancamentoDetalhe:
+def obter_lancamento(
+    lancamento_id: str, repositorio=Depends(obter_repositorio)
+) -> LancamentoDetalhe:
     """Consulta do lançamento por quem lançou: status e motivo da rejeição.
 
     Exige só autenticação (qualquer papel), porque quem lança é o educador.
     """
-    orcamento = _buscar_orcamento_do_lancamento(lancamento_id)
+    orcamento = _buscar_orcamento_do_lancamento(repositorio, lancamento_id)
     lancamento = next(l for l in orcamento.lancamentos if l.id == lancamento_id)
+    return _detalhe(orcamento, lancamento)
+
+
+def _detalhe(orcamento: Orcamento, lancamento: Lancamento) -> LancamentoDetalhe:
     return LancamentoDetalhe(
         id=lancamento.id,
         orcamento_id=orcamento.id,
@@ -492,24 +520,31 @@ async def reenviar_lancamento(
     comprovante: Optional[UploadFile] = File(None),
     armazenamento: ArmazenamentoComprovantes = Depends(obter_armazenamento),
     autor_id: str = Depends(exigir_usuario),
+    repositorio=Depends(obter_repositorio),
 ) -> LancamentoDetalhe:
-    orcamento = _buscar_orcamento_do_lancamento(lancamento_id)
-    lancamento = next(l for l in orcamento.lancamentos if l.id == lancamento_id)
-    if lancamento.autor_id != autor_id:
-        raise HTTPException(status_code=404, detail="Lançamento não encontrado")
-    if lancamento.status != StatusLancamento.REJEITADO:
-        raise HTTPException(
-            status_code=409, detail="Só despesas rejeitadas podem ser reenviadas"
+    def conferir(orcamento: Orcamento) -> str:
+        lancamento = next(l for l in orcamento.lancamentos if l.id == lancamento_id)
+        if lancamento.autor_id != autor_id:
+            raise HTTPException(status_code=404, detail="Lançamento não encontrado")
+        if lancamento.status != StatusLancamento.REJEITADO:
+            raise HTTPException(
+                status_code=409, detail="Só despesas rejeitadas podem ser reenviadas"
+            )
+        return _validar_dados_da_despesa(
+            orcamento, valor, descricao, categoria, data_despesa
         )
-    # Valida tudo antes de salvar a foto nova, para não deixar arquivo órfão.
-    descricao = _validar_dados_da_despesa(
-        orcamento, valor, descricao, categoria, data_despesa
-    )
+
+    # Valida tudo antes de salvar a foto nova, para não deixar arquivo órfão; sem
+    # trava, para o envio ao R2 não segurar o orçamento.
+    descricao = conferir(_buscar_orcamento_do_lancamento(repositorio, lancamento_id))
     chave = None
     if comprovante is not None:
         chave, *_ = await _receber_comprovante(comprovante, armazenamento)
+    # Relê com trava e confere de novo antes de alterar (pode ter mudado no meio).
+    orcamento = _buscar_orcamento_do_lancamento(repositorio, lancamento_id, para_alterar=True)
+    descricao = conferir(orcamento)
     try:
-        orcamento.reenviar_lancamento(
+        lancamento = orcamento.reenviar_lancamento(
             lancamento_id,
             valor=valor,
             descricao=descricao,
@@ -521,7 +556,9 @@ async def reenviar_lancamento(
         raise HTTPException(status_code=409, detail=str(erro)) from erro
     except LancamentoInvalido as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
-    return obter_lancamento(lancamento_id)
+    repositorio.salvar_lancamento(orcamento, lancamento)
+    repositorio.confirmar()
+    return _detalhe(orcamento, lancamento)
 
 
 # --- PATCH /lancamentos/{id}/conciliar (T-21 · US-05) ------------------------
@@ -548,13 +585,14 @@ def conciliar_lancamento(
     lancamento_id: str,
     payload: Optional[ConciliacaoPayload] = Body(None),
     _papel: Papel = Depends(exigir_papel(Papel.VOLUNTARIO_FINANCEIRO)),
+    repositorio=Depends(obter_repositorio),
 ) -> LancamentoConciliado:
     """Marca o lançamento como conciliado com um item do extrato bancário.
 
     Repetir com a mesma referência é idempotente (200, nada muda); com outra
     referência retorna 409.
     """
-    orcamento = _buscar_orcamento_do_lancamento(lancamento_id)
+    orcamento = _buscar_orcamento_do_lancamento(repositorio, lancamento_id, para_alterar=True)
 
     referencia = ((payload.referencia_extrato if payload else None) or "").strip()
     if not referencia:
@@ -571,6 +609,9 @@ def conciliar_lancamento(
         raise HTTPException(status_code=409, detail=str(erro)) from erro
     except LancamentoInvalido as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
+
+    repositorio.salvar_lancamento(orcamento, lancamento)
+    repositorio.confirmar()
 
     return LancamentoConciliado(
         id=lancamento.id,

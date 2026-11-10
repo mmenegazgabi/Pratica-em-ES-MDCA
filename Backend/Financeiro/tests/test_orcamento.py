@@ -260,77 +260,81 @@ def test_get_orcamento_com_lancamentos_aprovados_reflete_saldo_calculado():
     assert response.json()["saldo"] == 800
 
 
-def url_aprovar(orcamento_id, lancamento_id):
-    return f"/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/aprovar"
+# Aprovação pela API: PATCH /lancamentos/{id}/aprovar, com login e papel. As rotas
+# antigas POST /orcamentos/{id}/lancamentos/{id}/aprovar e .../reverter-aprovacao
+# (T-07) não pediam login e foram removidas (plano de integração, Trabalho 1).
+
+TOKEN = "token-de-teste-orcamento"
+COORDENACAO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
 
 
-def url_reverter(orcamento_id, lancamento_id):
-    return (
-        f"/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}"
-        "/reverter-aprovacao"
-    )
+@pytest.fixture
+def com_token(monkeypatch):
+    monkeypatch.setenv("FINANCEIRO_API_TOKEN", TOKEN)
 
 
-def test_post_aprovar_debita_saldo_e_retorna_orcamento_atualizado():
+def aprovar(lancamento_id):
+    return client.patch(f"/lancamentos/{lancamento_id}/aprovar", headers=COORDENACAO)
+
+
+@pytest.mark.parametrize(
+    "rota",
+    [
+        "/orcamentos/orcamento-1/lancamentos/{id}/aprovar",
+        "/orcamentos/orcamento-1/lancamentos/{id}/reverter-aprovacao",
+    ],
+)
+def test_rotas_antigas_sem_login_nao_existem_mais(rota):
     lancamento = Lancamento(valor=200, status=StatusLancamento.PENDENTE)
     _orcamentos.append(orcamento_de_teste(lancamentos=[lancamento]))
 
-    response = client.post(url_aprovar("orcamento-1", lancamento.id))
+    response = client.post(rota.format(id=lancamento.id))
+
+    assert response.status_code in (404, 405)
+    assert lancamento.status == StatusLancamento.PENDENTE
+    assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 1000
+
+
+def test_aprovar_debita_saldo_do_orcamento(com_token):
+    lancamento = Lancamento(valor=200, status=StatusLancamento.PENDENTE)
+    _orcamentos.append(orcamento_de_teste(lancamentos=[lancamento]))
+
+    response = aprovar(lancamento.id)
 
     assert response.status_code == 200
-    assert response.json()["saldo"] == 800
+    assert response.json()["saldo_orcamento"] == 800
     assert lancamento.status == StatusLancamento.APROVADO
+    assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 800
 
 
-def test_post_aprovar_duas_vezes_debita_saldo_uma_unica_vez():
+def test_aprovar_duas_vezes_debita_saldo_uma_unica_vez(com_token):
     lancamento = Lancamento(valor=200, status=StatusLancamento.PENDENTE)
     _orcamentos.append(orcamento_de_teste(lancamentos=[lancamento]))
 
-    client.post(url_aprovar("orcamento-1", lancamento.id))
-    response = client.post(url_aprovar("orcamento-1", lancamento.id))
+    aprovar(lancamento.id)
+    response = aprovar(lancamento.id)
 
     assert response.status_code == 409
     assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 800
 
 
-def test_post_reverter_aprovacao_recredita_saldo_e_volta_para_pendente():
-    lancamento = Lancamento(valor=200, status=StatusLancamento.APROVADO)
-    _orcamentos.append(orcamento_de_teste(lancamentos=[lancamento]))
+def test_aprovar_lancamento_inexistente_retorna_404(com_token):
+    _orcamentos.append(orcamento_de_teste())
 
-    response = client.post(url_reverter("orcamento-1", lancamento.id))
-
-    assert response.status_code == 200
-    assert response.json()["saldo"] == 1000
-    assert lancamento.status == StatusLancamento.PENDENTE
+    assert aprovar("nao-existe").status_code == 404
 
 
-def test_post_reverter_lancamento_nao_aprovado_retorna_409_sem_alterar_saldo():
+def test_aprovar_sem_login_retorna_401_sem_alterar_saldo(com_token):
     lancamento = Lancamento(valor=200, status=StatusLancamento.PENDENTE)
     _orcamentos.append(orcamento_de_teste(lancamentos=[lancamento]))
 
-    response = client.post(url_reverter("orcamento-1", lancamento.id))
+    response = client.patch(f"/lancamentos/{lancamento.id}/aprovar")
 
-    assert response.status_code == 409
-    assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 1000
-
-
-@pytest.mark.parametrize("montar_url", [url_aprovar, url_reverter])
-def test_post_em_orcamento_inexistente_retorna_404(montar_url):
-    response = client.post(montar_url("nao-existe", "qualquer"))
-
-    assert response.status_code == 404
+    assert response.status_code == 401
+    assert lancamento.status == StatusLancamento.PENDENTE
 
 
-@pytest.mark.parametrize("montar_url", [url_aprovar, url_reverter])
-def test_post_em_lancamento_inexistente_retorna_404(montar_url):
-    _orcamentos.append(orcamento_de_teste())
-
-    response = client.post(montar_url("orcamento-1", "nao-existe"))
-
-    assert response.status_code == 404
-
-
-def test_aprovacoes_simultaneas_via_api_mantem_saldo_consistente():
+def test_aprovacoes_simultaneas_via_api_mantem_saldo_consistente(com_token):
     from concurrent.futures import ThreadPoolExecutor
 
     lancamentos = [
@@ -339,40 +343,30 @@ def test_aprovacoes_simultaneas_via_api_mantem_saldo_consistente():
     _orcamentos.append(orcamento_de_teste(lancamentos=lancamentos))
 
     with ThreadPoolExecutor(max_workers=10) as executor:
-        respostas = list(
-            executor.map(
-                lambda l: client.post(url_aprovar("orcamento-1", l.id)),
-                lancamentos,
-            )
-        )
+        respostas = list(executor.map(lambda l: aprovar(l.id), lancamentos))
 
     assert all(r.status_code == 200 for r in respostas)
     assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 1000 - 20 * 10
 
 
-def test_aprovacoes_simultaneas_do_mesmo_lancamento_debitam_uma_unica_vez():
+def test_aprovacoes_simultaneas_do_mesmo_lancamento_debitam_uma_unica_vez(com_token):
     from concurrent.futures import ThreadPoolExecutor
 
     lancamento = Lancamento(valor=200, status=StatusLancamento.PENDENTE)
     _orcamentos.append(orcamento_de_teste(lancamentos=[lancamento]))
 
     with ThreadPoolExecutor(max_workers=10) as executor:
-        respostas = list(
-            executor.map(
-                lambda _: client.post(url_aprovar("orcamento-1", lancamento.id)),
-                range(10),
-            )
-        )
+        respostas = list(executor.map(lambda _: aprovar(lancamento.id), range(10)))
 
     assert sorted(r.status_code for r in respostas) == [200] + [409] * 9
     assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 800
 
 
-def test_post_aprovar_lancamento_rejeitado_retorna_409_sem_alterar_saldo():
+def test_aprovar_lancamento_rejeitado_retorna_409_sem_alterar_saldo(com_token):
     lancamento = Lancamento(valor=200, status=StatusLancamento.REJEITADO)
     _orcamentos.append(orcamento_de_teste(lancamentos=[lancamento]))
 
-    response = client.post(url_aprovar("orcamento-1", lancamento.id))
+    response = aprovar(lancamento.id)
 
     assert response.status_code == 409
     assert lancamento.status == StatusLancamento.REJEITADO

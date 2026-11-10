@@ -17,7 +17,10 @@ O celular do educador está em `docs/lancamento-celular.md`.
    503 ao receber fotos. Para testar sem R2, use o armazenamento em memória dos
    testes num arquivo fora do repositório (veja o passo 1 de "Testar com o backend
    local" em `docs/lancamento-celular.md`; o mesmo arquivo pode cadastrar projetos,
-   orçamentos e lançamentos de exemplo na partida, já que tudo fica em memória).
+   orçamentos e lançamentos de exemplo na partida). Sem `DATABASE_URL` os dados do
+   Financeiro ficam em memória; com ela, vão para o banco indicado — cuidado para não
+   apontar para o banco de produção. `FINANCEIRO_ARMAZENAMENTO=memoria` força a memória
+   (veja `docs/persistencia-financeiro.md`).
 2. API: `cd Backend && FINANCEIRO_API_TOKEN=dev CORS_ORIGINS=http://localhost:8081 PYTHONPATH=.:<pasta do app_local.py> .venv/bin/python -m uvicorn app_local:app --port 8080`
 3. Frontend: `cd Frontend && python3 -m http.server 8081`
 4. Abra `http://localhost:8081/Financeiro/`, informe nome, papel e o código `dev` e,
