@@ -14,6 +14,7 @@ const ARQUIVOS = [
   // Visual do Financeiro (T-00j): carregado pelo index.html, guardado para abrir sem rede.
   "../Financeiro/base/tokens.css",
   "../Financeiro/base/componentes.css",
+  "../Financeiro/style.css",
   "./",
   "index.html",
   "style.css",

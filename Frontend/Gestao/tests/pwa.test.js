@@ -33,7 +33,7 @@ test("a lista do service worker só tem arquivos que existem", () => {
 test("o service worker guarda os estilos do Financeiro que a página carrega (T-00j)", () => {
   const html = readFileSync(join(RAIZ, "index.html"), "utf8");
   const estilos = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(estilos, ["../Financeiro/base/tokens.css", "../Financeiro/base/componentes.css", "style.css"]);
+  assert.deepEqual(estilos, ["../Financeiro/base/tokens.css", "../Financeiro/base/componentes.css", "../Financeiro/style.css", "style.css"]);
   assert.deepEqual(estilos.filter((e) => !ARQUIVOS.includes(e)), []);
 });
 

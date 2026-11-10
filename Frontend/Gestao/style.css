@@ -600,3 +600,77 @@ h5, h6 { font-size: 11px; font-weight: 600; }
   .form-actions .btn { min-height: 48px; font-size: 16px; }
   .badge { font-size: 10.5px; padding: 1px 7px; }
 }
+
+/* =====================================================================================
+   Estrutura das telas igual à do Financeiro (T-00k)
+   .app, .lateral, .lateral__* e .principal vêm de ../Financeiro/style.css. Aqui ficam só
+   as adaptações da Gestão, montadas com as variáveis e peças do Financeiro.
+   ===================================================================================== */
+
+/* A Gestão tem mais itens e rótulos mais longos que o Financeiro: barra um pouco mais larga. */
+.gestao .lateral { width: 214px; z-index: 30; }
+.gestao .lateral__marca { text-decoration: none; }
+.lateral__modulos { display: flex; gap: 6px; margin: 0 6px 14px; }
+.lateral__modulos .filtro { flex: 1; justify-content: center; text-decoration: none; }
+.lateral__menu { overflow-y: auto; }
+.lateral__grupo { margin: 12px 8px 4px; font-size: 10px; font-weight: 500; color: var(--texto-suave); text-transform: uppercase; letter-spacing: .04em; }
+.lateral__grupo:first-child { margin-top: 0; }
+.lateral__item .icon { width: 15px; height: 15px; flex: none; }
+.lateral__item { text-decoration: none; }
+
+/* Pessoa no rodapé da barra: o mesmo bloco do Financeiro, clicável para trocar o perfil do protótipo. */
+.lateral__usuario { position: relative; }
+.lateral__pessoa { display: flex; gap: 8px; align-items: center; width: 100%; padding: 0; border: 0; background: none; text-align: left; font: inherit; color: var(--texto); cursor: pointer; }
+.lateral__usuario .user-menu { position: absolute; bottom: calc(100% + 8px); left: 0; width: 240px; z-index: 40;
+  padding: 12px; border: 1px solid var(--borda); border-radius: 8px; background: var(--fundo); box-shadow: var(--shadow-lg); font-size: 11px; }
+.user-menu .persona-caption { font-size: 11px; color: var(--texto-suave); margin-bottom: 8px; }
+.user-menu .persona-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.user-menu .persona-buttons button { border: 1px solid var(--borda); background: var(--fundo); border-radius: 6px; padding: 4px 9px; font: 11.5px var(--fonte); color: var(--texto-medio); cursor: pointer; }
+.user-menu .persona-buttons button.active { border-color: var(--verde); background: var(--ativo-fundo); color: var(--ativo-texto); font-weight: 500; }
+.user-menu .persona-note { margin-top: 8px; color: var(--texto-suave); font-size: 11px; line-height: 1.45; }
+
+/* Área principal: o padding é o do Financeiro (.principal); o conteúdo não soma outro. */
+.gestao .principal { display: flex; flex-direction: column; min-height: 100vh; box-sizing: border-box; }
+.gestao .principal .main { padding: 0; min-height: 0; max-width: 1200px; width: 100%; margin: 0; flex: 1; }
+.gestao .principal h1 { font-size: 19px; font-weight: 600; letter-spacing: -.015em; margin: 0; }
+
+/* Cabeçalho de página: título e subtítulo à esquerda, ação à direita, sem linha embaixo. */
+.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin: 0 0 16px; padding: 0; border: 0; }
+.page-head .subtitle, .page-head .sub { margin: 3px 0 0; font-size: 12px; color: var(--texto-suave); }
+.page-head .eyebrow { margin-bottom: 4px; }
+.page-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Caminho da página: o "Projetos /" do Financeiro, em linha antes do título. */
+.breadcrumbs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 0 0 6px; font-size: 11px; color: var(--texto-suave); }
+.breadcrumbs a { color: var(--texto-suave); text-decoration: none; }
+.breadcrumbs a:hover { color: var(--texto); }
+.breadcrumbs [aria-current="page"] { color: var(--texto-medio); }
+
+/* Avisos de uma linha (demonstração e sem conexão): mensagem no fundo do status, sem borda. */
+.aviso-faixa { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; padding: 7px 12px; border: 0; border-radius: 6px;
+  background: var(--pendente-fundo); color: var(--pendente-texto); font-size: 11.5px; }
+.aviso-faixa .icon { width: 15px; height: 15px; flex: none; }
+.aviso-faixa--offline { background: var(--fundo-suave); color: var(--texto-medio); justify-content: space-between; }
+
+/* Rodapé discreto (só os atalhos do protótipo). */
+.gestao .footer { margin-top: 26px; padding: 12px 0 0; border-top: 1px solid var(--borda); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  font-size: 11px; color: var(--texto-suave); background: none; }
+.gestao .footer a { color: var(--texto-suave); margin-left: 12px; text-decoration: none; }
+.gestao .footer a:hover { color: var(--texto); }
+
+/* Estados (carregando, erro, sem permissão, sessão encerrada): o .vazio do Financeiro, sem caixa. */
+.card.estado { border: 0; background: none; }
+
+/* Topo do celular: só aparece quando a barra lateral vira menu. */
+.topo-celular { display: none; }
+
+@media (max-width: 768px) {
+  .gestao .lateral { position: fixed; top: 0; left: 0; bottom: 0; height: 100vh; transform: translateX(-100%); transition: transform .2s; z-index: 40; }
+  .gestao .lateral.open { transform: none; box-shadow: var(--shadow-lg); }
+  .mobile-scrim.visible { display: block; position: fixed; inset: 0; z-index: 35; background: color-mix(in srgb, var(--texto) 35%, transparent); }
+  .gestao .principal { padding: 0 16px 16px; }
+  .topo-celular { display: flex; align-items: center; gap: 8px; margin: 0 -16px 14px; padding: 8px 12px; border-bottom: 1px solid var(--borda); background: var(--fundo); position: sticky; top: 0; z-index: 20; }
+  .topo-celular__titulo { font-size: 13px; font-weight: 600; }
+  .mobile-toggle { border: 0; background: none; padding: 6px; color: var(--texto); }
+  .page-head { flex-direction: column; align-items: stretch; }
+}

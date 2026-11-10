@@ -135,9 +135,15 @@ npm test
 
 A Gestão usa o mesmo visual do Financeiro ("B · Neutro e funcional": Inter, branco,
 verde `#3f8a3a`, bordas finas). O `index.html` carrega, antes do `style.css`, os arquivos
-`../Financeiro/base/tokens.css` e `../Financeiro/base/componentes.css`, só para leitura,
-como a página de Administração (`Frontend/Admin`). O `sw.js` guarda os dois, para o
-registro em campo abrir sem internet.
+`../Financeiro/base/tokens.css`, `../Financeiro/base/componentes.css` e
+`../Financeiro/style.css`, só para leitura, como a página de Administração
+(`Frontend/Admin`). O `sw.js` guarda os três, para o registro em campo abrir sem internet.
+
+A estrutura das telas usa as classes do Financeiro (T-00k): barra lateral `.lateral` (marca,
+menu com `.lateral__item`, contador de alertas abertos no item Visão geral e a pessoa com
+"Sair" embaixo) e área `.principal`, sem barra superior. Adaptações da Gestão, montadas com
+as peças deles: o seletor de módulo (dois `.filtro`), os grupos do menu, o menu do perfil do
+protótipo e, no celular, a barra lateral como menu que abre por cima.
 
 O `style.css` não cria cor nem fonte própria: as variáveis que as telas já usavam
 (`--color-*`, `--pine`, `--line`…) apontam para as do Financeiro, e a seção do fim dá aos

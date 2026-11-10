@@ -41,7 +41,8 @@ await import("../app.js");
 
 const $ = (s) => document.querySelector(s);
 const esperar = () => new Promise((r) => setTimeout(r, 20));
-const menu = () => [...document.querySelectorAll(".sidebar .nav a")].map((a) => a.textContent);
+// Barra lateral com as classes do Financeiro (T-00k): .lateral, .lateral__item.
+const menu = () => [...document.querySelectorAll(".lateral .lateral__item > span:first-of-type")].map((s) => s.textContent);
 async function irPara(hash) {
   window.location.hash = hash;
   await esperar();
@@ -50,7 +51,7 @@ async function irPara(hash) {
 test("abre na Visão geral com o menu lateral do protótipo e o aviso de demonstração", () => {
   assert.equal($("#main h1").textContent.startsWith("Bom dia"), true);
   assert.deepEqual(
-    [...document.querySelectorAll(".sidebar .nav-label")].map((g) => g.textContent),
+    [...document.querySelectorAll(".lateral .lateral__grupo")].map((g) => g.textContent),
     ["Programas e público", "Execução e atendimento", "Resultados", "Auditoria e implantação"],
   );
   assert.ok($(".demo-banner"));
@@ -62,18 +63,16 @@ test("notificações e Visão geral mostram os alertas reais da API, sem os de i
   await irPara("#/inicio");
   await esperar();
 
-  assert.match($(".notification-button").textContent, /Notificações · \d+/);
+  // O contador de alertas abertos fica no item Visão geral, como o contador do Início no Financeiro.
+  const contador = $('.lateral__item[href="#/inicio"] .lateral__contador');
+  assert.equal(contador.hidden, false);
+  assert.match(contador.textContent, /^\d+$/);
   const destinos = [...document.querySelectorAll("#main .priority-item a")].map((a) => a.getAttribute("href"));
   assert.equal(destinos[0], "#/alertas/al-9");
   assert.match(document.querySelector("#main .priority-item").textContent, /Lara Oliveira precisa de um contato.*4 faltas seguidas/);
   // Os alertas fictícios de infrequência do protótipo saíram (o "al1" era de infrequência).
   assert.ok(!destinos.includes("#/alertas/al1"));
 
-  $('[data-action="notifications"]').click();
-  await esperar();
-  const doDialogo = [...document.querySelectorAll("#dialog .priority-item a")].map((a) => a.getAttribute("href"));
-  assert.equal(doDialogo[0], "#/alertas/al-9");
-  document.getElementById("dialog").close?.();
 });
 
 test("Programas carrega pela API, sem o aviso de demonstração", async () => {
@@ -83,7 +82,7 @@ test("Programas carrega pela API, sem o aviso de demonstração", async () => {
   assert.equal(chamadas.at(-1).headers.Authorization, "Bearer token-de-teste");
   assert.equal($("#tela-api tbody td").textContent, "Semear");
   assert.equal($(".demo-banner"), null);
-  assert.equal($(".sidebar .nav a.active").textContent, "Programas e turmas");
+  assert.equal($('.lateral__item[aria-current="page"] span').textContent, "Programas e turmas");
 });
 
 test("Equipe e espaços de um programa do cadastro carrega pela API, com o usuário salvo", async () => {
@@ -196,10 +195,10 @@ test("encontro registrado abre pela API, com a chamada (T-89)", async () => {
 });
 
 test("seletor de módulo leva ao Financeiro e o logo ao menu inicial", () => {
-  const financas = [...document.querySelectorAll(".seg a")].find((a) => a.textContent === "Finanças");
+  const financas = [...document.querySelectorAll(".lateral__modulos a")].find((a) => a.textContent === "Finanças");
 
   assert.equal(financas.getAttribute("href"), "../Financeiro/");
-  assert.equal($(".sidebar .brand").getAttribute("href"), "../");
+  assert.equal($(".lateral .lateral__marca").getAttribute("href"), "../");
 });
 
 test("trocar de perfil muda o menu e fica salvo neste aparelho", async () => {
