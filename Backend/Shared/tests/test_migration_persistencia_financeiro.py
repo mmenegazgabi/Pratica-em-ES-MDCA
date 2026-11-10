@@ -61,15 +61,22 @@ def test_migrations_tem_um_unico_head():
     assert len(heads) == 1, f"mais de um head: {heads} — combine a ordem das migrations antes do merge"
 
 
-def test_historico_das_migrations_e_uma_linha_so():
+def test_ramos_paralelos_sao_sempre_juntados():
+    """Duas migrations partindo da mesma anterior só valem se uma junção as reunir.
+
+    Foi o que aconteceu em 10/11: b7d4e2a9c1f0 (login, T-35) e c2d8e4f6a1b3 (Financeiro)
+    partiram de 6bd565cae094, e d9f1a7c3b5e2 junta as duas.
+    """
     script = ScriptDirectory.from_config(_alembic_config())
     revisoes = list(script.walk_revisions())
 
-    # Nenhuma migration é base de duas outras (sem ramificação) e nenhuma junta ramos.
-    assert all(not isinstance(r.down_revision, tuple) for r in revisoes)
-    filhos = [r.down_revision for r in revisoes if r.down_revision]
-    assert len(filhos) == len(set(filhos))
     assert [r.revision for r in revisoes if r.down_revision is None] == ["4113860459ea"]
+    juncoes = {r.revision: set(r.down_revision) for r in revisoes if isinstance(r.down_revision, tuple)}
+    assert juncoes == {"d9f1a7c3b5e2": {"b7d4e2a9c1f0", "c2d8e4f6a1b3"}}
+    # Toda revisão chega ao head: nenhum ramo ficou de fora.
+    head = script.get_current_head()
+    alcancaveis = {r.revision for r in script.iterate_revisions(head, "base")}
+    assert alcancaveis == {r.revision for r in revisoes}
 
 
 def test_persistencia_do_financeiro_vem_depois_dos_alertas():
