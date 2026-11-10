@@ -1,6 +1,7 @@
 """Rascunhos de despesa: o educador fotografa o comprovante agora e completa os dados depois.
 
-Armazenamento em memória, como o restante do Financeiro por enquanto. Rascunho
+Com ``DATABASE_URL`` os rascunhos ficam na tabela ``rascunhos_lancamento``; a caixa em
+memória abaixo serve aos testes e à execução local sem banco. Rascunho
 não é lançamento: não aparece na fila de aprovação nem mexe no saldo.
 """
 

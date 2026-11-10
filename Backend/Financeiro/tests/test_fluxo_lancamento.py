@@ -23,6 +23,10 @@ CAMPOS_OBRIGATORIOS = ["orcamento_id", "valor", "descricao", "categoria", "data_
 
 client = TestClient(app)
 
+# As rotas de orçamento passaram a exigir login (T-33): a tela manda o código de
+# acesso e o papel em toda chamada.
+LEITURA_ORCAMENTO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
+
 
 @pytest.fixture(autouse=True)
 def ambiente(monkeypatch):
@@ -142,7 +146,7 @@ def test_lancamento_criado_aparece_pendente_na_consulta_e_nao_mexe_no_saldo():
     criado = enviar(corpo_do_formulario()).json()
 
     consulta = client.get(f"/lancamentos/{criado['id']}", headers=EDUCADOR)
-    orcamento = client.get("/orcamentos/orc-semear", headers=EDUCADOR).json()
+    orcamento = client.get("/orcamentos/orc-semear", headers=LEITURA_ORCAMENTO).json()
 
     assert consulta.status_code == 200
     assert consulta.json()["status_descricao"] == "Pendente de aprovação"

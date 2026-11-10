@@ -69,7 +69,12 @@ def validar_categorias(
             raise OrcamentoInvalido(f"Categoria repetida: {nome}.")
         vistos.add(nome.casefold())
 
-    for nome, valor in valores_categorias.items():
+    # Sempre na ordem da lista de categorias: com mais de um problema, a mensagem fala
+    # da mesma categoria, venham os valores da memória ou do banco.
+    na_ordem = [(nome, valores_categorias[nome]) for nome in categorias if nome in valores_categorias]
+    na_ordem += [(n, v) for n, v in valores_categorias.items() if n not in categorias]
+
+    for nome, valor in na_ordem:
         if not math.isfinite(valor) or valor < 0:
             raise OrcamentoInvalido(
                 f"O valor orçado da categoria {nome} deve ser maior ou igual a zero."
@@ -82,7 +87,7 @@ def validar_categorias(
             f"valor total do orçamento ({formatar_reais(valor_total)})."
         )
 
-    for nome, valor in valores_categorias.items():
+    for nome, valor in na_ordem:
         gasto = realizado_por_categoria.get(nome, 0.0)
         if _em_centavos(valor) < _em_centavos(gasto):
             raise OrcamentoInvalido(
@@ -121,9 +126,12 @@ class Lancamento:
     criado_em: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     # Redesign Financeiro: quando foi aprovado, para a lista de lançamentos.
     aprovado_em: Optional[datetime] = None
+    # Quando foi rejeitado; volta a None quando a despesa corrigida é reenviada.
+    rejeitado_em: Optional[datetime] = None
     # T-21 · US-05: vínculo com o item do extrato bancário.
     conciliado: bool = False
     referencia_extrato: Optional[str] = None
+    conciliado_em: Optional[datetime] = None
 
 
 @dataclass
@@ -142,12 +150,17 @@ class Orcamento:
 
     def __post_init__(self) -> None:
         self._lock = threading.Lock()
+        # Em centavos (Decimal), como na edição e no alerta de saldo: somar floats
+        # deixava resíduo (ex.: 15675.720000000001) no saldo devolvido pela API.
         realizado = sum(
-            lancamento.valor
-            for lancamento in self.lancamentos
-            if lancamento.status == StatusLancamento.APROVADO
+            (
+                _em_centavos(lancamento.valor)
+                for lancamento in self.lancamentos
+                if lancamento.status == StatusLancamento.APROVADO
+            ),
+            Decimal(0),
         )
-        self.saldo_atual = self.valor_total - realizado
+        self.saldo_atual = float(_em_centavos(self.valor_total) - realizado)
 
     @property
     def saldo(self) -> float:
@@ -198,7 +211,9 @@ class Orcamento:
 
             lancamento.status = StatusLancamento.APROVADO
             lancamento.aprovado_em = datetime.now(timezone.utc)
-            self.saldo_atual -= lancamento.valor
+            self.saldo_atual = float(
+                _em_centavos(self.saldo_atual) - _em_centavos(lancamento.valor)
+            )
             return lancamento
 
     def editar(
@@ -291,7 +306,9 @@ class Orcamento:
 
             lancamento.status = StatusLancamento.PENDENTE
             lancamento.aprovado_em = None
-            self.saldo_atual += lancamento.valor
+            self.saldo_atual = float(
+                _em_centavos(self.saldo_atual) + _em_centavos(lancamento.valor)
+            )
 
     def rejeitar_lancamento(self, lancamento_id: str, motivo: str) -> Lancamento:
         # T-16 · US-04: só "pendente -> rejeitado" é transição válida. Como
@@ -309,6 +326,7 @@ class Orcamento:
                 )
             lancamento.status = StatusLancamento.REJEITADO
             lancamento.motivo_rejeicao = motivo
+            lancamento.rejeitado_em = datetime.now(timezone.utc)
             return lancamento
 
     def reenviar_lancamento(
@@ -331,6 +349,7 @@ class Orcamento:
             if lancamento.motivo_rejeicao:
                 lancamento.motivos_rejeicao_anteriores.append(lancamento.motivo_rejeicao)
             lancamento.motivo_rejeicao = None
+            lancamento.rejeitado_em = None
             lancamento.valor = valor
             lancamento.descricao = descricao
             lancamento.categoria = categoria
@@ -364,6 +383,7 @@ class Orcamento:
                 )
             lancamento.conciliado = True
             lancamento.referencia_extrato = referencia_extrato
+            lancamento.conciliado_em = datetime.now(timezone.utc)
             return lancamento
 
     def registrar_lancamento(self, lancamento: Lancamento) -> Lancamento:

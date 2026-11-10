@@ -12,15 +12,16 @@ if __package__ == "routers":
         calcular_realizado,
         classificar_nivel_alerta,
     )
-    from autenticacao import Papel, exigir_autenticacao, exigir_papel
+    import auditoria
+    from autenticacao import AcessoFinanceiro, Papel, exigir_acesso_financeiro, exigir_papel, exigir_programa, obter_acesso
+    from moeda import formatar_reais
     from orcamento import (
-        AprovacaoInvalida,
-        LancamentoNaoEncontrado,
         Orcamento,
         OrcamentoInvalido,
         validar_categorias,
     )
-    from projetos import buscar_projeto
+    from persistencia import ORCAMENTOS_EM_MEMORIA, obter_repositorio
+    from projetos import buscar_projeto, listar_projetos
 else:
     from ..alerta_saldo import (
         NivelAlerta,
@@ -28,19 +29,22 @@ else:
         calcular_realizado,
         classificar_nivel_alerta,
     )
-    from ..autenticacao import Papel, exigir_autenticacao, exigir_papel
+    from .. import auditoria
+    from ..autenticacao import AcessoFinanceiro, Papel, exigir_acesso_financeiro, exigir_papel, exigir_programa, obter_acesso
+    from ..moeda import formatar_reais
     from ..orcamento import (
-        AprovacaoInvalida,
-        LancamentoNaoEncontrado,
         Orcamento,
         OrcamentoInvalido,
         validar_categorias,
     )
-    from ..projetos import buscar_projeto
+    from ..persistencia import ORCAMENTOS_EM_MEMORIA, obter_repositorio
+    from ..projetos import buscar_projeto, listar_projetos
 
 router = APIRouter(tags=["orcamentos"])
 
-_orcamentos: List[Orcamento] = []
+# Orçamentos guardados em memória (sem DATABASE_URL). Com banco, eles vêm das
+# tabelas orcamentos, orcamento_categorias e lancamentos (persistencia.py).
+_orcamentos: List[Orcamento] = ORCAMENTOS_EM_MEMORIA
 
 
 class CategoriaEntrada(BaseModel):
@@ -131,11 +135,7 @@ class OrcamentoDetalhe(BaseModel):
     categorias: List[CategoriaDetalhe]
 
     # Nome vem do cadastro de projetos; None se o projeto não existir mais.
-    @computed_field
-    @property
-    def projeto_nome(self) -> Optional[str]:
-        projeto = buscar_projeto(self.projeto_id)
-        return projeto.nome if projeto else None
+    projeto_nome: Optional[str] = None
 
     # T-08 · US-02: indicador de consumo com alerta em 80% e 100%.
     # Calculados a partir de valor_total e saldo para que as telas não
@@ -163,20 +163,48 @@ class OrcamentosPaginados(BaseModel):
     tamanho: int
 
 
-# Sem anotação de tipo: ``Identidade`` só é importada dentro de ``autenticacao``.
 def autorizar_leitura_projeto(
-    projeto_id: str, identidade=Depends(exigir_autenticacao)
+    projeto_id: str, identidade: AcessoFinanceiro = Depends(exigir_acesso_financeiro)
 ) -> str:
-    # Ponto de integração com o RBAC da US-08: quando implementado,
-    # deve levantar 403 se ``identidade`` não puder ver o projeto.
+    # T-33 · US-08: quem só é educador lê apenas os programas em que tem vínculo.
+    exigir_programa(identidade, projeto_id)
     return projeto_id
 
 
-def _buscar_orcamento(orcamento_id: str) -> Orcamento:
-    for orcamento in _orcamentos:
-        if orcamento.id == orcamento_id:
-            return orcamento
-    raise HTTPException(status_code=404, detail="Orçamento não encontrado")
+def _buscar_orcamento(repositorio, orcamento_id: str, para_alterar: bool = False) -> Orcamento:
+    orcamento = repositorio.buscar_orcamento(orcamento_id, para_alterar=para_alterar)
+    if orcamento is None:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado")
+    return orcamento
+
+
+def detalhar(orcamento: Orcamento, nomes_dos_projetos: dict) -> OrcamentoDetalhe:
+    detalhe = OrcamentoDetalhe.model_validate(orcamento)
+    detalhe.projeto_nome = nomes_dos_projetos.get(orcamento.projeto_id)
+    return detalhe
+
+
+def detalhar_um(orcamento: Orcamento, repositorio) -> OrcamentoDetalhe:
+    projeto = buscar_projeto(orcamento.projeto_id, repositorio)
+    return detalhar(orcamento, {projeto.id: projeto.nome} if projeto else {})
+
+
+def _resumo_do_orcamento(orcamento: Orcamento) -> dict:
+    """O que a auditoria guarda de um orçamento (para comparar antes e depois)."""
+    return {
+        "projeto_id": orcamento.projeto_id,
+        "valor_total": orcamento.valor_total,
+        "data_inicio": orcamento.data_inicio.isoformat(),
+        "data_fim": orcamento.data_fim.isoformat(),
+        "categorias": [
+            {"nome": nome, "valor_orcado": orcamento.valores_categorias.get(nome)}
+            for nome in orcamento.categorias_despesa
+        ],
+    }
+
+
+def _nomes_dos_projetos(repositorio) -> dict:
+    return {p.id: p.nome for p in listar_projetos(repositorio)}
 
 
 @router.get("/orcamentos", response_model=List[OrcamentoDetalhe])
@@ -185,23 +213,28 @@ def listar_orcamentos(
         None,
         description="Se informado, devolve só os orçamentos vigentes nessa data (AAAA-MM-DD).",
     ),
-    _identidade=Depends(exigir_autenticacao),
+    repositorio=Depends(obter_repositorio),
+    identidade: AcessoFinanceiro = Depends(exigir_acesso_financeiro),
 ) -> List[OrcamentoDetalhe]:
     # T-13 · US-03: o formulário de lançamento precisa listar projetos e
-    # categorias para o educador escolher.
+    # categorias para o educador escolher (só os dos programas dele, T-33).
     orcamentos = [
         o
-        for o in _orcamentos
-        if vigentes_em is None or o.data_inicio <= vigentes_em <= o.data_fim
+        for o in repositorio.listar_orcamentos()
+        if (vigentes_em is None or o.data_inicio <= vigentes_em <= o.data_fim)
+        and identidade.ve_programa(o.projeto_id)
     ]
     orcamentos.sort(key=lambda o: (o.projeto_id, o.data_inicio))
-    return [OrcamentoDetalhe.model_validate(o) for o in orcamentos]
+    nomes = _nomes_dos_projetos(repositorio)
+    return [detalhar(o, nomes) for o in orcamentos]
 
 
 @router.post("/orcamentos", response_model=Orcamento, status_code=201)
 def criar_orcamento(
     payload: OrcamentoCreate,
+    repositorio=Depends(obter_repositorio),
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO)),
+    identidade: AcessoFinanceiro = Depends(obter_acesso),
 ) -> Orcamento:
     if payload.valor_total < 0:
         raise HTTPException(
@@ -214,7 +247,7 @@ def criar_orcamento(
             detail="data_fim não pode ser anterior a data_inicio",
         )
 
-    if buscar_projeto(payload.projeto_id) is None:
+    if buscar_projeto(payload.projeto_id, repositorio) is None:
         raise HTTPException(
             status_code=400,
             detail="Projeto não encontrado. Cadastre o projeto antes de criar o orçamento.",
@@ -241,7 +274,15 @@ def criar_orcamento(
         categorias_despesa=nomes,
         valores_categorias=valores,
     )
-    _orcamentos.append(orcamento)
+    repositorio.inserir_orcamento(orcamento)
+    projeto = buscar_projeto(orcamento.projeto_id, repositorio)
+    auditoria.registrar(
+        repositorio, identidade, "criar_orcamento",
+        alvo_tipo="orcamento", alvo_id=orcamento.id,
+        descricao=auditoria.alvo(projeto.nome if projeto else None, f"valor total {formatar_reais(orcamento.valor_total)}"),
+        detalhes=_resumo_do_orcamento(orcamento),
+    )
+    repositorio.confirmar()
     return orcamento
 
 
@@ -250,18 +291,17 @@ def listar_orcamentos_do_projeto(
     projeto_id: str = Depends(autorizar_leitura_projeto),
     pagina: int = Query(1, ge=1),
     tamanho: int = Query(10, ge=1, le=100),
+    repositorio=Depends(obter_repositorio),
 ) -> OrcamentosPaginados:
     do_projeto = sorted(
-        (o for o in _orcamentos if o.projeto_id == projeto_id),
+        (o for o in repositorio.listar_orcamentos() if o.projeto_id == projeto_id),
         key=lambda o: o.data_inicio,
         reverse=True,
     )
     inicio = (pagina - 1) * tamanho
+    nomes = _nomes_dos_projetos(repositorio)
     return OrcamentosPaginados(
-        itens=[
-            OrcamentoDetalhe.model_validate(o)
-            for o in do_projeto[inicio : inicio + tamanho]
-        ],
+        itens=[detalhar(o, nomes) for o in do_projeto[inicio : inicio + tamanho]],
         total=len(do_projeto),
         pagina=pagina,
         tamanho=tamanho,
@@ -270,9 +310,13 @@ def listar_orcamentos_do_projeto(
 
 @router.get("/orcamentos/{orcamento_id}", response_model=OrcamentoDetalhe)
 def obter_orcamento(
-    orcamento_id: str, _identidade=Depends(exigir_autenticacao)
-) -> Orcamento:
-    return _buscar_orcamento(orcamento_id)
+    orcamento_id: str,
+    repositorio=Depends(obter_repositorio),
+    identidade: AcessoFinanceiro = Depends(exigir_acesso_financeiro),
+) -> OrcamentoDetalhe:
+    orcamento = _buscar_orcamento(repositorio, orcamento_id)
+    exigir_programa(identidade, orcamento.projeto_id)
+    return detalhar_um(orcamento, repositorio)
 
 
 @router.patch("/orcamentos/{orcamento_id}", response_model=OrcamentoDetalhe)
@@ -280,9 +324,12 @@ def editar_orcamento(
     orcamento_id: str,
     payload: OrcamentoEdicao,
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO)),
-) -> Orcamento:
+    repositorio=Depends(obter_repositorio),
+    identidade: AcessoFinanceiro = Depends(obter_acesso),
+) -> OrcamentoDetalhe:
     """Coordenação edita valor, vigência e categorias (redesign + US-01)."""
-    orcamento = _buscar_orcamento(orcamento_id)
+    orcamento = _buscar_orcamento(repositorio, orcamento_id, para_alterar=True)
+    antes = _resumo_do_orcamento(orcamento)
     categorias = (
         None
         if payload.categorias is None
@@ -298,43 +345,18 @@ def editar_orcamento(
         )
     except OrcamentoInvalido as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
-    return orcamento
+    repositorio.salvar_orcamento(orcamento)
+    projeto = buscar_projeto(orcamento.projeto_id, repositorio)
+    auditoria.registrar(
+        repositorio, identidade, "editar_orcamento",
+        alvo_tipo="orcamento", alvo_id=orcamento.id,
+        descricao=auditoria.alvo(projeto.nome if projeto else None, f"valor total {formatar_reais(orcamento.valor_total)}"),
+        detalhes={"antes": antes, "depois": _resumo_do_orcamento(orcamento)},
+    )
+    repositorio.confirmar()
+    return detalhar_um(orcamento, repositorio)
 
 
-@router.post(
-    "/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/aprovar",
-    response_model=OrcamentoDetalhe,
-)
-def aprovar_lancamento(
-    orcamento_id: str,
-    lancamento_id: str,
-    # Mesma regra da T-15 aplicada em PATCH /lancamentos/{id}/aprovar.
-    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
-) -> Orcamento:
-    orcamento = _buscar_orcamento(orcamento_id)
-    try:
-        orcamento.aprovar_lancamento(lancamento_id)
-    except LancamentoNaoEncontrado as erro:
-        raise HTTPException(status_code=404, detail=str(erro)) from erro
-    except AprovacaoInvalida as erro:
-        raise HTTPException(status_code=409, detail=str(erro)) from erro
-    return orcamento
-
-
-@router.post(
-    "/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/reverter-aprovacao",
-    response_model=OrcamentoDetalhe,
-)
-def reverter_aprovacao(
-    orcamento_id: str,
-    lancamento_id: str,
-    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
-) -> Orcamento:
-    orcamento = _buscar_orcamento(orcamento_id)
-    try:
-        orcamento.reverter_aprovacao(lancamento_id)
-    except LancamentoNaoEncontrado as erro:
-        raise HTTPException(status_code=404, detail=str(erro)) from erro
-    except AprovacaoInvalida as erro:
-        raise HTTPException(status_code=409, detail=str(erro)) from erro
-    return orcamento
+# As rotas antigas POST /orcamentos/{id}/lancamentos/{id}/aprovar e
+# .../reverter-aprovacao (T-07) foram removidas: não pediam login. A aprovação é
+# PATCH /lancamentos/{id}/aprovar, que exige o papel de Coordenação ou Direção.

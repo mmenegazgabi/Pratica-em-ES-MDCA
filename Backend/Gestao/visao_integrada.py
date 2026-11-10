@@ -6,19 +6,17 @@
   projeto correspondente, calculados pela função de resumo do próprio Financeiro
   (``Financeiro/dashboard.resumo_por_projeto``, a mesma do dashboard da Diretoria).
 
-O Financeiro ainda guarda projetos, orçamentos e lançamentos **em memória**, num cadastro
-separado do canônico. Este módulo só **lê** esses dados, sem alterar nada do Financeiro,
-e acha o projeto correspondente ao programa assim:
+O Financeiro grava orçamentos e lançamentos no mesmo PostgreSQL (tabelas ``orcamentos``,
+``orcamento_categorias`` e ``lancamentos``) e usa o cadastro canônico de programas como
+cadastro de projetos: o orçamento aponta para o próprio programa (``projeto_id``). Este
+módulo só **lê** esses dados, pela mesma conexão da consulta, com o repositório do próprio
+Financeiro (``Financeiro/persistencia.py``).
 
-1. pelo **id** (vale quando o Financeiro passar a usar a tabela ``projetos``);
-2. senão, pelo **nome**, sem diferenciar maiúsculas e acentos (a mesma regra que o
-   Financeiro usa para não repetir nomes).
-
-``vinculo`` diz qual dos dois casou (``id``, ``nome`` ou ``nenhum``). Os dados em memória
-somem a cada reinício da API.
+O vínculo é só pelo **id** (plano de integração, Trabalho 2): ``vinculo`` é ``id`` quando o
+programa tem orçamento no Financeiro e ``nenhum`` quando ainda não tem. A antiga busca pelo
+nome saiu, porque não existe mais um cadastro de projetos separado.
 """
 
-import unicodedata
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -31,7 +29,6 @@ from Gestao.plano_de_acao import percentual
 from Gestao.programas import DadosInvalidos, ProgramaDetalhado, buscar_programa
 
 VINCULO_ID = "id"
-VINCULO_NOME = "nome"
 VINCULO_NENHUM = "nenhum"
 
 
@@ -78,11 +75,6 @@ class VisaoIntegrada:
     financeira: Optional[ExecucaoFinanceira]
 
 
-def _chave(nome: str) -> str:
-    decomposto = unicodedata.normalize("NFKD", nome.strip().casefold())
-    return "".join(c for c in decomposto if not unicodedata.combining(c))
-
-
 def execucao_fisica(
     conexao: Connection, programa_id: str, inicio: Optional[date], fim: Optional[date]
 ) -> ExecucaoFisica:
@@ -123,30 +115,30 @@ def execucao_fisica(
 
 
 def execucao_financeira(
-    programa: ProgramaDetalhado, inicio: Optional[date], fim: Optional[date]
+    conexao: Connection, programa: ProgramaDetalhado, inicio: Optional[date], fim: Optional[date]
 ) -> ExecucaoFinanceira:
-    """Leitura dos dados em memória do Financeiro, sem alterá-los."""
+    """Leitura dos dados do Financeiro no banco, sem alterá-los."""
     # Importados aqui: são os módulos da API integrada (Backend/main.py), os mesmos que
     # recebem os orçamentos e lançamentos.
     from Financeiro.dashboard import resumo_por_projeto
-    from Financeiro.projetos import listar_projetos
-    from Financeiro.routers.orcamentos import _orcamentos
+    from Financeiro.persistencia import MEMORIA, RepositorioBanco, usa_banco
+    from Financeiro.projetos import Projeto
 
-    projetos = listar_projetos()
-    projeto = next((p for p in projetos if p.id == programa.id), None)
-    vinculo = VINCULO_ID
-    if projeto is None:
-        projeto = next((p for p in projetos if _chave(p.nome) == _chave(programa.nome)), None)
-        vinculo = VINCULO_NOME
-    if projeto is None:
+    # Sem banco o Financeiro roda em memória (testes e execução local); com banco, lê
+    # pela mesma conexão desta consulta.
+    repositorio = RepositorioBanco(conexao) if usa_banco() else MEMORIA
+    orcamentos = repositorio.orcamentos_do_projeto(programa.id)
+    if not orcamentos:
         return ExecucaoFinanceira(VINCULO_NENHUM, None, None, 0.0, 0.0, 0.0, None)
 
-    [resumo] = resumo_por_projeto([projeto], list(_orcamentos), inicio, fim)
+    # O projeto do Financeiro é o próprio programa (mesma linha da tabela projetos).
+    projeto = Projeto(nome=programa.nome, id=programa.id)
+    [resumo] = resumo_por_projeto([projeto], orcamentos, inicio, fim)
     executado = None
     if resumo.orcado > 0:
         executado = percentual(Decimal(str(resumo.realizado)), Decimal(str(resumo.orcado)))
     return ExecucaoFinanceira(
-        vinculo=vinculo,
+        vinculo=VINCULO_ID,
         projeto_id=projeto.id,
         projeto=projeto.nome,
         orcado=resumo.orcado,
@@ -172,5 +164,5 @@ def visao_integrada(
         inicio=inicio,
         fim=fim,
         fisica=execucao_fisica(conexao, programa_id, inicio, fim),
-        financeira=execucao_financeira(programa, inicio, fim) if com_financeiro else None,
+        financeira=execucao_financeira(conexao, programa, inicio, fim) if com_financeiro else None,
     )

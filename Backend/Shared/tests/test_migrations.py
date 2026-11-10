@@ -213,6 +213,13 @@ def test_migration_cria_tabela_lancamentos_com_colunas_esperadas(migrated_db):
         "autor_id",
         "conciliado",
         "item_extrato_ref",
+        # Persistência do Financeiro (c2d8e4f6a1b3).
+        "criado_em",
+        "aprovado_em",
+        "rejeitado_em",
+        "conciliado_em",
+        "motivos_rejeicao_anteriores",
+        "comprovante_chave",
     }
 
     fks = {

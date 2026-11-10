@@ -103,25 +103,31 @@ def test_criar_orcamento_fora_da_coordenacao_da_403(papel):
     assert len(_orcamentos) == 1
 
 
+# A aprovação é PATCH /lancamentos/{id}/aprovar (a das telas). As rotas antigas
+# POST /orcamentos/{id}/lancamentos/{id}/aprovar e /reverter-aprovacao saíram na E3
+# (docs/persistencia-financeiro.md, "Rotas removidas").
+APROVAR = "/lancamentos/pendente/aprovar"
+
+
 @pytest.mark.parametrize("papel", ["educador", "voluntario_financeiro"])
 def test_aprovar_fora_da_coordenacao_e_direcao_da_403(papel):
-    resposta = client.post(
-        "/orcamentos/orcamento-1/lancamentos/pendente/aprovar", headers=como(papel)
-    )
+    resposta = client.patch(APROVAR, headers=como(papel))
 
     assert resposta.status_code == 403
     assert _orcamentos[0].lancamentos[0].status == StatusLancamento.PENDENTE
 
 
-@pytest.mark.parametrize("papel", ["educador", "voluntario_financeiro"])
-def test_reverter_fora_da_coordenacao_e_direcao_da_403(papel):
-    resposta = client.post(
-        "/orcamentos/orcamento-1/lancamentos/aprovado/reverter-aprovacao",
-        headers=como(papel),
-    )
+def test_aprovar_sem_token_da_401():
+    assert client.patch(APROVAR).status_code == 401
+    assert _orcamentos[0].lancamentos[0].status == StatusLancamento.PENDENTE
 
-    assert resposta.status_code == 403
-    assert _orcamentos[0].lancamentos[1].status == StatusLancamento.APROVADO
+
+@pytest.mark.parametrize("papel", ["coordenacao", "direcao"])
+def test_direcao_e_coordenacao_aprovam(papel):
+    resposta = client.patch(APROVAR, headers=como(papel))
+
+    assert resposta.status_code == 200
+    assert _orcamentos[0].lancamentos[0].status == StatusLancamento.APROVADO
 
 
 @pytest.mark.parametrize(
@@ -131,14 +137,9 @@ def test_reverter_fora_da_coordenacao_e_direcao_da_403(papel):
         "/orcamentos/orcamento-1/lancamentos/aprovado/reverter-aprovacao",
     ],
 )
-def test_aprovar_e_reverter_sem_token_dao_401(rota):
-    assert client.post(rota).status_code == 401
-
-
-@pytest.mark.parametrize("papel", ["coordenacao", "direcao"])
-def test_direcao_e_coordenacao_aprovam(papel):
-    resposta = client.post(
-        "/orcamentos/orcamento-1/lancamentos/pendente/aprovar", headers=como(papel)
-    )
-
-    assert resposta.status_code == 200
+def test_rotas_antigas_de_aprovar_e_reverter_nao_existem(rota):
+    assert client.post(rota, headers=como("coordenacao")).status_code in (404, 405)
+    assert [l.status for l in _orcamentos[0].lancamentos] == [
+        StatusLancamento.PENDENTE,
+        StatusLancamento.APROVADO,
+    ]

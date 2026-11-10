@@ -23,6 +23,10 @@ JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
 
 client = TestClient(app)
 
+# As rotas de orçamento passaram a exigir login (T-33): a tela manda o código de
+# acesso e o papel em toda chamada.
+LEITURA_ORCAMENTO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
+
 
 def cabecalhos(papel="coordenacao", token=TOKEN):
     headers = {}
@@ -189,7 +193,7 @@ def test_rejeitar_nao_altera_saldo_e_get_orcamento_confirma():
 
     rejeitar(lancamento.id, {"motivo": "Comprovante não confere."})
 
-    assert client.get("/orcamentos/orcamento-1", headers=cabecalhos()).json()["saldo"] == 1000
+    assert client.get("/orcamentos/orcamento-1", headers=LEITURA_ORCAMENTO).json()["saldo"] == 1000
 
 
 def test_saldo_considera_so_o_aprovado_quando_outro_e_rejeitado():
