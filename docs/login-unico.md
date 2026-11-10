@@ -47,7 +47,7 @@ Uma conta só para a Gestão e o Financeiro: a pessoa entra uma vez na tela inic
 
 | Parte | Situação |
 |---|---|
-| API (todas as rotas da Gestão e do Financeiro) | Aceita o token de sessão. O código de acesso (`FINANCEIRO_API_TOKEN`) e os cabeçalhos continuam valendo durante a transição. |
+| API (todas as rotas da Gestão e do Financeiro) | Aceita o token de sessão. No Financeiro, com o token, **o papel vem do banco** (`usuarios_papeis` e `vinculos_equipe`) e o educador só vê os programas do vínculo (veja [permissoes-financeiro.md](permissoes-financeiro.md)). O código de acesso (`FINANCEIRO_API_TOKEN`) e os cabeçalhos continuam valendo durante a transição. |
 | Tela inicial "Entrar" | Chama a API e guarda a sessão. |
 | Frontend da Gestão | Usa a sessão: não pede código nem usuário; o menu mostra "Conectado como …"; sessão recusada mostra "Sessão encerrada" com o link para entrar de novo. Sem sessão, funciona como antes. |
 | Frontend do Financeiro | **A fazer pelo Financeiro** (abaixo). Até lá, continua pedindo nome, papel e código, sem quebrar nada. |
