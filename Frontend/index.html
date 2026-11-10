@@ -50,6 +50,8 @@
 
     *, *::before, *::after { box-sizing: border-box; }
 
+    [hidden] { display: none !important; }
+
     body {
       margin: 0;
       background: var(--color-bg);
@@ -353,11 +355,19 @@
 
     .login-btn { margin-top: 18px; width: 100%; display: flex; justify-content: center; background: var(--l-verde); color: #fff; border: 1px solid transparent; border-radius: 7px; padding: 10px 12px; font: 500 13px "Inter", system-ui, sans-serif; cursor: pointer; }
     .login-btn:hover { background: #367832; }
+    .login-btn:disabled { opacity: .65; cursor: progress; }
+    .login-btn--secundario { background: #fff; color: var(--l-texto); border-color: var(--l-borda-campo); }
+    .login-btn--secundario:hover { background: var(--l-fundo-suave); }
 
-    .login-erro, .login-ok { border-radius: 6px; padding: 9px 10px; margin-top: 14px; }
+    .login-caixa { width: 100%; max-width: 340px; }
+    .login-texto { margin: 14px 0 0; color: var(--l-texto-medio); font-size: 13px; line-height: 1.55; }
+    .login-avancado { margin-top: 18px; color: var(--l-texto-suave); font-size: 11px; }
+    .login-avancado summary { cursor: pointer; width: fit-content; }
+    .login-avancado summary:hover { color: var(--l-texto); }
+
+    .login-erro { border-radius: 6px; padding: 9px 10px; margin-top: 14px; }
     .login-erro { border: 1px solid var(--l-perigo-borda); background: #fef2f2; color: var(--l-perigo-texto); }
-    .login-ok { border: 1px solid #cfe5cb; background: var(--l-ativo-fundo); color: var(--l-ativo-texto); }
-    .login-erro[hidden], .login-ok[hidden] { display: none; }
+    .login-erro[hidden] { display: none; }
 
     .login-ajuda { margin: 22px 0 0; padding-top: 14px; border-top: 1px solid var(--l-linha); color: var(--l-texto-suave); font-size: 11px; line-height: 1.5; }
 
@@ -390,39 +400,71 @@
     </aside>
 
     <main class="login-principal">
-      <form class="login-form" id="formEntrar" novalidate>
-        <h1>Entrar</h1>
-        <p class="login-sub">Use o e-mail e a senha que você recebeu da coordenação.</p>
-        <div class="login-erro" id="loginErro" role="alert" hidden></div>
+      <div class="login-caixa">
+        <form class="login-form" id="formEntrar" novalidate>
+          <h1>Entrar</h1>
+          <p class="login-sub">Use o e-mail e a senha que você recebeu da coordenação.</p>
+          <div class="login-erro" id="loginErro" role="alert" hidden></div>
 
-        <div class="login-rotulo"><label for="loginEmail">E-mail</label></div>
-        <input class="login-entrada" id="loginEmail" type="email" autocomplete="username" placeholder="nome@mdca.org.br">
+          <div class="login-rotulo"><label for="loginEmail">E-mail</label></div>
+          <input class="login-entrada" id="loginEmail" type="email" autocomplete="username" placeholder="nome@mdca.org.br">
 
-        <div class="login-rotulo">
-          <label for="loginSenha">Senha</label>
-          <button class="login-link" type="button" id="irEsqueci">Esqueci minha senha</button>
-        </div>
-        <div class="login-senha">
-          <input class="login-entrada" id="loginSenha" type="password" autocomplete="current-password">
-          <button class="login-mostrar" type="button" id="mostrarSenha" aria-controls="loginSenha">Mostrar</button>
-        </div>
+          <div class="login-rotulo">
+            <label for="loginSenha">Senha</label>
+            <button class="login-link" type="button" id="irEsqueci">Esqueci minha senha</button>
+          </div>
+          <div class="login-senha">
+            <input class="login-entrada" id="loginSenha" type="password" autocomplete="current-password">
+            <button class="login-mostrar" type="button" id="mostrarSenha" aria-controls="loginSenha">Mostrar</button>
+          </div>
 
-        <label class="login-lembrar"><input type="checkbox" id="loginLembrar" checked> Manter conectado neste aparelho</label>
+          <label class="login-lembrar"><input type="checkbox" id="loginLembrar" checked> Manter conectado neste aparelho</label>
 
-        <button class="login-btn" type="submit">Entrar</button>
+          <button class="login-btn" type="submit" id="entrarBotao">Entrar</button>
 
-        <p class="login-ajuda">Depois de entrar, escolha o módulo: Gestão de Casos ou Financeiro.</p>
-      </form>
+          <p class="login-ajuda">
+            <button class="login-link" type="button" id="irPrimeiro">Primeiro acesso? Use seu código</button><br>
+            Depois de entrar, escolha o módulo: Gestão de Casos ou Financeiro.
+          </p>
+        </form>
 
-      <form class="login-form" id="formEsqueci" novalidate hidden>
-        <h1>Recuperar senha</h1>
-        <p class="login-sub">Informe seu e-mail. Enviaremos um link para criar uma senha nova.</p>
-        <div class="login-ok" id="esqueciOk" role="status" hidden>Se o e-mail estiver cadastrado, o link chega em alguns minutos.</div>
-        <div class="login-rotulo"><label for="esqueciEmail">E-mail</label></div>
-        <input class="login-entrada" id="esqueciEmail" type="email" autocomplete="username" placeholder="nome@mdca.org.br">
-        <button class="login-btn" type="submit">Enviar link</button>
-        <p class="login-ajuda"><button class="login-link" type="button" id="voltarEntrar">← Voltar para entrar</button></p>
-      </form>
+        <form class="login-form" id="formPrimeiro" novalidate hidden>
+          <h1>Primeiro acesso</h1>
+          <p class="login-sub">Use o código que você recebeu da administração e crie sua senha.</p>
+          <div class="login-erro" id="primeiroErro" role="alert" hidden></div>
+
+          <div class="login-rotulo"><label for="primeiroEmail">E-mail</label></div>
+          <input class="login-entrada" id="primeiroEmail" type="email" autocomplete="username" placeholder="nome@mdca.org.br">
+
+          <div class="login-rotulo"><label for="primeiroCodigo">Código de acesso</label></div>
+          <input class="login-entrada" id="primeiroCodigo" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false">
+
+          <div class="login-rotulo"><label for="primeiroSenha">Nova senha</label></div>
+          <input class="login-entrada" id="primeiroSenha" type="password" autocomplete="new-password">
+
+          <div class="login-rotulo"><label for="primeiroRepetir">Repita a nova senha</label></div>
+          <input class="login-entrada" id="primeiroRepetir" type="password" autocomplete="new-password">
+
+          <label class="login-lembrar"><input type="checkbox" id="primeiroLembrar" checked> Manter conectado neste aparelho</label>
+
+          <button class="login-btn" type="submit" id="primeiroBotao">Criar senha e entrar</button>
+
+          <p class="login-ajuda"><button class="login-link" type="button" id="primeiroVoltar">← Voltar para entrar</button></p>
+        </form>
+
+        <section class="login-form" id="esqueci" hidden>
+          <h1>Esqueci minha senha</h1>
+          <p class="login-texto">Peça à administração um novo código de acesso e use <strong>Primeiro acesso</strong>.</p>
+          <button class="login-btn login-btn--secundario" type="button" id="esqueciIrPrimeiro">Ir para Primeiro acesso</button>
+          <p class="login-ajuda"><button class="login-link" type="button" id="esqueciVoltar">← Voltar para entrar</button></p>
+        </section>
+
+        <details class="login-avancado">
+          <summary>Servidor (avançado)</summary>
+          <div class="login-rotulo"><label for="apiEndereco">Endereço da API</label></div>
+          <input class="login-entrada" id="apiEndereco" type="url" spellcheck="false" autocomplete="off">
+        </details>
+      </div>
     </main>
   </div>
 
@@ -446,6 +488,7 @@
         <div class="nav-group-title">Módulos</div>
         <a class="nav-item" href="Gestao/">Gestão de Casos</a>
         <a class="nav-item" href="Financeiro/">Financeiro</a>
+        <a class="nav-item" href="Admin/" id="navAdmin" hidden>Administração</a>
       </nav>
       <button type="button" class="sidebar-sair" id="sair">Sair</button>
     </aside>
@@ -453,7 +496,7 @@
     <div class="main">
       <header class="main-header">
         <div class="breadcrumb">Início</div>
-        <h1 class="page-title">Sistema MDCA</h1>
+        <h1 class="page-title" id="saudacao">Olá</h1>
       </header>
       <main class="main-content">
         <p class="lede">Selecione um módulo para continuar.</p>
@@ -466,128 +509,18 @@
             <span class="module-card-label">Financeiro</span>
             <span class="module-card-arrow" aria-hidden="true">→</span>
           </a>
+          <a class="module-card" href="Admin/" id="cartaoAdmin" hidden>
+            <span class="module-card-label">Administração</span>
+            <span class="module-card-arrow" aria-hidden="true">→</span>
+          </a>
         </div>
       </main>
     </div>
   </div>
 
-  <script>
-    (function () {
-      var toggle = document.getElementById('navToggle');
-      var sidebar = document.getElementById('sidebar');
-      toggle.addEventListener('click', function () {
-        var isOpen = sidebar.classList.toggle('is-open');
-        toggle.setAttribute('aria-expanded', String(isOpen));
-      });
-
-      // Login único (T-35 · US-08): e-mail e senha vão para POST /auth/entrar, que
-      // devolve o token de sessão. A sessão fica em 'mdca.sessao' (localStorage com
-      // "Manter conectado", senão sessionStorage) e é lida pelos módulos para chamar a API.
-      var CHAVE = 'mdca.sessao';
-      var CHAVE_ANTIGA = 'mdca.plataforma.entrada'; // entrada provisória de antes da T-35
-      var API_PADRAO = 'https://pratica-em-es-mdca-547285598829.southamerica-east1.run.app';
-      var $ = function (id) { return document.getElementById(id); };
-
-      function urlDaApi() {
-        var api = '';
-        try { api = localStorage.getItem('mdca.financeiro.api') || ''; } catch (e) {}
-        return (api || API_PADRAO).replace(/\/+$/, '');
-      }
-      function apagarSessao() {
-        try {
-          [localStorage, sessionStorage].forEach(function (s) { s.removeItem(CHAVE); s.removeItem(CHAVE_ANTIGA); });
-        } catch (e) {}
-      }
-      function ler() {
-        var sessao = null;
-        try { sessao = JSON.parse(localStorage.getItem(CHAVE) || sessionStorage.getItem(CHAVE) || 'null'); } catch (e) {}
-        if (!sessao || !sessao.token || !(new Date(sessao.expira_em) > new Date())) return null;
-        return sessao;
-      }
-      function mostrar() {
-        var entrou = !!ler();
-        if (!entrou) apagarSessao();
-        $('login').hidden = entrou;
-        $('app').hidden = !entrou;
-        document.title = entrou ? 'Sistema MDCA' : 'Entrar · Sistema MDCA';
-      }
-      function trocarForm(esqueci) {
-        $('formEntrar').hidden = esqueci;
-        $('formEsqueci').hidden = !esqueci;
-        $('esqueciOk').hidden = true;
-        (esqueci ? $('esqueciEmail') : $('loginEmail')).focus();
-      }
-      function erro(texto, campo) {
-        $('loginErro').textContent = texto;
-        $('loginErro').hidden = false;
-        $('loginEmail').classList.toggle('login-entrada--erro', campo === 'email');
-        $('loginSenha').classList.toggle('login-entrada--erro', campo === 'senha');
-        $(campo === 'email' ? 'loginEmail' : 'loginSenha').focus();
-      }
-
-      var enviando = false;
-      $('formEntrar').addEventListener('submit', function (evento) {
-        evento.preventDefault();
-        if (enviando) return;
-        var email = $('loginEmail').value.trim();
-        var senha = $('loginSenha').value;
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return erro('Informe um e-mail válido.', 'email');
-        if (!senha) return erro('Informe a senha.', 'senha');
-
-        var botao = $('formEntrar').querySelector('button[type="submit"]');
-        enviando = true;
-        botao.disabled = true;
-        botao.textContent = 'Entrando…';
-        fetch(urlDaApi() + '/auth/entrar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ email: email, senha: senha })
-        })
-          .then(function (resposta) {
-            if (resposta.ok) return resposta.json();
-            if (resposta.status === 401) throw new Error('E-mail ou senha inválidos.');
-            if (resposta.status === 503) throw new Error('O login está indisponível no momento. Tente de novo mais tarde.');
-            throw new Error('Não foi possível entrar. Tente de novo.');
-          })
-          .then(function (sessao) {
-            apagarSessao();
-            try {
-              ($('loginLembrar').checked ? localStorage : sessionStorage).setItem(CHAVE, JSON.stringify(sessao));
-            } catch (e) { /* sem armazenamento: a sessão não fica salva */ }
-            $('loginSenha').value = '';
-            $('loginErro').hidden = true;
-            mostrar();
-          })
-          .catch(function (falha) {
-            var texto = falha instanceof TypeError ? 'Não foi possível falar com o servidor. Verifique a conexão.' : falha.message;
-            erro(texto, 'senha');
-          })
-          .then(function () {
-            enviando = false;
-            botao.disabled = false;
-            botao.textContent = 'Entrar';
-          });
-      });
-      $('formEsqueci').addEventListener('submit', function (evento) {
-        evento.preventDefault();
-        $('esqueciOk').hidden = false;
-      });
-      $('irEsqueci').addEventListener('click', function () { trocarForm(true); });
-      $('voltarEntrar').addEventListener('click', function () { trocarForm(false); });
-      $('mostrarSenha').addEventListener('click', function () {
-        var senha = $('loginSenha');
-        var ver = senha.type === 'password';
-        senha.type = ver ? 'text' : 'password';
-        this.textContent = ver ? 'Ocultar' : 'Mostrar';
-      });
-      $('sair').addEventListener('click', function () {
-        apagarSessao();
-        mostrar();
-        trocarForm(false);
-      });
-
-      mostrar();
-    })();
+  <script type="module">
+    import { iniciar } from "./Shared/pagina-inicial.js";
+    iniciar(document);
   </script>
 </body>
 </html>

@@ -1,7 +1,10 @@
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
+
+if TYPE_CHECKING:
+    from Acesso.identidade import Identidade
 
 if __package__ == "routers":
     from autenticacao import Papel, exigir_autenticacao, exigir_papel
@@ -59,7 +62,7 @@ def criar_projeto(
 
 
 @router.get("/projetos", response_model=List[ProjetoSaida])
-def listar(_auth: str = Depends(exigir_autenticacao)) -> List[Projeto]:
+def listar(_auth: "Identidade" = Depends(exigir_autenticacao)) -> List[Projeto]:
     return listar_projetos()
 
 

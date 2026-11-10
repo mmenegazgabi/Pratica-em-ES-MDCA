@@ -160,7 +160,7 @@ describe("envio para o POST /lancamentos", () => {
 
   test("mensagens de erro da API viram texto para o educador", () => {
     assert.match(mensagemDeErro(0, null), /conexão/);
-    assert.match(mensagemDeErro(401, null), /código de acesso/);
+    assert.equal(mensagemDeErro(401, null), "Sua sessão expirou. Entre de novo pela página inicial.");
     assert.match(mensagemDeErro(413, null), /5 MB/);
     assert.equal(mensagemDeErro(400, { detail: "Comprovante obrigatório." }), "Comprovante obrigatório.");
   });

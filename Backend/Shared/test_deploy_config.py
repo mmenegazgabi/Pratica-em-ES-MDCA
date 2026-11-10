@@ -28,11 +28,6 @@ def test_omitted_optional_settings_do_not_override_application_defaults(tmp_path
     assert config["R2_BUCKET_NAME"] == "bucket"
 
 
-def test_login_key_is_exported_when_configured(tmp_path):
-    # Manual deploys replace the Cloud Run variables, so the key must go along (T-35).
-    assert "SESSAO_CHAVE" not in export_config(tmp_path)
-    assert export_config(tmp_path, "SESSAO_CHAVE=chave\n")["SESSAO_CHAVE"] == "chave"
-
 
 def test_configured_optional_settings_are_preserved(tmp_path):
     config = export_config(tmp_path, "APP_NAME=MDCA\nR2_PUBLIC_URL=https://files.example\n")

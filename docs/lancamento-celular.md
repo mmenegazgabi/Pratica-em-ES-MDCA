@@ -13,11 +13,13 @@ em `docs/superpowers/specs/2026-10-27-redesign-financeiro/telas-celular.html`).
 Uma página só; as telas trocam pelo endereço depois do `#`. Barra inferior:
 Despesas, Avisos, Perfil.
 
-1. **Primeiro acesso.** Sem sessão de educador neste aparelho (ou sem código),
-   a página pede o nome e o código de acesso do Financeiro (`FINANCEIRO_API_TOKEN`).
-   O papel é sempre `educador`. Tudo fica salvo só no aparelho (`localStorage`);
-   o código não vai para o repositório, que é público. Em "Servidor (avançado)"
-   dá para apontar para outra API.
+1. **Entrada.** O app usa a sessão do login único (`mdca.sessao`, veja
+   `docs/login.md`). Sem sessão, a página volta para a página inicial, onde a pessoa
+   entra ou faz o primeiro acesso. Aqui o papel é sempre `educador`, guardado só na
+   memória da página: entrar no celular não troca o papel de trabalho do computador
+   no mesmo navegador. A pessoa precisa ter o papel educador. Sessão vencida ou
+   pessoa desativada também voltam para a página inicial. O servidor (avançado) é o
+   da página inicial.
 2. **Minhas despesas** (`#/`). Botão "Fotografar comprovante" e, de cima para baixo:
    **Precisa de ajuste** (rejeitadas), **A completar** (fotos sem dados, com
    miniatura e horário) e **Enviadas** (as 5 mais recentes; "Ver todas" mostra o resto).
@@ -36,10 +38,10 @@ Despesas, Avisos, Perfil.
    "Trocar foto") e chama `PATCH /lancamentos/{id}/reenviar`.
 6. **Avisos** (`#/avisos`). `GET /notificacoes`; ao abrir, as novas são marcadas
    como lidas.
-7. **Perfil** (`#/perfil`). Nome, troca do código de acesso, servidor (avançado)
-   e "Sair deste aparelho" (apaga sessão e código).
+7. **Perfil** (`#/perfil`). Nome e e-mail da sessão e "Sair" (encerra a sessão da
+   plataforma).
 
-Os comprovantes só saem da API com o código de acesso; a tela baixa a imagem
+Os comprovantes só saem da API com o token da sessão; a tela baixa a imagem
 com os cabeçalhos e mostra pelo endereço local do navegador (`blob:`).
 
 ## Celular
@@ -63,8 +65,9 @@ com os cabeçalhos e mostra pelo endereço local do navegador (`blob:`).
    app.dependency_overrides[obter_armazenamento] = lambda: _memoria
    ```
 
-   `cd Backend && FINANCEIRO_API_TOKEN=dev CORS_ORIGINS=http://localhost:8090 PYTHONPATH=.:<pasta do app_local.py> .venv/bin/python -m uvicorn app_local:app --port 8080`
+   `cd Backend && DATABASE_URL=postgresql://localhost/mdca_local FINANCEIRO_API_TOKEN=dev CORS_ORIGINS=http://localhost:8090 PYTHONPATH=.:<pasta do app_local.py> .venv/bin/python -m uvicorn app_local:app --port 8080`
 2. Em outro terminal, sirva o frontend: `cd Frontend && python3 -m http.server 8090`.
-3. Cadastre um projeto e um orçamento (como coordenação, por `curl` ou pelo computador).
-4. Abra `http://localhost:8090/Financeiro/lancamento/`, informe nome, o código
-   `dev` e, em "Servidor (avançado)", `http://localhost:8080`.
+3. Crie a administradora e as pessoas (educador e coordenação) como em
+   `docs/login.md`, e cadastre um projeto e um orçamento como coordenação.
+4. Abra `http://localhost:8090/`, entre como educador (servidor `http://localhost:8080`
+   em "Servidor (avançado)") e abra o Financeiro em tela de celular.

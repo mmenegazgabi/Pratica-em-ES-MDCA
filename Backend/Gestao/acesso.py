@@ -1,8 +1,8 @@
 """Acesso aos programas de Gestão (US-01), provisório até o RBAC da T-33.
 
-Quem chama é identificado pelo cabeçalho ``X-Usuario-Id``, sempre junto com o token
-de serviço (o mesmo esquema do Financeiro, até o login da T-35). Os papéis vêm do
-banco, não de cabeçalho:
+Quem chama é identificado pela sessão do login único (T-35) ou, no modo serviço, pelo
+cabeçalho ``X-Usuario-Id`` junto com o token de serviço (o front da Gestão ainda usa
+este). Os papéis vêm do banco, não de cabeçalho:
 
 - papéis da plataforma (``usuarios_papeis``): direção consulta todos os programas e
   administração consulta e gerencia todos;

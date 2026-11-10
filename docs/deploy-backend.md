@@ -68,6 +68,16 @@ O Pages continua publicando `Frontend/`, conforme a main. O painel técnico
 herdado da infra fica em `Frontend/Shared/infra-smoke.html` para verificar a
 comunicação frontend/API; ele não substitui a página inicial da plataforma.
 
+## Migrations e login único (T-35)
+
+O deploy não aplica migrations: elas rodam à mão, de `Backend/`, com a
+`DATABASE_URL` de produção (`Backend/.env` ou exportada):
+`.venv/bin/alembic -c Shared/alembic.ini upgrade head`. A do login
+(`b7d4e2a9c1f0`) precisa estar aplicada, e a primeira administradora criada,
+antes do merge que publica o front com login. A ordem completa está em
+[login.md](login.md#publicação). Sem a migration, as rotas `/auth` e `/admin`
+respondem 503 "Banco de dados indisponível".
+
 ## Deploy automático pela main
 
 O job `deploy-backend` em `.github/workflows/ci.yml` publica somente em um

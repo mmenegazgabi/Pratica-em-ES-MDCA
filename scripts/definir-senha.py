@@ -1,8 +1,9 @@
 """Define a senha de login (T-35) de um usuário já cadastrado, pelo e-mail.
 
-Ainda não há cadastro de contas pela API: um administrador usa este script para dar
-senha às contas (inclusive as da demonstração). A senha é pedida no terminal, sem
-aparecer na tela nem no histórico, e só o hash vai para o banco.
+O caminho normal é a tela de administração (cadastro + código de primeiro acesso,
+ver docs/login.md). Este script fica para o time técnico dar senha direto a uma conta
+(por exemplo, as da demonstração). A senha é pedida no terminal, sem aparecer na tela
+nem no histórico, e só o hash vai para o banco; as sessões abertas da pessoa terminam.
 
 Uso (na raiz do repositório):
     .venv/bin/python scripts/definir-senha.py ana@mdca.org.br
@@ -18,8 +19,6 @@ from pathlib import Path
 BACKEND = Path(__file__).resolve().parents[1] / "Backend"
 sys.path.insert(0, str(BACKEND))
 
-TAMANHO_MINIMO = 8
-
 
 def main():
     parser = argparse.ArgumentParser(description="Define a senha de login de um usuário.")
@@ -33,21 +32,24 @@ def main():
         sys.exit("DATABASE_URL não definida (ambiente ou Backend/.env).")
 
     import sqlalchemy as sa
-    from Shared import sessao
+    from Acesso import senhas, sessoes
+    from Gestao.banco import url_sqlalchemy
 
     senha = getpass.getpass("Nova senha: ")
-    if len(senha) < TAMANHO_MINIMO:
-        sys.exit(f"A senha precisa ter pelo menos {TAMANHO_MINIMO} caracteres.")
+    erro = senhas.validar(senha)
+    if erro:
+        sys.exit(erro)
     if getpass.getpass("Repita a senha: ") != senha:
         sys.exit("As senhas não conferem.")
 
-    with sessao.conectar() as conexao:
-        alterados = conexao.execute(
-            sa.text("UPDATE usuarios SET senha_hash = :hash WHERE lower(email) = lower(:email)"),
-            {"hash": sessao.gerar_hash_senha(senha), "email": args.email.strip()},
-        ).rowcount
-        if alterados != 1:
+    with sa.create_engine(url_sqlalchemy(os.environ["DATABASE_URL"])).connect() as conexao:
+        usuario_id = conexao.execute(
+            sa.text("UPDATE usuarios SET senha_hash = :hash WHERE lower(email) = lower(:email) RETURNING id"),
+            {"hash": senhas.gerar_hash(senha), "email": args.email.strip()},
+        ).scalar_one_or_none()
+        if usuario_id is None:
             sys.exit(f"Nenhum usuário com o e-mail {args.email!r}.")
+        sessoes.encerrar_todas(conexao, usuario_id)
         conexao.commit()
     print(f"Senha definida para {args.email}.")
 

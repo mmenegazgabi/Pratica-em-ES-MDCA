@@ -1,0 +1,20 @@
+/* Administração de pessoas e papéis: reaproveita a lateral, .caixa, .tabela e .btn do Financeiro. */
+.admin__topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.admin__acoes { display: flex; gap: 6px; }
+.admin__papeis { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.admin__papeis label { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.admin__erro { color: var(--perigo-texto); font-size: 12px; margin: 12px 0 0; }
+.admin__rodape { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.admin__codigo { font: 600 22px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; padding: 12px; margin: 12px 0 4px; text-align: center; background: var(--fundo-suave); border: 1px solid var(--borda); border-radius: var(--raio); user-select: all; }
+.admin__ajuda { color: var(--texto-suave); font-size: 12px; margin: 8px 0 0; }
+.admin__situacao--aguardando_primeiro_acesso { color: var(--pendente-texto); }
+.admin__situacao--desativado { color: var(--texto-suave); }
+.admin .dialogo { width: 420px; max-width: calc(100vw - 32px); }
+.admin__aviso { max-width: 360px; margin: 15vh auto 0; padding: 20px; }
+.admin__aviso a { color: var(--verde); }
+@media (max-width: 700px) {
+  .app { flex-direction: column; }
+  .lateral { width: auto; height: auto; position: static; border-right: 0; border-bottom: 1px solid var(--borda); }
+  .principal { padding: 16px; }
+  .admin__tabela { overflow-x: auto; }
+}

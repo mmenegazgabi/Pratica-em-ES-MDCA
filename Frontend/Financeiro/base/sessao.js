@@ -1,4 +1,6 @@
-// Sessão provisória (papel + nome) guardada neste aparelho, até o login (US-08).
+// Sessão do Financeiro = sessão da plataforma (login único) + papel em uso neste navegador.
+
+import { CHAVE_PAPEL_FINANCEIRO, lerSessao as lerSessaoDaPlataforma, temPapel } from "../../Shared/plataforma.js";
 
 export const PAPEIS = {
   coordenacao: "Coordenação",
@@ -7,39 +9,51 @@ export const PAPEIS = {
   educador: "Educador",
 };
 
-export const CHAVE_SESSAO_COMPUTADOR = "mdca.financeiro.sessao";
-export const CHAVE_SESSAO_CELULAR = "mdca.financeiro.sessao.celular";
-
-let CHAVE_SESSAO = CHAVE_SESSAO_COMPUTADOR;
-
-/** O app do celular guarda a sessão à parte, para não trocar a do computador no mesmo navegador. */
-export function usarChaveDeSessao(chave) {
-  CHAVE_SESSAO = chave;
+/** Papéis do Financeiro que a pessoa da sessão tem, na ordem de PAPEIS. */
+export function papeisDoFinanceiro(sessaoPlataforma) {
+  return Object.keys(PAPEIS).filter((papel) => temPapel(sessaoPlataforma, papel));
 }
 
+let papelFixo = null; // só em memória: o app do celular usa "educador" sem mexer no papel salvo do computador
+
+/** Faz lerSessao() usar `papel` (se a pessoa o tiver) nesta página, sem gravar nada. */
+export function usarPapelFixo(papel) {
+  papelFixo = PAPEIS[papel] ? papel : null;
+}
+
+function papelSalvo() {
+  try {
+    return localStorage.getItem(CHAVE_PAPEL_FINANCEIRO);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * {papel, nome, usuarioId} da pessoa logada, ou null sem sessão da plataforma.
+ * Papel: o escolhido (se ainda for da pessoa), senão o único do Financeiro, senão null.
+ */
 export function lerSessao() {
-  try {
-    const dados = JSON.parse(localStorage.getItem(CHAVE_SESSAO));
-    if (dados && PAPEIS[dados.papel] && typeof dados.nome === "string") {
-      return { papel: dados.papel, nome: dados.nome };
-    }
-  } catch {
-    /* sem armazenamento ou conteúdo inválido: sem sessão */
-  }
-  return null;
+  const sessao = lerSessaoDaPlataforma();
+  if (!sessao) return null;
+  const papeis = papeisDoFinanceiro(sessao);
+  const salvo = papelFixo || papelSalvo();
+  const papel = papeis.includes(salvo) ? salvo : papeis.length === 1 ? papeis[0] : null;
+  return { papel, nome: String(sessao.usuario.nome || ""), usuarioId: String(sessao.usuario.id || "") };
 }
 
-export function salvarSessao({ papel, nome }) {
+export function escolherPapel(papel) {
+  if (!PAPEIS[papel]) return;
   try {
-    localStorage.setItem(CHAVE_SESSAO, JSON.stringify({ papel, nome }));
+    localStorage.setItem(CHAVE_PAPEL_FINANCEIRO, papel);
   } catch {
-    /* navegador sem armazenamento */
+    /* navegador sem armazenamento: a escolha não fica salva */
   }
 }
 
-export function encerrarSessao() {
+export function esquecerPapel() {
   try {
-    localStorage.removeItem(CHAVE_SESSAO);
+    localStorage.removeItem(CHAVE_PAPEL_FINANCEIRO);
   } catch {
     /* navegador sem armazenamento */
   }
@@ -52,16 +66,6 @@ export function nomeDoAutor(autorId) {
     .filter(Boolean)
     .map((p) => p[0].toUpperCase() + p.slice(1))
     .join(" ");
-}
-
-/** " Marcos Vieira " → "marcos-vieira". */
-export function usuarioId(nome) {
-  return String(nome)
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-");
 }
 
 const ITENS = {

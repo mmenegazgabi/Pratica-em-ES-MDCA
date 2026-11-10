@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Connection
 
-# Token de serviço provisório, o mesmo das rotas do Financeiro, até existirem o
-# login único (T-35) e o RBAC (T-33).
+# Mesma autenticação das rotas do Financeiro: sessão do login único (T-35) ou
+# token de serviço, até existir o RBAC (T-33).
+from Acesso.identidade import Identidade
 from Financeiro.autenticacao import exigir_autenticacao
 from Gestao import programas
 from Gestao.banco import obter_conexao
@@ -98,7 +99,7 @@ def _http(erro: ErroDeCadastro) -> HTTPException:
 
 @router.get("/programas", response_model=List[ProgramaSaida])
 def listar(
-    _auth: str = Depends(exigir_autenticacao),
+    _auth: Identidade = Depends(exigir_autenticacao),
     conexao: Connection = Depends(obter_conexao),
 ) -> List[Programa]:
     return programas.listar_programas(conexao)
@@ -107,7 +108,7 @@ def listar(
 @router.post("/programas", response_model=ProgramaDetalhadoSaida, status_code=201)
 def cadastrar(
     dados: ProgramaEntrada,
-    _auth: str = Depends(exigir_autenticacao),
+    _auth: Identidade = Depends(exigir_autenticacao),
     conexao: Connection = Depends(obter_conexao),
 ) -> programas.ProgramaDetalhado:
     try:
@@ -137,7 +138,7 @@ def editar(
 @router.get("/programas/{programa_id}", response_model=ProgramaDetalhadoSaida)
 def consultar(
     programa_id: str,
-    _auth: str = Depends(exigir_autenticacao),
+    _auth: Identidade = Depends(exigir_autenticacao),
     conexao: Connection = Depends(obter_conexao),
 ) -> programas.ProgramaDetalhado:
     try:
@@ -149,7 +150,7 @@ def consultar(
 @router.get("/programas/{programa_id}/convenios", response_model=List[ConvenioSaida])
 def listar_convenios(
     programa_id: str,
-    _auth: str = Depends(exigir_autenticacao),
+    _auth: Identidade = Depends(exigir_autenticacao),
     conexao: Connection = Depends(obter_conexao),
 ) -> List[programas.Convenio]:
     try:
@@ -162,7 +163,7 @@ def listar_convenios(
 def cadastrar_convenio(
     programa_id: str,
     dados: ConvenioEntrada,
-    _auth: str = Depends(exigir_autenticacao),
+    _auth: Identidade = Depends(exigir_autenticacao),
     conexao: Connection = Depends(obter_conexao),
 ) -> programas.Convenio:
     try:
@@ -176,7 +177,7 @@ def cadastrar_convenio(
 @router.get("/programas/{programa_id}/vagas", response_model=List[VagasSaida])
 def listar_vagas(
     programa_id: str,
-    _auth: str = Depends(exigir_autenticacao),
+    _auth: Identidade = Depends(exigir_autenticacao),
     conexao: Connection = Depends(obter_conexao),
 ) -> List[programas.Vaga]:
     try:
@@ -189,7 +190,7 @@ def listar_vagas(
 def cadastrar_vagas(
     programa_id: str,
     dados: VagasEntrada,
-    _auth: str = Depends(exigir_autenticacao),
+    _auth: Identidade = Depends(exigir_autenticacao),
     conexao: Connection = Depends(obter_conexao),
 ) -> programas.Vaga:
     try:

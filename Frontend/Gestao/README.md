@@ -98,7 +98,9 @@ Nenhum outro arquivo deve chamar `fetch`: o teste `estrutura.test.js` falha se i
 
 ## Acesso e perfis (provisórios)
 
-- **Código de acesso:** até o login único (T-35), a API exige o token de serviço do
+- **Login único (T-35):** quem entra pela tela inicial da plataforma tem a sessão em
+  `mdca.sessao`, e a Gestão manda o token dela (veja `docs/login.md`).
+- **Código de acesso:** sem sessão, a API exige o token de serviço do
   Financeiro. A tela pede o código quando a API responde 401, e ele fica salvo só neste
   aparelho, nas mesmas chaves do Financeiro (um código vale para os dois módulos).
   O campo "Servidor (avançado)" troca o endereço da API, para testar com o backend local.

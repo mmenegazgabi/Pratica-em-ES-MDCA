@@ -13,27 +13,21 @@ O celular do educador está em `docs/lancamento-celular.md`.
 
 ## Como rodar local
 
-1. Os comprovantes vão para o Cloudflare R2; sem as variáveis `R2_*` a API responde
-   503 ao receber fotos. Para testar sem R2, use o armazenamento em memória dos
-   testes num arquivo fora do repositório (veja o passo 1 de "Testar com o backend
-   local" em `docs/lancamento-celular.md`; o mesmo arquivo pode cadastrar projetos,
-   orçamentos e lançamentos de exemplo na partida, já que tudo fica em memória).
-2. API: `cd Backend && FINANCEIRO_API_TOKEN=dev CORS_ORIGINS=http://localhost:8081 PYTHONPATH=.:<pasta do app_local.py> .venv/bin/python -m uvicorn app_local:app --port 8080`
-3. Frontend: `cd Frontend && python3 -m http.server 8081`
-4. Abra `http://localhost:8081/Financeiro/`, informe nome, papel e o código `dev` e,
-   em "Servidor (avançado)", `http://localhost:8080`.
+Siga "Rodar local com Postgres" em `docs/login.md` (a API integrada precisa rodar a
+partir de `Backend/`, com `DATABASE_URL`). Sem as variáveis `R2_*`, a API responde 503
+ao receber fotos; para testar sem R2, veja `docs/lancamento-celular.md`. Depois,
+abra `http://localhost:8090/`, entre e escolha Financeiro.
 
-## Código de acesso e perfil
+## Login e papel
 
-Enquanto não há login (US-08), a tela "Entrar" pede **nome**, **papel** e o **código
-de acesso** do Financeiro (`FINANCEIRO_API_TOKEN`). Tudo fica só neste navegador
-(`localStorage`); o código não vai para o repositório, que é público. A API recebe
-`Authorization: Bearer <código>`, `X-Papel-Usuario` e `X-Usuario-Id` (o nome em
-minúsculas e com hífens, ex.: `marcos-vieira`). "Trocar perfil" na barra lateral
-apaga a sessão e o código. Quem entra como educador é levado ao app do celular
-(`lancamento/`). O celular guarda a sessão em outra chave
-(`mdca.financeiro.sessao.celular`), então entrar no celular não troca a sessão do
-computador no mesmo navegador.
+O Financeiro não tem tela de entrada própria: usa a sessão do login único
+(`docs/login.md`, chave `mdca.sessao`). Sem sessão, a página volta para a página
+inicial. Quem tem mais de um papel financeiro (coordenação, direção, voluntário
+financeiro) escolhe em "Entrar como"; a escolha fica em `mdca.financeiro.papel`.
+"Trocar papel" na barra lateral reabre a escolha e "Sair" encerra a sessão da
+plataforma. A API recebe `Authorization: Bearer <token da sessão>` e
+`X-Papel-Usuario` (que precisa ser um dos papéis da pessoa); `X-Usuario-Id` não é
+mais enviado. Quem só tem o papel educador é levado ao app do celular (`lancamento/`).
 
 ## Telas por papel
 
@@ -47,10 +41,9 @@ computador no mesmo navegador.
 | Relatórios (`#/relatorios`) | Prestação de contas: projeto, período, PDF (impressão) ou planilha (CSV) | Igual | não aparece |
 | Auditoria (`#/auditoria`) | Histórico de ações com busca | Igual | não aparece |
 
-Na tela Entrar também existe o papel **Educador**: ele vai direto para o app do
-celular (`lancamento/`), já com o nome e o código informados. A gestão de pessoas e
-papéis (Acessos) fica para depois do login da US-08; por enquanto ninguém tem essa
-tela.
+O papel **Educador** vai direto para o app do celular (`lancamento/`). A gestão de
+pessoas e papéis fica na tela Administração da página inicial (`Frontend/Admin/`,
+veja `docs/login.md`), não no Financeiro.
 
 As barras de uso são verdes abaixo de 80%, amarelas de 80% a 99,99% e vermelhas a
 partir de 100% (campo `nivel_alerta`: normal, atencao, estourado). Rotas fora do

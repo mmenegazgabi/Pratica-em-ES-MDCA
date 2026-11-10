@@ -25,15 +25,13 @@
 .principal .sub { color: var(--texto-suave); margin: 3px 0 16px; }
 .principal .carregando, .principal .aviso-tela { color: var(--texto-suave); padding: 24px 0; margin: 0; }
 
-.entrar { margin: 0 auto; align-self: center; width: 100%; max-width: 360px; padding: 24px; box-sizing: border-box; }
-.entrar h1 { font-size: 19px; font-weight: 600; margin: 0 0 4px; }
-.entrar .ajuda { color: var(--texto-suave); margin: 0 0 8px; font-size: 12px; }
-.entrar .avancado { margin-top: 12px; }
-.entrar .avancado summary { cursor: pointer; color: var(--texto-suave); font-size: 11.5px; }
-.entrar .erro { color: var(--perigo-texto); margin: 10px 0 0; }
-.entrar .erro[hidden] { display: none; }
-.entrar .btn { margin-top: 16px; width: 100%; justify-content: center; padding: 9px 12px; font-size: 13px; }
-.entrar select.entrada { appearance: auto; }
+/* Entrar como (escolha do papel) e aviso de perfil sem acesso. */
+.acesso { margin: 0 auto; align-self: center; width: 100%; max-width: 360px; padding: 24px 16px; box-sizing: border-box; }
+.acesso h1 { font-size: 19px; font-weight: 600; margin: 0 0 4px; }
+.acesso .ajuda { color: var(--texto-suave); margin: 0 0 16px; font-size: 12px; }
+.acesso__papeis { display: flex; flex-direction: column; gap: 8px; }
+.acesso .btn { justify-content: center; padding: 9px 12px; font-size: 13px; }
+.acesso__papeis .btn { width: 100%; }
 
 /* Relatórios: "Gerar relatório" em PDF usa a impressão do navegador e imprime só o documento. */
 @media print {
