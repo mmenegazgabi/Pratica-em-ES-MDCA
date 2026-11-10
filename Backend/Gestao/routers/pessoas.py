@@ -12,6 +12,7 @@ from Financeiro.autenticacao import exigir_usuario
 from Gestao import auditoria, autorizacoes, pessoas, trajetoria
 from Gestao.acesso import (
     AcessoAPessoas,
+    acompanha_alertas,
     exigir_cadastro_na_pessoa,
     exigir_consulta_a_pessoa,
     programas_com_pessoas_visiveis,
@@ -279,11 +280,16 @@ def obter_pessoa(
 @router.get("/pessoas/{pessoa_id}/trajetoria", response_model=List[EventoSaida])
 def obter_trajetoria(
     pessoa_id: str,
-    _acesso: AcessoAPessoas = Depends(exigir_consulta_a_pessoa),
+    acesso: AcessoAPessoas = Depends(exigir_consulta_a_pessoa),
     conexao: Connection = Depends(obter_conexao),
 ):
-    """Linha do tempo da pessoa, do mais recente para o mais antigo (T-49)."""
-    return trajetoria.trajetoria(conexao, pessoa_id)
+    """Linha do tempo da pessoa, do mais recente para o mais antigo (T-49).
+
+    Inclui os alertas de infrequência e a busca ativa (T-60); o resultado das ações só vai
+    para quem acompanha os alertas do programa.
+    """
+    ve = acompanha_alertas(conexao, acesso.usuario_id, acesso.programa_id)
+    return trajetoria.trajetoria(conexao, pessoa_id, ve_acompanhamento=ve)
 
 
 @router.post("/pessoas/{pessoa_id}/responsaveis", response_model=PessoaSaida, status_code=201)

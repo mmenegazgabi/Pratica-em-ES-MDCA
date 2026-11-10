@@ -392,3 +392,24 @@ export function enviarEvidencia(programaId, atividadeId, { registro_id, arquivo,
     tempoLimite: 60000,
   });
 }
+
+// --- Alertas de infrequência e busca ativa (T-59 · US-06; tela da T-60) -----------
+
+/** filtros: { programaId, situacao } (situacao: "aberto" ou "encerrado"). */
+export function listarAlertas({ programaId = "", situacao = "" } = {}) {
+  const busca = new URLSearchParams();
+  if (programaId) busca.set("programa_id", programaId);
+  if (situacao) busca.set("situacao", situacao);
+  const consulta = busca.toString();
+  return requisitar(`/gestao/alertas${consulta ? `?${consulta}` : ""}`);
+}
+
+const alerta = (id) => `/gestao/alertas/${encodeURIComponent(id)}`;
+
+export const obterAlerta = (id) => requisitar(alerta(id));
+
+/** dados: { tipo, data, resultado } (tipo: contato_familia, busca_ativa, articulacao_rede ou revisao_contrato). */
+export const registrarAcaoDeAlerta = (id, dados) => requisitar(`${alerta(id)}/acoes`, { metodo: "POST", dados });
+
+export const encerrarAlerta = (id, justificativa) =>
+  requisitar(`${alerta(id)}/encerramento`, { metodo: "POST", dados: { justificativa } });

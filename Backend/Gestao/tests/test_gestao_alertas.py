@@ -403,3 +403,67 @@ def test_quem_nao_acompanha_nao_ve_nem_age_e_a_tentativa_e_registrada(cliente, c
 
 def test_alerta_inexistente_404(cliente, cabecalhos, programa):
     assert cliente.get(f"{ALERTAS}/nao-existe", headers=como(cabecalhos)).status_code == 404
+
+
+# --- Trajetória da pessoa (T-60) -------------------------------------------------------
+
+
+def trajetoria(cliente, cabecalhos, usuario="patricia", pessoa="pe-lara"):
+    resposta = cliente.get(f"/gestao/pessoas/{pessoa}/trajetoria", headers=como(cabecalhos, usuario))
+    assert resposta.status_code == 200, resposta.text
+    return [e for e in resposta.json() if e["tipo"] in ("alerta", "busca_ativa")]
+
+
+def test_alerta_e_busca_ativa_entram_na_trajetoria_da_pessoa(cliente, cabecalhos, programa):
+    alerta_id = alerta_aberto(cliente, cabecalhos)
+    registrar_acao(cliente, cabecalhos, alerta_id)
+
+    [acao, alerta] = trajetoria(cliente, cabecalhos)
+
+    assert acao["tipo"] == "busca_ativa"
+    assert acao["titulo"] == "Busca ativa: busca ativa"
+    assert acao["descricao"] == "Visita à família; a mãe relatou mudança de horário do trabalho. (por Patrícia Souza)"
+    assert acao["data"][:10] == HOJE.isoformat()
+    assert alerta["tipo"] == "alerta"
+    assert alerta["titulo"] == "Alerta de infrequência na turma Oficina de arte"
+    assert alerta["descricao"] == f"3 faltas seguidas (limite do programa: 3), de {dia(1):%d/%m/%Y} a {dia(3):%d/%m/%Y}."
+    # O alerta de outra pessoa não aparece aqui.
+    assert trajetoria(cliente, cabecalhos, pessoa="pe-davi") == []
+
+
+def test_acao_com_data_anterior_entra_na_data_informada(cliente, cabecalhos, programa):
+    alerta_id = alerta_aberto(cliente, cabecalhos)
+    ontem = HOJE - timedelta(days=1)
+    registrar_acao(cliente, cabecalhos, alerta_id, tipo="contato_familia", data=ontem.isoformat(), resultado="Telefone sem resposta.")
+
+    acao = next(e for e in trajetoria(cliente, cabecalhos) if e["tipo"] == "busca_ativa")
+
+    assert acao["titulo"] == "Busca ativa: contato com a família"
+    assert acao["data"][:10] == ontem.isoformat()
+
+
+def test_encerramento_entra_na_trajetoria_com_a_justificativa(cliente, cabecalhos, programa):
+    alerta_id = alerta_aberto(cliente, cabecalhos)
+    encerrar(cliente, cabecalhos, alerta_id, "Voltou a frequentar.")
+
+    encerramento = trajetoria(cliente, cabecalhos)[0]
+
+    assert encerramento["titulo"] == "Alerta de infrequência encerrado (turma Oficina de arte)"
+    assert encerramento["descricao"] == "Voltou a frequentar."
+
+
+def test_quem_nao_acompanha_os_alertas_ve_so_que_houve_o_contato(cliente, cabecalhos, programa):
+    # A educadora vê a trajetória da pessoa, mas não o resultado da busca ativa nem a justificativa.
+    alerta_id = alerta_aberto(cliente, cabecalhos)
+    registrar_acao(cliente, cabecalhos, alerta_id)
+    encerrar(cliente, cabecalhos, alerta_id, "Voltou a frequentar.")
+
+    eventos_da_educadora = trajetoria(cliente, cabecalhos, usuario="jessica")
+
+    assert [e["descricao"] for e in eventos_da_educadora[:2]] == [
+        "Acompanhamento encerrado pela equipe técnica.",
+        "Contato de acompanhamento registrado pela equipe técnica.",
+    ]
+    assert "Visita" not in str(eventos_da_educadora)
+    # Quem acompanha (coordenação) vê o conteúdo.
+    assert "Visita à família" in str(trajetoria(cliente, cabecalhos, usuario="ana"))

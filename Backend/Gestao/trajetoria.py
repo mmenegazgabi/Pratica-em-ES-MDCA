@@ -7,7 +7,11 @@ Por enquanto a linha do tempo junta o que o cadastro já guarda:
 - documentos registrados;
 - autorizações registradas, revogadas e vencidas (o vencimento entra na data em que a
   autorização deixou de valer, sem nada gravado para isso);
-- turmas (US-04): inscrição na lista de espera, matrícula e desligamento com o motivo.
+- turmas (US-04): inscrição na lista de espera, matrícula e desligamento com o motivo;
+- alertas de infrequência (US-06): o alerta, cada ação de busca ativa e o encerramento.
+  O resultado das ações e a justificativa do encerramento só aparecem para quem
+  acompanha os alertas do programa (coordenação, assistência social e administração);
+  para o resto da equipe fica só o registro de que houve o contato, como no protótipo.
 
 Frequência (US-05), atendimentos (US-07) e rede de proteção (US-08) entram aqui quando
 cada uma existir, com o sigilo de cada registro.
@@ -20,13 +24,19 @@ from typing import List, Optional
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
+from Gestao.alertas import TIPOS_DE_ACAO
+
 CADASTRO = "cadastro"
 RESPONSAVEL = "responsavel"
 DOCUMENTO = "documento"
 AUTORIZACAO = "autorizacao"
 MATRICULA = "matricula"
+ALERTA = "alerta"
+BUSCA_ATIVA = "busca_ativa"
 
 NOMES_DE_AUTORIZACAO = {"uso_de_imagem": "uso de imagem"}
+CONTATO_SEM_DETALHES = "Contato de acompanhamento registrado pela equipe técnica."
+ENCERRAMENTO_SEM_DETALHES = "Acompanhamento encerrado pela equipe técnica."
 
 
 @dataclass(frozen=True)
@@ -46,8 +56,14 @@ def _meia_noite(dia: date, fuso) -> datetime:
     return datetime(dia.year, dia.month, dia.day, tzinfo=fuso)
 
 
-def trajetoria(conexao: Connection, pessoa_id: str, *, hoje: Optional[date] = None) -> List[Evento]:
-    """Eventos da pessoa, do mais recente para o mais antigo. A rota já conferiu o acesso."""
+def trajetoria(
+    conexao: Connection, pessoa_id: str, *, hoje: Optional[date] = None, ve_acompanhamento: bool = False
+) -> List[Evento]:
+    """Eventos da pessoa, do mais recente para o mais antigo. A rota já conferiu o acesso.
+
+    ``ve_acompanhamento``: quem pede acompanha os alertas do programa e vê o resultado das
+    ações de busca ativa e a justificativa do encerramento.
+    """
     hoje = hoje or date.today()
     eventos: List[Evento] = []
 
@@ -173,4 +189,67 @@ def trajetoria(conexao: Connection, pessoa_id: str, *, hoje: Optional[date] = No
                 )
             )
 
+    eventos.extend(_eventos_de_alertas(conexao, pessoa_id, fuso, ve_acompanhamento))
     return sorted(eventos, key=lambda e: e.data, reverse=True)
+
+
+def _eventos_de_alertas(conexao: Connection, pessoa_id: str, fuso, ve_acompanhamento: bool) -> List[Evento]:
+    eventos: List[Evento] = []
+    alertas = conexao.execute(
+        sa.text(
+            """
+            SELECT al.id, t.nome AS turma, al.faltas_consecutivas, al.limite, al.primeira_falta, al.ultima_falta,
+                   al.criado_em, al.encerrado_em, al.justificativa_encerramento
+            FROM alertas al JOIN turmas t ON t.id = al.turma_id
+            WHERE al.pessoa_id = :id
+            """
+        ),
+        {"id": pessoa_id},
+    ).all()
+    for al in alertas:
+        eventos.append(
+            Evento(
+                data=al.criado_em,
+                tipo=ALERTA,
+                titulo=f"Alerta de infrequência na turma {al.turma}",
+                descricao=(
+                    f"{al.faltas_consecutivas} faltas seguidas (limite do programa: {al.limite}), "
+                    f"de {_data_br(al.primeira_falta)} a {_data_br(al.ultima_falta)}."
+                ),
+            )
+        )
+        if al.encerrado_em is not None:
+            eventos.append(
+                Evento(
+                    data=al.encerrado_em,
+                    tipo=ALERTA,
+                    titulo=f"Alerta de infrequência encerrado (turma {al.turma})",
+                    descricao=al.justificativa_encerramento if ve_acompanhamento else ENCERRAMENTO_SEM_DETALHES,
+                )
+            )
+
+    if not alertas:
+        return eventos
+    for ac in conexao.execute(
+        sa.text(
+            """
+            SELECT ac.tipo, ac.data, ac.resultado, ac.criado_em, u.nome AS responsavel
+            FROM acoes_busca_ativa ac
+            JOIN alertas al ON al.id = ac.alerta_id
+            JOIN usuarios u ON u.id = ac.responsavel_id
+            WHERE al.pessoa_id = :id
+            """
+        ),
+        {"id": pessoa_id},
+    ):
+        # A ação vale pela data informada; registrada no próprio dia, entra na hora do registro.
+        no_dia = ac.criado_em.astimezone(fuso).date() == ac.data
+        eventos.append(
+            Evento(
+                data=ac.criado_em if no_dia else _meia_noite(ac.data, fuso),
+                tipo=BUSCA_ATIVA,
+                titulo=f"Busca ativa: {TIPOS_DE_ACAO.get(ac.tipo, ac.tipo).lower()}",
+                descricao=f"{ac.resultado} (por {ac.responsavel})" if ve_acompanhamento else CONTATO_SEM_DETALHES,
+            )
+        )
+    return eventos
