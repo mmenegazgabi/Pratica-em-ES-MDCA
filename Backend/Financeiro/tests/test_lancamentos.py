@@ -138,7 +138,10 @@ def test_lancamento_pendente_nao_altera_o_saldo():
 def test_lancamento_criado_pode_ser_aprovado_e_entao_debita_o_saldo():
     lancamento_id = enviar(valor="400").json()["id"]
 
-    resposta = client.post(f"/orcamentos/orcamento-1/lancamentos/{lancamento_id}/aprovar")
+    resposta = client.post(
+        f"/orcamentos/orcamento-1/lancamentos/{lancamento_id}/aprovar",
+        headers={**AUTH, "X-Papel-Usuario": "coordenacao"},
+    )
 
     assert resposta.status_code == 200
     assert resposta.json()["saldo"] == 600

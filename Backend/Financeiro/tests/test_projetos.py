@@ -54,19 +54,19 @@ def test_criar_orcamento_para_projeto_existente_retorna_201_com_nome():
     assert resposta.status_code == 201
     assert resposta.json()["projeto_id"] == projeto["id"]
     orcamento_id = resposta.json()["id"]
-    detalhe = client.get(f"/orcamentos/{orcamento_id}").json()
+    detalhe = client.get(f"/orcamentos/{orcamento_id}", headers=cabecalhos()).json()
     assert detalhe["projeto_nome"] == "Oficina de Arte"
-    assert client.get("/orcamentos").json()[0]["projeto_nome"] == "Oficina de Arte"
+    assert client.get("/orcamentos", headers=cabecalhos()).json()[0]["projeto_nome"] == "Oficina de Arte"
 
 
 def test_projeto_nome_e_nulo_quando_o_projeto_nao_existe_mais():
     projeto = criar_projeto("Temporário").json()
     orcamento_id = client.post(
-        "/orcamentos", json={**ORCAMENTO, "projeto_id": projeto["id"]}
+        "/orcamentos", json={**ORCAMENTO, "projeto_id": projeto["id"]}, headers=cabecalhos()
     ).json()["id"]
     _projetos.clear()
 
-    assert client.get(f"/orcamentos/{orcamento_id}").json()["projeto_nome"] is None
+    assert client.get(f"/orcamentos/{orcamento_id}", headers=cabecalhos()).json()["projeto_nome"] is None
 
 
 def test_criar_projeto_coordenacao_201():

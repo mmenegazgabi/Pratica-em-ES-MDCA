@@ -189,7 +189,7 @@ def test_rejeitar_nao_altera_saldo_e_get_orcamento_confirma():
 
     rejeitar(lancamento.id, {"motivo": "Comprovante não confere."})
 
-    assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 1000
+    assert client.get("/orcamentos/orcamento-1", headers=cabecalhos()).json()["saldo"] == 1000
 
 
 def test_saldo_considera_so_o_aprovado_quando_outro_e_rejeitado():

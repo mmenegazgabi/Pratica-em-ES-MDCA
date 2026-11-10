@@ -70,7 +70,7 @@ def payload(valor_total=10000, **campos):
 
 
 def criar(**campos):
-    resposta = client.post("/orcamentos", json=payload(**campos))
+    resposta = client.post("/orcamentos", json=payload(**campos), headers=COORDENACAO)
     assert resposta.status_code == 201, resposta.json()
     return resposta.json()["id"]
 
@@ -80,7 +80,7 @@ def editar(orcamento_id, corpo, headers=COORDENACAO):
 
 
 def detalhe(orcamento_id):
-    return client.get(f"/orcamentos/{orcamento_id}").json()
+    return client.get(f"/orcamentos/{orcamento_id}", headers=COORDENACAO).json()
 
 
 def categorias(orcamento_id):
@@ -174,6 +174,7 @@ def test_criar_com_soma_acima_do_total_retorna_400():
                 {"nome": "alimentacao", "valor_orcado": 4000.01},
             ],
         ),
+        headers=COORDENACAO,
     )
 
     assert resposta.status_code == 400
@@ -337,8 +338,8 @@ def test_get_lista_tambem_traz_as_categorias():
     orcamento_id = criar()
     gastar(orcamento_id, 400)
 
-    [item] = client.get("/orcamentos").json()
-    [paginado] = client.get(f"/orcamentos/projeto/{projeto_id()}").json()["itens"]
+    [item] = client.get("/orcamentos", headers=COORDENACAO).json()
+    [paginado] = client.get(f"/orcamentos/projeto/{projeto_id()}", headers=COORDENACAO).json()["itens"]
 
     for corpo in (item, paginado):
         assert corpo["id"] == orcamento_id
@@ -375,7 +376,7 @@ def test_categorias_despesa_continua_com_os_nomes_na_ordem():
     orcamento_id = criar()
 
     assert detalhe(orcamento_id)["categorias_despesa"] == ["materiais", "alimentacao"]
-    [vigente] = client.get("/orcamentos", params={"vigentes_em": "2026-10-10"}).json()
+    [vigente] = client.get("/orcamentos", params={"vigentes_em": "2026-10-10"}, headers=COORDENACAO).json()
     assert vigente["categorias_despesa"] == ["materiais", "alimentacao"]
 
 
@@ -402,7 +403,7 @@ def test_formulario_do_celular_lanca_em_categoria_do_novo_formato():
     ids=["negativo", "repetida", "nome-vazio"],
 )
 def test_categorias_invalidas_retornam_400_no_post_e_no_patch(lista, mensagem):
-    resposta = client.post("/orcamentos", json=payload(categorias=lista))
+    resposta = client.post("/orcamentos", json=payload(categorias=lista), headers=COORDENACAO)
     assert resposta.status_code == 400
     assert resposta.json()["detail"] == mensagem
 
@@ -424,7 +425,7 @@ def test_categorias_invalidas_retornam_400_no_post_e_no_patch(lista, mensagem):
     ids=["lista-vazia", "nomes-vazio", "nenhum", "os-dois", "sem-valor"],
 )
 def test_formato_de_categorias_invalido_no_post_retorna_422(campos):
-    assert client.post("/orcamentos", json=payload(**campos)).status_code == 422
+    assert client.post("/orcamentos", json=payload(**campos), headers=COORDENACAO).status_code == 422
 
 
 def test_patch_sem_nada_para_editar_retorna_422():
@@ -434,7 +435,9 @@ def test_patch_sem_nada_para_editar_retorna_422():
 
 def test_post_com_nomes_segue_funcionando_como_antes():
     resposta = client.post(
-        "/orcamentos", json=payload(categorias_despesa=["materiais", "transporte"])
+        "/orcamentos",
+        json=payload(categorias_despesa=["materiais", "transporte"]),
+        headers=COORDENACAO,
     )
     assert resposta.status_code == 201
 

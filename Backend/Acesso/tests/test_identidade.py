@@ -113,6 +113,19 @@ def test_sem_cabecalho_com_dois_papeis_permitidos_da_403(banco, cliente):
     assert r.json()["detail"] == "Ação permitida apenas para: coordenacao, direcao."
 
 
+def test_educador_por_sessao_le_orcamentos_mas_nao_cria_nem_aprova(banco, cliente):
+    _orcamento_existente()
+    token = _sessao(banco, "edu", papeis=["educador"])
+
+    assert cliente.get("/orcamentos/orcamento-1", headers=_bearer(token)).status_code == 200
+    for cab in (_bearer(token), _bearer(token, **{"X-Papel-Usuario": "coordenacao"})):
+        criar = cliente.post("/orcamentos", json={**ORCAMENTO, "projeto_id": "projeto-1"}, headers=cab)
+        assert criar.status_code == 403
+        aprovar = cliente.post("/orcamentos/orcamento-1/lancamentos/qualquer/aprovar", headers=cab)
+        assert aprovar.status_code == 403
+    assert len(_orcamentos) == 1
+
+
 def test_autor_vem_da_sessao(banco, cliente):
     _orcamento_existente()
     token = _sessao(banco, "marcos", papeis=["educador"])

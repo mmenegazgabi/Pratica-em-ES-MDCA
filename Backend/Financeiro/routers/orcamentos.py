@@ -12,7 +12,7 @@ if __package__ == "routers":
         calcular_realizado,
         classificar_nivel_alerta,
     )
-    from autenticacao import Papel, exigir_papel
+    from autenticacao import Papel, exigir_autenticacao, exigir_papel
     from orcamento import (
         AprovacaoInvalida,
         LancamentoNaoEncontrado,
@@ -28,7 +28,7 @@ else:
         calcular_realizado,
         classificar_nivel_alerta,
     )
-    from ..autenticacao import Papel, exigir_papel
+    from ..autenticacao import Papel, exigir_autenticacao, exigir_papel
     from ..orcamento import (
         AprovacaoInvalida,
         LancamentoNaoEncontrado,
@@ -163,9 +163,12 @@ class OrcamentosPaginados(BaseModel):
     tamanho: int
 
 
-def autorizar_leitura_projeto(projeto_id: str) -> str:
+# Sem anotação de tipo: ``Identidade`` só é importada dentro de ``autenticacao``.
+def autorizar_leitura_projeto(
+    projeto_id: str, identidade=Depends(exigir_autenticacao)
+) -> str:
     # Ponto de integração com o RBAC da US-08: quando implementado,
-    # deve levantar 403 se o usuário não puder ver o projeto.
+    # deve levantar 403 se ``identidade`` não puder ver o projeto.
     return projeto_id
 
 
@@ -182,6 +185,7 @@ def listar_orcamentos(
         None,
         description="Se informado, devolve só os orçamentos vigentes nessa data (AAAA-MM-DD).",
     ),
+    _identidade=Depends(exigir_autenticacao),
 ) -> List[OrcamentoDetalhe]:
     # T-13 · US-03: o formulário de lançamento precisa listar projetos e
     # categorias para o educador escolher.
@@ -195,7 +199,10 @@ def listar_orcamentos(
 
 
 @router.post("/orcamentos", response_model=Orcamento, status_code=201)
-def criar_orcamento(payload: OrcamentoCreate) -> Orcamento:
+def criar_orcamento(
+    payload: OrcamentoCreate,
+    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO)),
+) -> Orcamento:
     if payload.valor_total < 0:
         raise HTTPException(
             status_code=400,
@@ -262,7 +269,9 @@ def listar_orcamentos_do_projeto(
 
 
 @router.get("/orcamentos/{orcamento_id}", response_model=OrcamentoDetalhe)
-def obter_orcamento(orcamento_id: str) -> Orcamento:
+def obter_orcamento(
+    orcamento_id: str, _identidade=Depends(exigir_autenticacao)
+) -> Orcamento:
     return _buscar_orcamento(orcamento_id)
 
 
@@ -296,7 +305,12 @@ def editar_orcamento(
     "/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/aprovar",
     response_model=OrcamentoDetalhe,
 )
-def aprovar_lancamento(orcamento_id: str, lancamento_id: str) -> Orcamento:
+def aprovar_lancamento(
+    orcamento_id: str,
+    lancamento_id: str,
+    # Mesma regra da T-15 aplicada em PATCH /lancamentos/{id}/aprovar.
+    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
+) -> Orcamento:
     orcamento = _buscar_orcamento(orcamento_id)
     try:
         orcamento.aprovar_lancamento(lancamento_id)
@@ -311,7 +325,11 @@ def aprovar_lancamento(orcamento_id: str, lancamento_id: str) -> Orcamento:
     "/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/reverter-aprovacao",
     response_model=OrcamentoDetalhe,
 )
-def reverter_aprovacao(orcamento_id: str, lancamento_id: str) -> Orcamento:
+def reverter_aprovacao(
+    orcamento_id: str,
+    lancamento_id: str,
+    _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
+) -> Orcamento:
     orcamento = _buscar_orcamento(orcamento_id)
     try:
         orcamento.reverter_aprovacao(lancamento_id)
