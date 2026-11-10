@@ -173,6 +173,8 @@ export async function mostrar(container, { parametros = {}, sessao, navegar }) {
 
   // T-18: aprovar debita o saldo, então pede confirmação antes de enviar.
   function abrirDialogoDeAprovacao() {
+    // Sem showModal o botão continua clicável: um segundo clique não abre outro diálogo.
+    if (container.querySelector("dialog.dialogo")) return;
     const { meta } = painel;
     const origem = document.activeElement;
     const cancelar = el("button", { type: "button", class: "btn btn--sec" }, "Cancelar");
@@ -196,7 +198,8 @@ export async function mostrar(container, { parametros = {}, sessao, navegar }) {
     dialogo.addEventListener("cancel", fechar);
     dialogo.querySelector("form").addEventListener("submit", (evento) => {
       evento.preventDefault();
-      fechar();
+      // Sem devolver o foco: decidir redesenha o painel e o botão "Aprovar" some.
+      dialogo.remove();
       // Sem showModal o painel continua clicável: só aprova se ainda for o mesmo lançamento.
       if (painel?.meta?.id === meta.id) decidir(() => aprovarLancamento(meta.id));
     });

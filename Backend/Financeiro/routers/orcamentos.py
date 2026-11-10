@@ -163,9 +163,12 @@ class OrcamentosPaginados(BaseModel):
     tamanho: int
 
 
-def autorizar_leitura_projeto(projeto_id: str) -> str:
+# Sem anotação de tipo: ``Identidade`` só é importada dentro de ``autenticacao``.
+def autorizar_leitura_projeto(
+    projeto_id: str, identidade=Depends(exigir_autenticacao)
+) -> str:
     # Ponto de integração com o RBAC da US-08: quando implementado,
-    # deve levantar 403 se o usuário não puder ver o projeto.
+    # deve levantar 403 se ``identidade`` não puder ver o projeto.
     return projeto_id
 
 
@@ -182,7 +185,7 @@ def listar_orcamentos(
         None,
         description="Se informado, devolve só os orçamentos vigentes nessa data (AAAA-MM-DD).",
     ),
-    _auth: str = Depends(exigir_autenticacao),
+    _identidade=Depends(exigir_autenticacao),
 ) -> List[OrcamentoDetalhe]:
     # T-13 · US-03: o formulário de lançamento precisa listar projetos e
     # categorias para o educador escolher.
@@ -247,7 +250,6 @@ def listar_orcamentos_do_projeto(
     projeto_id: str = Depends(autorizar_leitura_projeto),
     pagina: int = Query(1, ge=1),
     tamanho: int = Query(10, ge=1, le=100),
-    _auth: str = Depends(exigir_autenticacao),
 ) -> OrcamentosPaginados:
     do_projeto = sorted(
         (o for o in _orcamentos if o.projeto_id == projeto_id),
@@ -268,7 +270,7 @@ def listar_orcamentos_do_projeto(
 
 @router.get("/orcamentos/{orcamento_id}", response_model=OrcamentoDetalhe)
 def obter_orcamento(
-    orcamento_id: str, _auth: str = Depends(exigir_autenticacao)
+    orcamento_id: str, _identidade=Depends(exigir_autenticacao)
 ) -> Orcamento:
     return _buscar_orcamento(orcamento_id)
 

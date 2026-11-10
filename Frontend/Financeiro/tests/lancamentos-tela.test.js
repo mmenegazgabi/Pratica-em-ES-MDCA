@@ -154,9 +154,24 @@ test("aprovar fecha o painel, recarrega a lista e atualiza o contador", async ()
   aprovarComConfirmacao();
   await esperar();
   assert.ok(chamadas.includes("PATCH /lancamentos/l1/aprovar"));
+  assert.equal(container().querySelector("dialog"), null);
   assert.equal(container().querySelector(".painel-lateral"), null);
   assert.equal(container().querySelectorAll("tbody tr").length, 1);
   assert.equal(document.querySelector("[data-contador]").textContent, "1");
+});
+
+test("clicar duas vezes em Aprovar abre um diálogo só e aprova uma vez", async () => {
+  preparar();
+  simular();
+  await mostrar(container(), { parametros: { abrir: "l1" }, sessao: coord, navegar() {} });
+  await esperar();
+  const aprovar = [...container().querySelectorAll(".painel-lateral button")].find((b) => b.textContent === "Aprovar");
+  aprovar.click();
+  aprovar.click();
+  assert.equal(container().querySelectorAll("dialog").length, 1);
+  container().querySelector("dialog form").dispatchEvent(new window.Event("submit", { cancelable: true }));
+  await esperar();
+  assert.equal(chamadas.filter((c) => c.endsWith("/aprovar")).length, 1);
 });
 
 test("409 ao aprovar mostra a mensagem do servidor no painel", async () => {
