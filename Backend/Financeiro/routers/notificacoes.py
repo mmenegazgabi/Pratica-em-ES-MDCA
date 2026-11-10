@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 if __package__ == "routers":
-    from autenticacao import exigir_usuario
+    from autenticacao import exigir_acesso_financeiro, exigir_usuario
     from notificacoes import (
         Notificacao,
         NotificacaoNaoEncontrada,
@@ -22,7 +22,7 @@ if __package__ == "routers":
     )
     from persistencia import obter_repositorio
 else:
-    from ..autenticacao import exigir_usuario
+    from ..autenticacao import exigir_acesso_financeiro, exigir_usuario
     from ..notificacoes import (
         Notificacao,
         NotificacaoNaoEncontrada,
@@ -30,7 +30,11 @@ else:
     )
     from ..persistencia import obter_repositorio
 
-router = APIRouter(prefix="/notificacoes", tags=["notificacoes"])
+router = APIRouter(
+    prefix="/notificacoes",
+    tags=["notificacoes"],
+    dependencies=[Depends(exigir_acesso_financeiro)],
+)
 
 
 class NotificacaoSaida(BaseModel):

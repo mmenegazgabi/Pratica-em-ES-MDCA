@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 if __package__ == "routers":
-    from autenticacao import exigir_usuario
+    from autenticacao import Identidade, exigir_acesso_financeiro, exigir_programa, exigir_usuario
     from comprovantes import ArmazenamentoComprovantes
     from persistencia import obter_repositorio
     from rascunhos import Rascunho, RascunhoNaoEncontrado
@@ -27,7 +27,7 @@ if __package__ == "routers":
     )
     from routers.orcamentos import _buscar_orcamento
 else:
-    from ..autenticacao import exigir_usuario
+    from ..autenticacao import Identidade, exigir_acesso_financeiro, exigir_programa, exigir_usuario
     from ..comprovantes import ArmazenamentoComprovantes
     from ..persistencia import obter_repositorio
     from ..rascunhos import Rascunho, RascunhoNaoEncontrado
@@ -40,7 +40,11 @@ else:
     )
     from .orcamentos import _buscar_orcamento
 
-router = APIRouter(prefix="/rascunhos", tags=["rascunhos"])
+router = APIRouter(
+    prefix="/rascunhos",
+    tags=["rascunhos"],
+    dependencies=[Depends(exigir_acesso_financeiro)],
+)
 
 
 class RascunhoSaida(BaseModel):
@@ -102,6 +106,7 @@ def completar_rascunho(
     categoria: str = Form(...),
     data_despesa: date = Form(...),
     autor_id: str = Depends(exigir_usuario),
+    identidade: Identidade = Depends(exigir_acesso_financeiro),
     repositorio=Depends(obter_repositorio),
 ) -> LancamentoCriado:
     rascunho = next(
@@ -113,6 +118,7 @@ def completar_rascunho(
     # Valida antes de retirar: dado inválido não pode consumir o rascunho. Com trava,
     # como na criação do lançamento.
     orcamento = _buscar_orcamento(repositorio, orcamento_id, para_alterar=True)
+    exigir_programa(identidade, orcamento.projeto_id)
     descricao = _validar_dados_da_despesa(
         orcamento, valor, descricao, categoria, data_despesa
     )

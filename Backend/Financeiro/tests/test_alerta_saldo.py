@@ -17,6 +17,16 @@ from Financeiro.routers.orcamentos import _orcamentos
 
 client = TestClient(app)
 
+TOKEN = "token-de-teste-orcamento"
+# As rotas de orçamento passaram a exigir login (T-33): a tela manda o código de
+# acesso e o papel em toda chamada.
+LEITURA_ORCAMENTO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
+
+
+@pytest.fixture(autouse=True)
+def _codigo_de_acesso(monkeypatch):
+    monkeypatch.setenv("FINANCEIRO_API_TOKEN", TOKEN)
+
 
 def setup_function():
     _orcamentos.clear()
@@ -130,7 +140,7 @@ def test_lancamentos_pendentes_e_rejeitados_nao_disparam_alerta():
 def test_get_orcamento_retorna_nivel_de_alerta(aprovados, nivel, percentual, saldo):
     _orcamentos.append(orcamento_com_aprovados(*aprovados))
 
-    response = client.get("/orcamentos/orcamento-1")
+    response = client.get("/orcamentos/orcamento-1", headers=LEITURA_ORCAMENTO)
 
     assert response.status_code == 200
     body = response.json()
@@ -151,7 +161,7 @@ def test_listagem_por_projeto_retorna_nivel_de_alerta_de_cada_orcamento():
         orcamento_com_aprovados(1100, id="o-estourado", data_inicio=date(2026, 1, 1))
     )
 
-    body = client.get("/orcamentos/projeto/projeto-1").json()
+    body = client.get("/orcamentos/projeto/projeto-1", headers=LEITURA_ORCAMENTO).json()
 
     niveis = {item["id"]: item["nivel_alerta"] for item in body["itens"]}
     assert niveis == {

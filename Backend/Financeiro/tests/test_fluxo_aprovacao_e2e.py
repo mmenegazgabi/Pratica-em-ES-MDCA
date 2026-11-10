@@ -24,6 +24,10 @@ JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
 
 client = TestClient(app)
 
+# As rotas de orçamento passaram a exigir login (T-33): a tela manda o código de
+# acesso e o papel em toda chamada.
+LEITURA_ORCAMENTO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
+
 
 def como(papel, usuario=None):
     headers = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": papel}
@@ -62,8 +66,7 @@ def criar_orcamento(valor_total=1000):
             "data_inicio": "2026-01-01",
             "data_fim": "2026-12-31",
             "categorias_despesa": ["materiais", "alimentacao"],
-        },
-    )
+        },headers=LEITURA_ORCAMENTO)
     assert resposta.status_code == 201
     return resposta.json()["id"]
 
@@ -103,7 +106,7 @@ def rejeitar(lancamento_id, corpo):
 
 
 def saldo(orcamento_id):
-    return client.get(f"/orcamentos/{orcamento_id}").json()["saldo"]
+    return client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()["saldo"]
 
 
 def notificacoes(usuario="educadora-ana"):
@@ -135,7 +138,7 @@ def test_fluxo_de_aprovacao_completo():
     assert resposta.json()["saldo_orcamento"] == 700
 
     # Saldo debitado e indicador de consumo atualizado
-    orcamento = client.get(f"/orcamentos/{orcamento_id}").json()
+    orcamento = client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()
     assert orcamento["saldo"] == 700
     assert orcamento["realizado"] == 300
     assert orcamento["percentual_consumido"] == 30
@@ -248,8 +251,7 @@ def test_rota_antiga_de_aprovacao_sem_login_foi_removida():
     lancamento_id = lancar(orcamento_id, 300)
 
     resposta = client.post(
-        f"/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/aprovar"
-    )
+        f"/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/aprovar", headers=LEITURA_ORCAMENTO)
 
     assert resposta.status_code in (404, 405)
     assert saldo(orcamento_id) == 1000
@@ -274,7 +276,7 @@ def test_fila_com_varios_autores_e_decisoes():
     aprovar(da_ana_2)
 
     # Só os aprovados contam: 1000 - 400 - 450
-    orcamento = client.get(f"/orcamentos/{orcamento_id}").json()
+    orcamento = client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()
     assert orcamento["saldo"] == 150
     assert orcamento["nivel_alerta"] == "atencao"  # 85% consumido
     assert fila_de_pendentes() == []

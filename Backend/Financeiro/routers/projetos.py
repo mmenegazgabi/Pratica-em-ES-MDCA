@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 if __package__ == "routers":
-    from autenticacao import Papel, exigir_autenticacao, exigir_papel
+    from autenticacao import Identidade, Papel, exigir_acesso_financeiro, exigir_papel
     from projetos import (
         Projeto,
         ProjetoDuplicado,
@@ -16,7 +16,7 @@ if __package__ == "routers":
     )
     from persistencia import obter_repositorio
 else:
-    from ..autenticacao import Papel, exigir_autenticacao, exigir_papel
+    from ..autenticacao import Identidade, Papel, exigir_acesso_financeiro, exigir_papel
     from ..projetos import (
         Projeto,
         ProjetoDuplicado,
@@ -65,10 +65,12 @@ def criar_projeto(
 
 @router.get("/projetos", response_model=List[ProjetoSaida])
 def listar(
-    _auth: str = Depends(exigir_autenticacao), repositorio=Depends(obter_repositorio)
+    identidade: Identidade = Depends(exigir_acesso_financeiro),
+    repositorio=Depends(obter_repositorio),
 ) -> List[Projeto]:
     # Com banco, inclui os programas cadastrados pela Gestão (mesma tabela projetos).
-    return listar_projetos(repositorio)
+    # Quem só é educador vê os programas em que tem vínculo ativo (T-36).
+    return [p for p in listar_projetos(repositorio) if identidade.ve_programa(p.id)]
 
 
 @router.patch("/projetos/{projeto_id}/status", response_model=ProjetoSaida)

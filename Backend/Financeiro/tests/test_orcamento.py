@@ -14,6 +14,16 @@ from Financeiro.projetos import _projetos, registrar_projeto
 from Financeiro.routers.orcamentos import _orcamentos
 
 client = TestClient(app)
+TOKEN = "token-de-teste-orcamento"
+
+# As rotas de orçamento passaram a exigir login (T-33): a tela manda o código de
+# acesso e o papel em toda chamada.
+LEITURA_ORCAMENTO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
+
+
+@pytest.fixture(autouse=True)
+def _codigo_de_acesso(monkeypatch):
+    monkeypatch.setenv("FINANCEIRO_API_TOKEN", TOKEN)
 
 
 def setup_function():
@@ -54,7 +64,7 @@ def orcamento_de_teste(**overrides):
 
 
 def test_valor_total_negativo_retorna_400_com_mensagem_clara():
-    response = client.post("/orcamentos", json=payload(valor_total=-100.0))
+    response = client.post("/orcamentos", json=payload(valor_total=-100.0), headers=LEITURA_ORCAMENTO)
 
     assert response.status_code == 400
     assert "negativo" in response.json()["detail"].lower()
@@ -63,14 +73,13 @@ def test_valor_total_negativo_retorna_400_com_mensagem_clara():
 def test_periodo_com_data_fim_anterior_a_data_inicio_retorna_400():
     response = client.post(
         "/orcamentos",
-        json=payload(data_inicio="2026-06-01", data_fim="2026-01-01"),
-    )
+        json=payload(data_inicio="2026-06-01", data_fim="2026-01-01"),headers=LEITURA_ORCAMENTO)
 
     assert response.status_code == 400
 
 
 def test_payload_valido_cria_orcamento_e_retorna_201():
-    response = client.post("/orcamentos", json=payload())
+    response = client.post("/orcamentos", json=payload(), headers=LEITURA_ORCAMENTO)
 
     assert response.status_code == 201
     body = response.json()
@@ -226,7 +235,7 @@ def test_aprovacoes_concorrentes_serializam_acesso_ao_saldo():
 
 
 def test_get_orcamento_inexistente_retorna_404():
-    response = client.get("/orcamentos/nao-existe")
+    response = client.get("/orcamentos/nao-existe", headers=LEITURA_ORCAMENTO)
 
     assert response.status_code == 404
 
@@ -234,7 +243,7 @@ def test_get_orcamento_inexistente_retorna_404():
 def test_get_orcamento_sem_lancamentos_retorna_saldo_igual_ao_valor_total():
     _orcamentos.append(orcamento_de_teste(id="orcamento-1", valor_total=500))
 
-    response = client.get("/orcamentos/orcamento-1")
+    response = client.get("/orcamentos/orcamento-1", headers=LEITURA_ORCAMENTO)
 
     assert response.status_code == 200
     body = response.json()
@@ -254,7 +263,7 @@ def test_get_orcamento_com_lancamentos_aprovados_reflete_saldo_calculado():
         )
     )
 
-    response = client.get("/orcamentos/orcamento-1")
+    response = client.get("/orcamentos/orcamento-1", headers=LEITURA_ORCAMENTO)
 
     assert response.status_code == 200
     assert response.json()["saldo"] == 800
@@ -264,7 +273,6 @@ def test_get_orcamento_com_lancamentos_aprovados_reflete_saldo_calculado():
 # antigas POST /orcamentos/{id}/lancamentos/{id}/aprovar e .../reverter-aprovacao
 # (T-07) não pediam login e foram removidas (plano de integração, Trabalho 1).
 
-TOKEN = "token-de-teste-orcamento"
 COORDENACAO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
 
 
@@ -292,7 +300,7 @@ def test_rotas_antigas_sem_login_nao_existem_mais(rota):
 
     assert response.status_code in (404, 405)
     assert lancamento.status == StatusLancamento.PENDENTE
-    assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 1000
+    assert client.get("/orcamentos/orcamento-1", headers=LEITURA_ORCAMENTO).json()["saldo"] == 1000
 
 
 def test_aprovar_debita_saldo_do_orcamento(com_token):
@@ -304,7 +312,7 @@ def test_aprovar_debita_saldo_do_orcamento(com_token):
     assert response.status_code == 200
     assert response.json()["saldo_orcamento"] == 800
     assert lancamento.status == StatusLancamento.APROVADO
-    assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 800
+    assert client.get("/orcamentos/orcamento-1", headers=LEITURA_ORCAMENTO).json()["saldo"] == 800
 
 
 def test_aprovar_duas_vezes_debita_saldo_uma_unica_vez(com_token):
@@ -315,7 +323,7 @@ def test_aprovar_duas_vezes_debita_saldo_uma_unica_vez(com_token):
     response = aprovar(lancamento.id)
 
     assert response.status_code == 409
-    assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 800
+    assert client.get("/orcamentos/orcamento-1", headers=LEITURA_ORCAMENTO).json()["saldo"] == 800
 
 
 def test_aprovar_lancamento_inexistente_retorna_404(com_token):
@@ -346,7 +354,7 @@ def test_aprovacoes_simultaneas_via_api_mantem_saldo_consistente(com_token):
         respostas = list(executor.map(lambda l: aprovar(l.id), lancamentos))
 
     assert all(r.status_code == 200 for r in respostas)
-    assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 1000 - 20 * 10
+    assert client.get("/orcamentos/orcamento-1", headers=LEITURA_ORCAMENTO).json()["saldo"] == 1000 - 20 * 10
 
 
 def test_aprovacoes_simultaneas_do_mesmo_lancamento_debitam_uma_unica_vez(com_token):
@@ -359,7 +367,7 @@ def test_aprovacoes_simultaneas_do_mesmo_lancamento_debitam_uma_unica_vez(com_to
         respostas = list(executor.map(lambda _: aprovar(lancamento.id), range(10)))
 
     assert sorted(r.status_code for r in respostas) == [200] + [409] * 9
-    assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 800
+    assert client.get("/orcamentos/orcamento-1", headers=LEITURA_ORCAMENTO).json()["saldo"] == 800
 
 
 def test_aprovar_lancamento_rejeitado_retorna_409_sem_alterar_saldo(com_token):
@@ -370,7 +378,7 @@ def test_aprovar_lancamento_rejeitado_retorna_409_sem_alterar_saldo(com_token):
 
     assert response.status_code == 409
     assert lancamento.status == StatusLancamento.REJEITADO
-    assert client.get("/orcamentos/orcamento-1").json()["saldo"] == 1000
+    assert client.get("/orcamentos/orcamento-1", headers=LEITURA_ORCAMENTO).json()["saldo"] == 1000
 
 
 def test_get_orcamentos_do_projeto_retorna_valor_vigencia_e_categorias():
@@ -383,7 +391,7 @@ def test_get_orcamentos_do_projeto_retorna_valor_vigencia_e_categorias():
     )
     _orcamentos.append(orcamento_de_teste(id="orcamento-2", projeto_id="projeto-2"))
 
-    response = client.get("/orcamentos/projeto/projeto-1")
+    response = client.get("/orcamentos/projeto/projeto-1", headers=LEITURA_ORCAMENTO)
 
     assert response.status_code == 200
     body = response.json()
@@ -397,7 +405,7 @@ def test_get_orcamentos_do_projeto_retorna_valor_vigencia_e_categorias():
 
 
 def test_get_orcamentos_de_projeto_sem_orcamento_retorna_lista_vazia():
-    response = client.get("/orcamentos/projeto/projeto-sem-orcamento")
+    response = client.get("/orcamentos/projeto/projeto-sem-orcamento", headers=LEITURA_ORCAMENTO)
 
     assert response.status_code == 200
     body = response.json()
@@ -415,8 +423,8 @@ def test_get_orcamentos_do_projeto_pagina_historico_mais_recente_primeiro():
             )
         )
 
-    primeira = client.get("/orcamentos/projeto/projeto-1?pagina=1&tamanho=2").json()
-    segunda = client.get("/orcamentos/projeto/projeto-1?pagina=2&tamanho=2").json()
+    primeira = client.get("/orcamentos/projeto/projeto-1?pagina=1&tamanho=2", headers=LEITURA_ORCAMENTO).json()
+    segunda = client.get("/orcamentos/projeto/projeto-1?pagina=2&tamanho=2", headers=LEITURA_ORCAMENTO).json()
 
     assert primeira["total"] == 3
     assert [o["id"] for o in primeira["itens"]] == ["orcamento-2026", "orcamento-2025"]
@@ -426,7 +434,7 @@ def test_get_orcamentos_do_projeto_pagina_historico_mais_recente_primeiro():
 
 
 def test_get_orcamentos_do_projeto_com_pagina_invalida_retorna_422():
-    response = client.get("/orcamentos/projeto/projeto-1?pagina=0")
+    response = client.get("/orcamentos/projeto/projeto-1?pagina=0", headers=LEITURA_ORCAMENTO)
 
     assert response.status_code == 422
 
@@ -438,6 +446,6 @@ def test_valor_total_nan_no_corpo_bruto_retorna_422():
         json.dumps(payload()["valor_total"]), "NaN", 1
     )
     response = client.post(
-        "/orcamentos", content=corpo, headers={"Content-Type": "application/json"}
+        "/orcamentos", content=corpo, headers={**LEITURA_ORCAMENTO, "Content-Type": "application/json"}
     )
     assert response.status_code == 422

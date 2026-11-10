@@ -1,3 +1,4 @@
+import pytest
 """Persistência do Financeiro no PostgreSQL.
 
 Com ``DATABASE_URL`` as rotas do Financeiro gravam e leem das tabelas das migrations
@@ -28,6 +29,15 @@ TOKEN = "token-de-teste-banco"
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
 
 client = TestClient(app)
+
+# As rotas de orçamento passaram a exigir login (T-33): a tela manda o código de
+# acesso e o papel em toda chamada.
+LEITURA_ORCAMENTO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
+
+
+@pytest.fixture(autouse=True)
+def _codigo_de_acesso(monkeypatch):
+    monkeypatch.setenv("FINANCEIRO_API_TOKEN", TOKEN)
 
 
 def _esvaziar_memoria() -> None:
@@ -128,7 +138,7 @@ def test_orcamento_e_valores_por_categoria_ficam_gravados(banco_financeiro):
     assert [(c.nome, float(c.valor_orcado)) for c in categorias] == [("materiais", 600.0), ("transporte", 300.0)]
 
     _esvaziar_memoria()
-    detalhe = client.get(f"/orcamentos/{orcamento_id}").json()
+    detalhe = client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()
     assert (detalhe["projeto_nome"], detalhe["saldo"]) == ("Semear", 1000.0)
     assert [(c["nome"], c["valor_orcado"]) for c in detalhe["categorias"]] == [("materiais", 600.0), ("transporte", 300.0)]
 
@@ -143,7 +153,7 @@ def test_edicao_do_orcamento_fica_gravada(banco_financeiro):
     )
 
     assert resposta.status_code == 200, resposta.text
-    detalhe = client.get(f"/orcamentos/{orcamento_id}").json()
+    detalhe = client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()
     assert (detalhe["valor_total"], detalhe["categorias_despesa"]) == (1500.0, ["materiais"])
     assert consulta(banco_financeiro, "SELECT nome FROM orcamento_categorias") == [("materiais",)]
 
@@ -224,7 +234,7 @@ def test_fluxo_completo_fica_no_banco_e_sobrevive_a_reinicio(banco_financeiro):
 
     # Depois de "reiniciar" (memória vazia), a API devolve o mesmo estado.
     _esvaziar_memoria()
-    orcamento = client.get(f"/orcamentos/{orcamento_id}").json()
+    orcamento = client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()
     assert (orcamento["saldo"], orcamento["realizado"]) == (749.6, 250.4)
     fila = client.get("/lancamentos", params={"status": "pendente"}, headers=COORDENACAO).json()
     assert [(l["id"], l["descricao"]) for l in fila] == [(rejeitado["id"], "Passagens")]
@@ -249,7 +259,7 @@ def test_aprovar_duas_vezes_ao_mesmo_tempo_debita_uma_vez(banco_financeiro):
         )
 
     assert sorted(r.status_code for r in respostas) == [200, 409, 409, 409]
-    assert client.get(f"/orcamentos/{orcamento_id}").json()["saldo"] == 900.0
+    assert client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()["saldo"] == 900.0
     assert len(consulta(banco_financeiro, "SELECT id FROM notificacoes")) == 1
 
 

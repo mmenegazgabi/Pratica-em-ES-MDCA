@@ -130,13 +130,13 @@ class Rodada:
         coord, direcao = como("coordenacao", "luana"), como("direcao", "jane")
         self.chamar(f"{etiqueta}:projetos", "get", "/projetos", headers=coord)
         # Ordenado pelo id do projeto, que muda de uma rodada para outra.
-        self.chamar(f"{etiqueta}:orcamentos", "get", "/orcamentos", sem_ordem=True)
+        self.chamar(f"{etiqueta}:orcamentos", "get", "/orcamentos", sem_ordem=True, headers=coord)
         for orcamento_id in self.orcamentos:
-            self.chamar(f"{etiqueta}:orcamento", "get", f"/orcamentos/{orcamento_id}")
+            self.chamar(f"{etiqueta}:orcamento", "get", f"/orcamentos/{orcamento_id}", headers=coord)
         for projeto_id in self.projetos:
             self.chamar(
                 f"{etiqueta}:orcamentos-do-projeto", "get", f"/orcamentos/projeto/{projeto_id}",
-                params={"tamanho": 100},
+                params={"tamanho": 100}, headers=coord,
             )
         self.chamar(f"{etiqueta}:fila", "get", "/lancamentos", headers=coord)
         for filtro in ({"status": "pendente"}, {"status": "aprovado", "conciliado": "false"}, {"conciliado": "true"}):
@@ -412,6 +412,8 @@ def test_mesmo_cenario_responde_igual_na_memoria_e_no_banco(semente, banco_finan
     banco = _rodar(semente, monkeypatch, banco_financeiro)
 
     _comparar(memoria.registro, banco.registro)
+    # O retrato final tem de ler dados de verdade, não respostas 401/403.
+    assert all(status == 200 for nome, status, _ in banco.registro if nome.startswith("final:"))
     # O cenário precisa ter exercitado de verdade as decisões, não só erros.
     codigos = {(nome, status) for nome, status, _ in banco.registro}
     assert ("lancar", 201) in codigos

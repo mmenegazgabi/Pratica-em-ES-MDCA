@@ -40,9 +40,11 @@ from pydantic import BaseModel
 
 if __package__ == "routers":
     from autenticacao import (
+        Identidade,
         Papel,
-        exigir_autenticacao,
+        exigir_acesso_financeiro,
         exigir_papel,
+        exigir_programa,
         exigir_usuario,
         obter_usuario,
     )
@@ -67,9 +69,11 @@ if __package__ == "routers":
     from routers.orcamentos import _buscar_orcamento
 else:
     from ..autenticacao import (
+        Identidade,
         Papel,
-        exigir_autenticacao,
+        exigir_acesso_financeiro,
         exigir_papel,
+        exigir_programa,
         exigir_usuario,
         obter_usuario,
     )
@@ -96,7 +100,7 @@ else:
 router = APIRouter(
     prefix="/lancamentos",
     tags=["lancamentos"],
-    dependencies=[Depends(exigir_autenticacao)],
+    dependencies=[Depends(exigir_acesso_financeiro)],
 )
 
 DESCRICAO_STATUS = {
@@ -236,6 +240,7 @@ async def criar_lancamento(
     armazenamento: ArmazenamentoComprovantes = Depends(obter_armazenamento),
     autor_id: Optional[str] = Depends(obter_usuario),
     repositorio=Depends(obter_repositorio),
+    identidade: Identidade = Depends(exigir_acesso_financeiro),
 ) -> LancamentoCriado:
     # 1. Comprovante obrigatório
     conteudo = await _ler_comprovante(comprovante)
@@ -243,6 +248,7 @@ async def criar_lancamento(
     # 2 e 3. Orçamento e dados da despesa (sem trava: o envio do arquivo para o R2
     # não deve segurar o orçamento)
     orcamento = _buscar_orcamento(repositorio, orcamento_id)
+    exigir_programa(identidade, orcamento.projeto_id)
     descricao = _validar_dados_da_despesa(
         orcamento, valor, descricao, categoria, data_despesa
     )
@@ -426,6 +432,7 @@ def listar_lancamentos(
     ),
     usuario: Optional[str] = Depends(obter_usuario),
     repositorio=Depends(obter_repositorio),
+    identidade: Identidade = Depends(exigir_acesso_financeiro),
 ) -> List[LancamentoResumo]:
     """Lançamentos de todos os orçamentos, dos mais antigos para os mais novos.
 
@@ -442,7 +449,8 @@ def listar_lancamentos(
     itens = [
         (orcamento, lancamento)
         for orcamento in repositorio.listar_orcamentos()
-        if orcamento_id is None or orcamento.id == orcamento_id
+        if (orcamento_id is None or orcamento.id == orcamento_id)
+        and identidade.ve_programa(orcamento.projeto_id)
         for lancamento in orcamento.lancamentos
         if (status is None or lancamento.status == status)
         and (conciliado is None or lancamento.conciliado == conciliado)
@@ -476,14 +484,20 @@ def listar_lancamentos(
 
 @router.get("/{lancamento_id}", response_model=LancamentoDetalhe)
 def obter_lancamento(
-    lancamento_id: str, repositorio=Depends(obter_repositorio)
+    lancamento_id: str,
+    repositorio=Depends(obter_repositorio),
+    identidade: Identidade = Depends(exigir_acesso_financeiro),
 ) -> LancamentoDetalhe:
     """Consulta do lançamento por quem lançou: status e motivo da rejeição.
 
-    Exige só autenticação (qualquer papel), porque quem lança é o educador.
+    Qualquer papel do Financeiro, porque quem lança é o educador. Com o login, quem só
+    é educador vê apenas os próprios lançamentos (o de outra pessoa responde como
+    inexistente).
     """
     orcamento = _buscar_orcamento_do_lancamento(repositorio, lancamento_id)
     lancamento = next(l for l in orcamento.lancamentos if l.id == lancamento_id)
+    if identidade.programas is not None and lancamento.autor_id != identidade.usuario_id:
+        raise HTTPException(status_code=404, detail="Lançamento não encontrado")
     return _detalhe(orcamento, lancamento)
 
 

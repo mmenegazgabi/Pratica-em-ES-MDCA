@@ -20,8 +20,10 @@ valendo enquanto os frontends migram para o login.
 
 import hmac
 import os
+from dataclasses import dataclass
+from datetime import date
 from enum import Enum
-from typing import Optional
+from typing import FrozenSet, Optional
 
 from fastapi import Depends, Header, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -66,12 +68,12 @@ def exigir_autenticacao(
     )
 
 
-# --- Papel do usuário (T-15 · US-04) ----------------------------------------
+# --- Papel do usuário (T-15 · US-04; T-33 · US-08) ---------------------------
 #
-# Provisório até a US-08: o papel chega no cabeçalho ``X-Papel-Usuario`` e só
-# é aceito junto com o token de serviço (quem tem o token é o frontend, que já
-# sabe quem está logado). Na US-08 o papel passa a vir do usuário autenticado;
-# as rotas continuam usando ``exigir_papel`` do mesmo jeito.
+# Com o token de sessão do login único, o papel vem do banco (``usuarios_papeis`` e
+# ``vinculos_equipe``) e o cabeçalho ``X-Papel-Usuario`` é ignorado. Com o código de
+# acesso (transição até a tela Entrar do Financeiro), o papel ainda chega nesse
+# cabeçalho, como antes. ``exigir_papel`` fica no fim do arquivo.
 
 CABECALHO_PAPEL = "X-Papel-Usuario"
 
@@ -81,24 +83,6 @@ class Papel(str, Enum):
     DIRECAO = "direcao"
     EDUCADOR = "educador"
     VOLUNTARIO_FINANCEIRO = "voluntario_financeiro"
-
-
-def exigir_papel(*permitidos: Papel):
-    def verificar(
-        _servico: str = Depends(exigir_autenticacao),
-        papel: Optional[str] = Header(None, alias=CABECALHO_PAPEL),
-    ) -> Papel:
-        papel_normalizado = (papel or "").strip().lower()
-        if papel_normalizado not in {p.value for p in permitidos}:
-            raise HTTPException(
-                status_code=403,
-                detail="Ação permitida apenas para: "
-                + ", ".join(p.value for p in permitidos)
-                + ".",
-            )
-        return Papel(papel_normalizado)
-
-    return verificar
 
 
 # --- Identificação do usuário (T-17 · US-04) --------------------------------
@@ -144,3 +128,122 @@ def exigir_usuario(
             detail="Identificação do usuário obrigatória.",
         )
     return usuario
+
+
+# --- Identidade e autorização (T-33 · US-08) ---------------------------------
+#
+# Plano de integração, Trabalho 3. Quem chama a API é uma ``Identidade``:
+#
+# - **Token de sessão** (login único): usuário do token; papéis do Financeiro que a
+#   pessoa tem no banco, nos papéis da plataforma (``usuarios_papeis``) e nos vínculos
+#   ativos com programas (``vinculos_equipe``). Quem só é educador enxerga apenas os
+#   programas em que tem vínculo ativo; Coordenação, Direção e voluntário financeiro
+#   enxergam todos. Sem nenhum papel do Financeiro, a pessoa é bloqueada (403).
+# - **Código de acesso** (``FINANCEIRO_API_TOKEN``, só durante a transição): papel e
+#   usuário dos cabeçalhos, sem restrição de programa, exatamente como antes. Para
+#   desligar, basta tirar a variável do Cloud Run quando a tela Entrar estiver pronta.
+
+PAPEIS_DO_FINANCEIRO = frozenset(p.value for p in Papel)
+# Ordem usada quando a pessoa tem mais de um papel permitido na rota.
+PRIORIDADE = (Papel.COORDENACAO, Papel.DIRECAO, Papel.VOLUNTARIO_FINANCEIRO, Papel.EDUCADOR)
+# Quem tem algum destes papéis vê todos os programas; quem não tem, só os do vínculo.
+PAPEIS_QUE_VEEM_TODOS_OS_PROGRAMAS = frozenset(
+    {Papel.COORDENACAO.value, Papel.DIRECAO.value, Papel.VOLUNTARIO_FINANCEIRO.value}
+)
+SEM_VINCULO = "Você não tem vínculo com este programa."
+
+
+@dataclass(frozen=True)
+class Identidade:
+    usuario_id: Optional[str]
+    papeis: FrozenSet[str]
+    via_sessao: bool
+    # None: todos os programas. Conjunto: só esses (quem só é educador).
+    programas: Optional[FrozenSet[str]] = None
+
+    def ve_programa(self, programa_id: str) -> bool:
+        return self.programas is None or programa_id in self.programas
+
+
+def papeis_no_banco(usuario_id: str, hoje: Optional[date] = None) -> Identidade:
+    """Papéis do Financeiro da pessoa e os programas que ela pode ver."""
+    import sqlalchemy as sa
+    from sqlalchemy.exc import SQLAlchemyError
+
+    from Shared.banco import BANCO_INDISPONIVEL, conectar
+
+    hoje = hoje or date.today()
+    try:
+        with conectar() as conexao:
+            globais = set(
+                conexao.execute(
+                    sa.text("SELECT papel_id FROM usuarios_papeis WHERE usuario_id = :u"),
+                    {"u": usuario_id},
+                ).scalars()
+            )
+            vinculos = conexao.execute(
+                sa.text(
+                    """
+                    SELECT papel_id, programa_id FROM vinculos_equipe
+                    WHERE usuario_id = :u AND (data_saida IS NULL OR data_saida > :hoje)
+                    """
+                ),
+                {"u": usuario_id, "hoje": hoje},
+            ).all()
+    except SQLAlchemyError as erro:
+        raise HTTPException(status_code=503, detail=BANCO_INDISPONIVEL) from erro
+    papeis = frozenset((globais | {v.papel_id for v in vinculos}) & PAPEIS_DO_FINANCEIRO)
+    programas = None
+    if not papeis & PAPEIS_QUE_VEEM_TODOS_OS_PROGRAMAS:
+        programas = frozenset(v.programa_id for v in vinculos)
+    return Identidade(usuario_id, papeis, via_sessao=True, programas=programas)
+
+
+def obter_identidade(
+    modo: str = Depends(exigir_autenticacao),
+    usuario: Optional[str] = Depends(obter_usuario),
+    papel: Optional[str] = Header(None, alias=CABECALHO_PAPEL),
+) -> Identidade:
+    if modo == "sessao":
+        # O cabeçalho de papel é ignorado: o papel vem do banco, não da tela.
+        return papeis_no_banco(usuario)
+    papel = (papel or "").strip().lower()
+    papeis = frozenset({papel}) if papel in PAPEIS_DO_FINANCEIRO else frozenset()
+    return Identidade(usuario, papeis, via_sessao=False)
+
+
+def _negar(permitidos) -> HTTPException:
+    return HTTPException(
+        status_code=403,
+        detail="Ação permitida apenas para: " + ", ".join(p.value for p in permitidos) + ".",
+    )
+
+
+def exigir_papel(*permitidos: Papel):
+    """Exige um dos papéis; devolve o papel com que a pessoa age nesta rota."""
+
+    def verificar(identidade: Identidade = Depends(obter_identidade)) -> Papel:
+        for papel in PRIORIDADE:
+            if papel in permitidos and papel.value in identidade.papeis:
+                return papel
+        raise _negar(permitidos)
+
+    return verificar
+
+
+def exigir_acesso_financeiro(identidade: Identidade = Depends(obter_identidade)) -> Identidade:
+    """Rotas de qualquer papel do Financeiro.
+
+    Com o login, quem não tem papel do Financeiro é bloqueado. Com o código de acesso,
+    vale só o código, como antes (a tela manda o papel, mas as rotas de leitura não o
+    exigiam).
+    """
+    if identidade.via_sessao and not identidade.papeis:
+        raise _negar(PRIORIDADE)
+    return identidade
+
+
+def exigir_programa(identidade: Identidade, programa_id: str) -> None:
+    """403 quando a pessoa não tem vínculo com o programa (educador em outro programa)."""
+    if not identidade.ve_programa(programa_id):
+        raise HTTPException(status_code=403, detail=SEM_VINCULO)

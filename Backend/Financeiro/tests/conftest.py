@@ -70,10 +70,17 @@ def motor_financeiro():
 
 
 def limpar_banco(motor) -> None:
-    # CASCADE leva orçamentos, categorias, lançamentos, notificações e o que a Gestão
-    # pendura nos programas.
+    # CASCADE leva orçamentos, categorias, lançamentos, notificações, papéis, vínculos e o
+    # que a Gestão pendura nos programas (a mesma lista do conftest da Gestão). A lista de
+    # papéis, preenchida pela migration, fica. TRUNCATE passa pelo trigger do log, que só
+    # barra UPDATE e DELETE.
     with motor.begin() as conexao:
-        conexao.execute(sa.text("TRUNCATE projetos, rascunhos_lancamento CASCADE"))
+        conexao.execute(
+            sa.text(
+                "TRUNCATE projetos, usuarios, log_auditoria, nucleos_familiares, responsaveis, "
+                "rascunhos_lancamento CASCADE"
+            )
+        )
 
 
 def esvaziar_memoria() -> None:
