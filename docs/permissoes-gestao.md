@@ -104,6 +104,19 @@ Rotas: `GET /gestao/programas/{id}/agenda`, `POST …/turmas/{turma}/atividades`
 adolescentes, então consultá-las segue a regra de pessoas (a Direção não vê). Todo
 download de evidência é registrado na auditoria (`download_evidencia`).
 
+### Alertas de infrequência e busca ativa (US-06)
+
+| Ação | Coordenação | Educador | Assist. social | Psicólogo | Direção | Administração |
+|---|---|---|---|---|---|---|
+| Consultar os alertas e o histórico do acompanhamento | Programa | — | Programa | — | — | Todos |
+| Registrar ação de busca ativa e encerrar o alerta (com justificativa) | Programa | — | Programa | — | — | Todos |
+| Configurar o limite de faltas do programa | pela edição do programa (pendente da T-33) | | | | | |
+
+Rotas: `GET /gestao/alertas`, `GET /gestao/alertas/{id}`, `POST …/acoes` e
+`POST …/encerramento`. Os alertas nascem sozinhos quando uma chamada é registrada; a
+geração e cada ação e encerramento ficam na auditoria. Como no protótipo, educadores e
+direção não veem os alertas (o resultado dos contatos com a família é sensível).
+
 ### Programas e plano de ação (US-02): pendente da T-33
 
 | Ação | Hoje |
@@ -120,7 +133,7 @@ gerencia todos, Direção e o restante da equipe só consultam.
 ### Ainda sem rota na API
 
 Frequência consolidada, atendimentos técnicos (social e psicológico), relatórios,
-alertas, rede e a consulta à trilha de auditoria ainda não têm API. A permissão de
+rede e a consulta à trilha de auditoria ainda não têm API. A permissão de
 cada um entra nesta matriz junto com a US correspondente. Por enquanto, as telas
 dessas funcionalidades são só demonstração, com o menu por perfil em
 [`Frontend/Gestao/base/papeis.js`](../Frontend/Gestao/base/papeis.js).
@@ -153,6 +166,7 @@ PAPEIS_QUE_CADASTRAM_PESSOAS = {"coordenacao", "assistente_social"}
 PAPEIS_QUE_VEEM_FINANCEIRO_DE_TODOS = {"direcao", "administracao"}
 PAPEIS_QUE_VEEM_FINANCEIRO_DO_PROGRAMA = {"coordenacao"}
 PAPEIS_QUE_REGISTRAM_ATIVIDADES = {"coordenacao", "educador"}
+PAPEIS_QUE_ACOMPANHAM_ALERTAS = {"coordenacao", "assistente_social"}
 ```
 
 Qualquer vínculo ativo no programa, de qualquer papel, permite consultar o programa e

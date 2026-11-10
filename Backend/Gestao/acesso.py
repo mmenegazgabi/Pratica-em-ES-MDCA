@@ -23,6 +23,9 @@ vinculadas ao programa, e a administração.
 
 Atividades, chamadas e evidências (US-05): registram a coordenação e os educadores
 vinculados ao programa, e a administração.
+
+Alertas de infrequência e busca ativa (US-06): consultam e acompanham a coordenação e a
+assistência social vinculadas ao programa, e a administração (como no protótipo).
 """
 
 from dataclasses import dataclass
@@ -54,6 +57,9 @@ SEM_PERMISSAO_PARA_CADASTRAR = "Seu perfil não pode cadastrar nem alterar pesso
 
 PAPEIS_QUE_REGISTRAM_ATIVIDADES = {"coordenacao", "educador"}
 SEM_PERMISSAO_PARA_REGISTRAR = "Seu perfil não pode registrar atividades neste programa."
+
+PAPEIS_QUE_ACOMPANHAM_ALERTAS = {"coordenacao", "assistente_social"}
+SEM_ACESSO_A_ALERTAS = "Seu perfil não acompanha os alertas deste programa."
 
 
 @dataclass(frozen=True)
@@ -403,6 +409,66 @@ def exigir_registro_de_atividade(
     conexao: Connection = Depends(obter_conexao),
 ) -> Acesso:
     return verificar_registro_de_atividade(conexao, usuario_id, programa_id, requisicao=requisicao)
+
+
+def verificar_acompanhamento_de_alertas(
+    conexao: Connection,
+    usuario_id: str,
+    programa_id: str,
+    *,
+    alvo_id: Optional[str] = None,
+    requisicao: Optional[Request] = None,
+    hoje: Optional[date] = None,
+) -> Acesso:
+    """Quem consulta e acompanha os alertas de infrequência do programa (US-06)."""
+    if not programa_existe(conexao, programa_id):
+        raise HTTPException(status_code=404, detail=PROGRAMA_NAO_ENCONTRADO)
+    papeis = papeis_do_usuario(conexao, usuario_id, programa_id, hoje or date.today())
+    globais, no_programa = papeis or (set(), set())
+    acompanha = papeis is not None and (
+        bool(globais & PAPEIS_QUE_GERENCIAM_TODOS) or bool(no_programa & PAPEIS_QUE_ACOMPANHAM_ALERTAS)
+    )
+    if not acompanha:
+        _registrar_negacao(
+            conexao,
+            usuario_id,
+            alvo_tipo="alerta" if alvo_id else "programa",
+            alvo_id=alvo_id or programa_id,
+            operacao="acompanhar_alertas",
+            descricao="Tentativa de acessar alertas de infrequência sem permissão",
+            requisicao=requisicao,
+        )
+        raise HTTPException(status_code=403, detail=SEM_ACESSO_A_ALERTAS)
+    gerencia = bool(globais & PAPEIS_QUE_GERENCIAM_TODOS) or bool(no_programa & PAPEIS_QUE_GERENCIAM_O_PROGRAMA)
+    return Acesso(usuario_id=usuario_id, programa_id=programa_id, pode_gerenciar=gerencia)
+
+
+def programas_com_alertas_visiveis(conexao: Connection, usuario_id: str, hoje: Optional[date] = None) -> Optional[List[str]]:
+    """Programas cujos alertas o usuário acompanha; ``None`` quando são todos."""
+    ativo = conexao.execute(
+        sa.text("SELECT ativo FROM usuarios WHERE id = :id"), {"id": usuario_id}
+    ).scalar_one_or_none()
+    if not ativo:
+        return []
+    globais = set(
+        conexao.execute(
+            sa.text("SELECT papel_id FROM usuarios_papeis WHERE usuario_id = :id"), {"id": usuario_id}
+        ).scalars()
+    )
+    if globais & PAPEIS_QUE_GERENCIAM_TODOS:
+        return None
+    return list(
+        conexao.execute(
+            sa.text(
+                """
+                SELECT DISTINCT programa_id FROM vinculos_equipe
+                WHERE usuario_id = :id AND papel_id IN :papeis AND (data_saida IS NULL OR data_saida > :hoje)
+                ORDER BY programa_id
+                """
+            ).bindparams(sa.bindparam("papeis", expanding=True)),
+            {"id": usuario_id, "papeis": sorted(PAPEIS_QUE_ACOMPANHAM_ALERTAS), "hoje": hoje or date.today()},
+        ).scalars()
+    )
 
 
 def exigir_acesso_aos_usuarios(
