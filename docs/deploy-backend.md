@@ -45,9 +45,11 @@ O banco é consultado sob demanda, permitindo que a API inicie mesmo quando
 uma dependência estiver indisponível. A antiga tabela de teste `app_metadata`
 não é criada automaticamente durante o início do serviço.
 
-Os orçamentos da implementação atual ficam em memória. A infraestrutura
-PostgreSQL não altera essa regra: reiniciar o container perde esses registros,
-e diferentes instâncias não compartilham esse armazenamento. O upload herdado
+Com `DATABASE_URL` configurada, o Financeiro grava projetos, orçamentos,
+lançamentos, notificações e rascunhos no PostgreSQL, o mesmo banco da Gestão:
+reiniciar o container não perde nada e as instâncias enxergam os mesmos dados.
+Veja [persistencia-financeiro.md](persistencia-financeiro.md), inclusive a
+migration que precisa ser aplicada na produção. O upload herdado
 da infra ainda não implementa autenticação/RBAC; CORS não substitui autorização.
 
 ## Publicar

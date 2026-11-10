@@ -77,6 +77,9 @@ PRs não publicam o backend. Veja os detalhes em
 - [docs/relatorio-prestacao-contas.md](docs/relatorio-prestacao-contas.md) —
   estrutura do relatório de prestação de contas (US-06): campos, origem no
   banco e exemplo.
+- [docs/persistencia-financeiro.md](docs/persistencia-financeiro.md) — onde o
+  Financeiro grava os dados (PostgreSQL compartilhado com a Gestão), a migration a
+  aplicar na produção e como rodar com e sem banco.
 - [docs/permissoes-gestao.md](docs/permissoes-gestao.md) — matriz de
   permissões do Módulo de Gestão: o que cada papel pode fazer, por
   funcionalidade (US-01).

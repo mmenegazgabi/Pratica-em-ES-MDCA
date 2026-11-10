@@ -6,16 +6,19 @@
   projeto correspondente, calculados pela função de resumo do próprio Financeiro
   (``Financeiro/dashboard.resumo_por_projeto``, a mesma do dashboard da Diretoria).
 
-O Financeiro ainda guarda projetos, orçamentos e lançamentos **em memória**, num cadastro
-separado do canônico. Este módulo só **lê** esses dados, sem alterar nada do Financeiro,
-e acha o projeto correspondente ao programa assim:
+O Financeiro grava projetos, orçamentos e lançamentos no mesmo PostgreSQL (tabelas
+``projetos``, ``orcamentos``, ``orcamento_categorias`` e ``lancamentos``) e usa o cadastro
+canônico de programas como cadastro de projetos. Este módulo só **lê** esses dados, pela
+mesma conexão da consulta, com o repositório do próprio Financeiro
+(``Financeiro/persistencia.py``), e acha o projeto correspondente ao programa assim:
 
-1. pelo **id** (vale quando o Financeiro passar a usar a tabela ``projetos``);
+1. pelo **id** — o caso normal: os orçamentos do Financeiro apontam para o próprio programa;
 2. senão, pelo **nome**, sem diferenciar maiúsculas e acentos (a mesma regra que o
-   Financeiro usa para não repetir nomes).
+   Financeiro usa para não repetir nomes): orçamentos num projeto à parte com o mesmo
+   nome do programa (por exemplo, criado no Financeiro antes do programa existir).
 
-``vinculo`` diz qual dos dois casou (``id``, ``nome`` ou ``nenhum``). Os dados em memória
-somem a cada reinício da API.
+``vinculo`` diz qual dos dois casou (``id``, ``nome``), ou ``nenhum`` quando o programa
+ainda não tem orçamento no Financeiro.
 """
 
 import unicodedata
@@ -123,25 +126,41 @@ def execucao_fisica(
 
 
 def execucao_financeira(
-    programa: ProgramaDetalhado, inicio: Optional[date], fim: Optional[date]
+    conexao: Connection, programa: ProgramaDetalhado, inicio: Optional[date], fim: Optional[date]
 ) -> ExecucaoFinanceira:
-    """Leitura dos dados em memória do Financeiro, sem alterá-los."""
+    """Leitura dos dados do Financeiro no banco, sem alterá-los."""
     # Importados aqui: são os módulos da API integrada (Backend/main.py), os mesmos que
     # recebem os orçamentos e lançamentos.
     from Financeiro.dashboard import resumo_por_projeto
-    from Financeiro.projetos import listar_projetos
-    from Financeiro.routers.orcamentos import _orcamentos
+    from Financeiro.persistencia import MEMORIA, RepositorioBanco, usa_banco
 
-    projetos = listar_projetos()
-    projeto = next((p for p in projetos if p.id == programa.id), None)
+    # Sem banco o Financeiro roda em memória (testes e execução local); com banco, lê
+    # pela mesma conexão desta consulta.
+    repositorio = RepositorioBanco(conexao) if usa_banco() else MEMORIA
+    projetos = repositorio.listar_projetos()
+    orcamentos = repositorio.listar_orcamentos()
+    com_orcamento = {o.projeto_id for o in orcamentos}
+    # O próprio programa é um projeto do Financeiro (mesma tabela), então o que decide o
+    # vínculo é onde estão os orçamentos: no programa (id) ou num projeto à parte com o
+    # mesmo nome (nome). Sem orçamento em nenhum dos dois, não há o que mostrar.
+    projeto = next((p for p in projetos if p.id == programa.id and p.id in com_orcamento), None)
     vinculo = VINCULO_ID
     if projeto is None:
-        projeto = next((p for p in projetos if _chave(p.nome) == _chave(programa.nome)), None)
+        projeto = next(
+            (
+                p
+                for p in projetos
+                if p.id != programa.id
+                and p.id in com_orcamento
+                and _chave(p.nome) == _chave(programa.nome)
+            ),
+            None,
+        )
         vinculo = VINCULO_NOME
     if projeto is None:
         return ExecucaoFinanceira(VINCULO_NENHUM, None, None, 0.0, 0.0, 0.0, None)
 
-    [resumo] = resumo_por_projeto([projeto], list(_orcamentos), inicio, fim)
+    [resumo] = resumo_por_projeto([projeto], orcamentos, inicio, fim)
     executado = None
     if resumo.orcado > 0:
         executado = percentual(Decimal(str(resumo.realizado)), Decimal(str(resumo.orcado)))
@@ -172,5 +191,5 @@ def visao_integrada(
         inicio=inicio,
         fim=fim,
         fisica=execucao_fisica(conexao, programa_id, inicio, fim),
-        financeira=execucao_financeira(programa, inicio, fim) if com_financeiro else None,
+        financeira=execucao_financeira(conexao, programa, inicio, fim) if com_financeiro else None,
     )

@@ -122,7 +122,7 @@ function financeira(dados) {
         ? el(
             "p",
             { class: "muted integrada-vinculo", role: "note" },
-            `O projeto do Financeiro foi encontrado pelo nome (${dados.projeto}), porque o Financeiro ainda tem cadastro próprio de projetos. Quando ele usar o cadastro único, o vínculo passa a ser pelo identificador.`,
+            `O projeto do Financeiro foi encontrado pelo nome (${dados.projeto}): os orçamentos estão num projeto separado, com o mesmo nome do programa. Para o vínculo ser pelo identificador, cadastre os próximos orçamentos no próprio programa.`,
           )
         : null,
     ),

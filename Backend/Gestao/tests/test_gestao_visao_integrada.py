@@ -1,8 +1,8 @@
 """Visão integrada da execução física e financeira (T-78 · US-12).
 
-A parte física vem das tabelas de Gestão; a financeira, dos dados em memória do
-Financeiro, que estes testes preparam diretamente nos módulos dele (só leitura no código
-de Gestão).
+A parte física vem das tabelas de Gestão; a financeira, das tabelas do Financeiro no
+mesmo banco, que estes testes preparam com o repositório do próprio Financeiro (só
+leitura no código de Gestão).
 """
 
 from datetime import date
@@ -10,25 +10,15 @@ from datetime import date
 import pytest
 import sqlalchemy as sa
 
-from Financeiro import projetos as fin_projetos
 from Financeiro.orcamento import Lancamento, Orcamento, StatusLancamento
-from Financeiro.routers import orcamentos as fin_orcamentos
+from Financeiro.persistencia import RepositorioBanco
+from Financeiro.projetos import Projeto
 
 VISAO = "/gestao/programas/p-1/visao-integrada"
 
 
 @pytest.fixture
-def memoria_do_financeiro():
-    """Esvazia os cadastros em memória do Financeiro antes e depois de cada teste."""
-    fin_projetos._projetos.clear()
-    fin_orcamentos._orcamentos.clear()
-    yield
-    fin_projetos._projetos.clear()
-    fin_orcamentos._orcamentos.clear()
-
-
-@pytest.fixture
-def programa(banco, memoria_do_financeiro):
+def programa(banco):
     """Programa p-1 (Semear) com plano de ação, equipe e papéis.
 
     - ana: coordenação em p-1       - jessica: educadora em p-1
@@ -90,26 +80,36 @@ def programa(banco, memoria_do_financeiro):
     return banco
 
 
-def projeto_financeiro(nome="Semear", projeto_id=None, orcado=10000, aprovados=(2500,), pendentes=(400,)):
-    """Projeto e orçamento no Financeiro (em memória), com lançamentos em 2026."""
-    projeto = fin_projetos.registrar_projeto(nome)
-    if projeto_id:
-        projeto.id = projeto_id
+def projeto_financeiro(banco, nome="Semear", projeto_id=None, orcado=10000, aprovados=(2500,), pendentes=(400,)):
+    """Orçamento do Financeiro gravado no banco, com lançamentos em 2026.
+
+    Com ``projeto_id`` o orçamento é do próprio programa (o caso normal: vínculo pelo id).
+    Sem ele, vai para um projeto à parte com o ``nome`` dado (vínculo pelo nome).
+    """
     lancamentos = [
         Lancamento(valor=v, status=StatusLancamento.APROVADO, data_despesa=date(2026, 5, 15)) for v in aprovados
     ] + [Lancamento(valor=v, status=StatusLancamento.PENDENTE, data_despesa=date(2026, 5, 20)) for v in pendentes]
-    fin_orcamentos._orcamentos.append(
-        Orcamento(
-            id=f"orc-{projeto.id}",
-            projeto_id=projeto.id,
-            valor_total=orcado,
-            data_inicio=date(2026, 1, 1),
-            data_fim=date(2026, 12, 31),
-            categorias_despesa=["materiais"],
-            lancamentos=lancamentos,
+    for lancamento in lancamentos:
+        lancamento.descricao, lancamento.categoria = "Despesa", "materiais"
+    with banco.connect() as conexao:
+        repositorio = RepositorioBanco(conexao)
+        if projeto_id is None:
+            projeto = Projeto(nome=nome)
+            repositorio.inserir_projeto(projeto)
+            projeto_id = projeto.id
+        repositorio.inserir_orcamento(
+            Orcamento(
+                id=f"orc-{projeto_id}",
+                projeto_id=projeto_id,
+                valor_total=orcado,
+                data_inicio=date(2026, 1, 1),
+                data_fim=date(2026, 12, 31),
+                categorias_despesa=["materiais"],
+                lancamentos=lancamentos,
+            )
         )
-    )
-    return projeto
+        repositorio.confirmar()
+    return projeto_id
 
 
 def como(cabecalhos, usuario):
@@ -117,7 +117,7 @@ def como(cabecalhos, usuario):
 
 
 def test_junta_execucao_fisica_e_financeira_do_programa(cliente, cabecalhos, programa):
-    projeto_financeiro()
+    projeto_financeiro(programa)
 
     resposta = cliente.get(VISAO, headers=como(cabecalhos, "ana"))
 
@@ -142,7 +142,7 @@ def test_junta_execucao_fisica_e_financeira_do_programa(cliente, cabecalhos, pro
 
 
 def test_periodo_filtra_o_realizado_fisico_e_o_financeiro(cliente, cabecalhos, programa):
-    projeto_financeiro()
+    projeto_financeiro(programa)
 
     resposta = cliente.get(VISAO, params={"inicio": "2026-08-01", "fim": "2026-08-31"}, headers=como(cabecalhos, "ana"))
 
@@ -154,7 +154,7 @@ def test_periodo_filtra_o_realizado_fisico_e_o_financeiro(cliente, cabecalhos, p
 
 
 def test_projeto_do_financeiro_com_o_mesmo_id_casa_pelo_id(cliente, cabecalhos, programa):
-    projeto_financeiro(nome="Nome diferente no Financeiro", projeto_id="p-1")
+    projeto_financeiro(programa, projeto_id="p-1")
 
     financeira = cliente.get(VISAO, headers=como(cabecalhos, "ana")).json()["financeira"]
 
@@ -165,7 +165,7 @@ def test_projeto_do_financeiro_com_o_mesmo_id_casa_pelo_id(cliente, cabecalhos, 
 def test_nome_casa_sem_diferenciar_maiusculas_e_acentos(cliente, cabecalhos, programa):
     with programa.begin() as conexao:
         conexao.execute(sa.text("UPDATE projetos SET nome = 'Ação Semear' WHERE id = 'p-1'"))
-    projeto_financeiro(nome="acao semear")
+    projeto_financeiro(programa, nome="acao semear")
 
     assert cliente.get(VISAO, headers=como(cabecalhos, "ana")).json()["financeira"]["vinculo"] == "nome"
 
@@ -188,7 +188,7 @@ def test_programa_sem_projeto_no_financeiro_mostra_so_a_execucao_fisica(cliente,
 
 @pytest.mark.parametrize("usuario, ve_financeiro", [("ana", True), ("dora", True), ("jessica", False)])
 def test_valores_financeiros_so_para_coordenacao_direcao_e_administracao(cliente, cabecalhos, programa, usuario, ve_financeiro):
-    projeto_financeiro()
+    projeto_financeiro(programa)
 
     visao = cliente.get(VISAO, headers=como(cabecalhos, usuario)).json()
 
@@ -201,7 +201,7 @@ def test_sem_acesso_ao_programa_403(cliente, cabecalhos, programa):
 
 
 def test_consulta_fica_na_trilha_de_auditoria(cliente, cabecalhos, programa):
-    projeto_financeiro()
+    projeto_financeiro(programa)
     cliente.get(VISAO, params={"inicio": "2026-01-01"}, headers=como(cabecalhos, "jessica"))
 
     with programa.connect() as conexao:

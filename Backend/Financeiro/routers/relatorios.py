@@ -34,7 +34,7 @@ if __package__ == "routers":
         montar_relatorio,
         nome_do_arquivo,
     )
-    from routers.orcamentos import _orcamentos
+    from persistencia import obter_repositorio
 else:
     from ..autenticacao import Papel, exigir_papel
     from ..projetos import buscar_projeto
@@ -47,7 +47,7 @@ else:
         montar_relatorio,
         nome_do_arquivo,
     )
-    from .orcamentos import _orcamentos
+    from ..persistencia import obter_repositorio
 
 router = APIRouter(tags=["relatorios"])
 
@@ -100,14 +100,15 @@ def gerar_prestacao_de_contas(
     data_fim: date = Query(..., description="Fim do período (AAAA-MM-DD)."),
     formato: FormatoRelatorio = Query(FormatoRelatorio.PDF, description="pdf ou xlsx."),
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
+    repositorio=Depends(obter_repositorio),
 ) -> Response:
-    projeto = buscar_projeto(projeto_id)
+    projeto = buscar_projeto(projeto_id, repositorio)
     if projeto is None:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
     try:
         relatorio = montar_relatorio(
             projeto,
-            list(_orcamentos),
+            repositorio.listar_orcamentos(),
             data_inicio,
             data_fim,
             url_base=_url_base(request),

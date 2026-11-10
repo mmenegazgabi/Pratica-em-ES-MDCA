@@ -7,13 +7,13 @@ from pydantic import BaseModel, ConfigDict
 if __package__ == "routers":
     from autenticacao import Papel, exigir_papel
     from dashboard import ResumoProjeto, resumo_por_projeto
+    from persistencia import obter_repositorio
     from projetos import StatusProjeto, listar_projetos
-    from routers.orcamentos import _orcamentos
 else:
     from ..autenticacao import Papel, exigir_papel
     from ..dashboard import ResumoProjeto, resumo_por_projeto
+    from ..persistencia import obter_repositorio
     from ..projetos import StatusProjeto, listar_projetos
-    from .orcamentos import _orcamentos
 
 router = APIRouter(tags=["dashboard"])
 
@@ -35,6 +35,7 @@ def resumo_dos_projetos(
     data_fim: Optional[date] = Query(None, description="Fim do período (AAAA-MM-DD)."),
     status: Optional[StatusProjeto] = Query(None, description="ativo ou encerrado."),
     _papel: Papel = Depends(exigir_papel(Papel.DIRECAO)),
+    repositorio=Depends(obter_repositorio),
 ) -> List[ResumoProjeto]:
     # T-29 · US-07: orçado, realizado e saldo de todos os projetos numa
     # única resposta, para o dashboard executivo da Diretoria.
@@ -44,5 +45,9 @@ def resumo_dos_projetos(
             detail="data_fim não pode ser anterior a data_inicio",
         )
     return resumo_por_projeto(
-        listar_projetos(), list(_orcamentos), data_inicio, data_fim, status
+        listar_projetos(repositorio),
+        repositorio.listar_orcamentos(),
+        data_inicio,
+        data_fim,
+        status,
     )

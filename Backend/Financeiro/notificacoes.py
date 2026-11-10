@@ -62,8 +62,31 @@ TIPO_POR_STATUS = {
 }
 
 
+def criar_notificacao(lancamento: Lancamento) -> Optional[Notificacao]:
+    """Notificação do resultado para o autor; ``None`` se não houver o que avisar.
+
+    Só monta a notificação: quem guarda é a caixa em memória ou o banco
+    (``persistencia.py``).
+    """
+    tipo = TIPO_POR_STATUS.get(lancamento.status)
+    if tipo is None or not lancamento.autor_id:
+        return None
+    return Notificacao(
+        destinatario_id=lancamento.autor_id,
+        lancamento_id=lancamento.id,
+        tipo=tipo,
+        mensagem=montar_mensagem(lancamento),
+        motivo=lancamento.motivo_rejeicao
+        if tipo == TipoNotificacao.LANCAMENTO_REJEITADO
+        else None,
+    )
+
+
 class CaixaDeNotificacoes:
-    """Armazenamento em memória, como o restante do Financeiro por enquanto."""
+    """Armazenamento em memória (testes e execução local sem banco).
+
+    Com ``DATABASE_URL`` as notificações ficam na tabela ``notificacoes``.
+    """
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -71,18 +94,9 @@ class CaixaDeNotificacoes:
 
     def notificar_resultado(self, lancamento: Lancamento) -> Optional[Notificacao]:
         """Avisa o autor que o lançamento foi aprovado ou rejeitado."""
-        tipo = TIPO_POR_STATUS.get(lancamento.status)
-        if tipo is None or not lancamento.autor_id:
+        notificacao = criar_notificacao(lancamento)
+        if notificacao is None:
             return None
-        notificacao = Notificacao(
-            destinatario_id=lancamento.autor_id,
-            lancamento_id=lancamento.id,
-            tipo=tipo,
-            mensagem=montar_mensagem(lancamento),
-            motivo=lancamento.motivo_rejeicao
-            if tipo == TipoNotificacao.LANCAMENTO_REJEITADO
-            else None,
-        )
         with self._lock:
             self._notificacoes.append(notificacao)
         return notificacao

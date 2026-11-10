@@ -1,17 +1,16 @@
 """Testes da US-12 (T-80): identificador do programa, acesso por papel, trilha de auditoria
 e o fluxo ponta a ponta da integração.
 
-Ponta a ponta: o projeto, o orçamento, o lançamento e a aprovação são feitos pelas rotas
-do próprio Financeiro, na mesma API integrada, e a Visão integrada de Gestão mostra os
+Ponta a ponta: o orçamento, o lançamento e a aprovação são feitos pelas rotas do próprio
+Financeiro, na mesma API integrada e no mesmo banco. O programa cadastrado na Gestão já é
+o projeto do Financeiro (tabela ``projetos``), e a Visão integrada de Gestão mostra os
 valores novos do mesmo programa e período, sem recadastro e sem dado desatualizado.
 """
 
 import pytest
 import sqlalchemy as sa
 
-from Financeiro import projetos as fin_projetos
 from Financeiro.comprovantes import ArmazenamentoEmMemoria
-from Financeiro.routers import orcamentos as fin_orcamentos
 from Financeiro.routers.comprovantes import obter_armazenamento
 
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
@@ -25,8 +24,6 @@ def plataforma(app, banco, cabecalhos):
     - ana: coordenação em p-1       - jessica: educadora em p-1
     - dora: direção da plataforma   - bruno: sem vínculo
     """
-    fin_projetos._projetos.clear()
-    fin_orcamentos._orcamentos.clear()
     app.dependency_overrides[obter_armazenamento] = ArmazenamentoEmMemoria
     with banco.begin() as conexao:
         conexao.execute(
@@ -60,8 +57,6 @@ def plataforma(app, banco, cabecalhos):
         )
     yield banco
     app.dependency_overrides.pop(obter_armazenamento, None)
-    fin_projetos._projetos.clear()
-    fin_orcamentos._orcamentos.clear()
 
 
 def financeiro(cabecalhos, papel, usuario):
@@ -85,13 +80,15 @@ def visao(cliente, cabecalhos, usuario="ana", **periodo):
 def test_orcamento_e_lancamento_aprovado_no_financeiro_aparecem_na_visao_integrada(cliente, cabecalhos, plataforma):
     coordenacao = financeiro(cabecalhos, "coordenacao", "coordenadora-ana")
 
-    # 1. Financeiro: projeto do programa (mesmo nome do cadastro de Gestão) e orçamento.
-    projeto = cliente.post("/projetos", json={"nome": "Semear"}, headers=coordenacao)
-    assert projeto.status_code == 201
+    # 1. Financeiro: o programa da Gestão já aparece como projeto, sem recadastro; um
+    # segundo cadastro com o mesmo nome é recusado. O orçamento vai para o próprio programa.
+    projetos = cliente.get("/projetos", headers=coordenacao).json()
+    assert [(p["id"], p["nome"]) for p in projetos] == [("p-1", "Semear")]
+    assert cliente.post("/projetos", json={"nome": "Semear"}, headers=coordenacao).status_code == 409
     orcamento = cliente.post(
         "/orcamentos",
         json={
-            "projeto_id": projeto.json()["id"],
+            "projeto_id": "p-1",
             "valor_total": 5000,
             "data_inicio": "2026-01-01",
             "data_fim": "2026-12-31",
@@ -100,8 +97,9 @@ def test_orcamento_e_lancamento_aprovado_no_financeiro_aparecem_na_visao_integra
         headers=coordenacao,
     )
     assert orcamento.status_code == 201
+    assert orcamento.json()["projeto_id"] == "p-1"
     antes = visao(cliente, cabecalhos)["financeira"]
-    assert (antes["orcado"], antes["realizado"], antes["saldo"]) == (5000.0, 0.0, 5000.0)
+    assert (antes["vinculo"], antes["orcado"], antes["realizado"], antes["saldo"]) == ("id", 5000.0, 0.0, 5000.0)
 
     # 2. Financeiro: lançamento com comprovante; pendente ainda não conta no realizado.
     lancamento = cliente.post(
@@ -146,13 +144,45 @@ def test_gestao_e_visao_integrada_usam_o_mesmo_identificador_do_programa(cliente
 
 
 def test_quando_o_financeiro_usa_o_mesmo_registro_o_vinculo_e_pelo_id(cliente, cabecalhos, plataforma):
-    # Simula o Financeiro já no cadastro canônico: o projeto dele tem o id do programa.
-    projeto = fin_projetos.registrar_projeto("Nome antigo no Financeiro")
-    projeto.id = "p-1"
+    # O Financeiro usa o cadastro canônico: o projeto dele é o próprio programa.
+    assert visao(cliente, cabecalhos)["financeira"]["vinculo"] == "nenhum"
+    cliente.post(
+        "/orcamentos",
+        json={
+            "projeto_id": "p-1",
+            "valor_total": 1000,
+            "data_inicio": "2026-01-01",
+            "data_fim": "2026-12-31",
+            "categorias_despesa": ["materiais"],
+        },
+        headers=financeiro(cabecalhos, "coordenacao", "coordenadora-ana"),
+    )
 
     financeira = visao(cliente, cabecalhos)["financeira"]
 
-    assert (financeira["vinculo"], financeira["projeto_id"]) == ("id", "p-1")
+    assert (financeira["vinculo"], financeira["projeto_id"], financeira["projeto"]) == ("id", "p-1", "Semear")
+
+
+def test_dados_do_financeiro_ficam_no_banco_e_nao_somem_com_reinicio(cliente, cabecalhos, plataforma):
+    coordenacao = financeiro(cabecalhos, "coordenacao", "coordenadora-ana")
+    criado = cliente.post(
+        "/orcamentos",
+        json={
+            "projeto_id": "p-1",
+            "valor_total": 800,
+            "data_inicio": "2026-01-01",
+            "data_fim": "2026-12-31",
+            "categorias_despesa": ["materiais"],
+        },
+        headers=coordenacao,
+    )
+    assert criado.status_code == 201
+
+    with plataforma.connect() as conexao:
+        gravado = conexao.execute(
+            sa.text("SELECT projeto_id, valor_total FROM orcamentos WHERE id = :id"), {"id": criado.json()["id"]}
+        ).one()
+    assert (gravado.projeto_id, float(gravado.valor_total)) == ("p-1", 800.0)
 
 
 # --- Acesso por papel ----------------------------------------------------------
@@ -160,8 +190,6 @@ def test_quando_o_financeiro_usa_o_mesmo_registro_o_vinculo_e_pelo_id(cliente, c
 
 @pytest.mark.parametrize("usuario, ve_valores", [("ana", True), ("dora", True), ("jessica", False)])
 def test_papel_sem_acesso_aos_valores_financeiros_recebe_so_a_parte_fisica(cliente, cabecalhos, plataforma, usuario, ve_valores):
-    fin_projetos.registrar_projeto("Semear")
-
     resposta = visao(cliente, cabecalhos, usuario)
 
     assert (resposta["financeira"] is not None) is ve_valores
