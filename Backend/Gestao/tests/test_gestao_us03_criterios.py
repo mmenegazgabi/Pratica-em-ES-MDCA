@@ -176,8 +176,10 @@ def test_menor_sem_responsavel_legal_e_bloqueado_e_nada_e_gravado(cliente, cabec
     assert resposta.status_code == 400
     assert resposta.json()["detail"] == "Informe ao menos um responsável legal para uma pessoa menor de idade."
     # Nem a pessoa, nem o núcleo novo, nem o responsável ou o vínculo com ele.
-    tabelas = ("pessoas", "nucleos_familiares", "responsaveis", "pessoas_responsaveis")
-    assert [total(programa, t) for t in tabelas] == [3, 1, 1, 1]
+    assert total(programa, "pessoas") == 3
+    assert total(programa, "nucleos_familiares") == 1
+    assert total(programa, "responsaveis") == 1
+    assert total(programa, "pessoas_responsaveis") == 1
 
 
 @pytest.mark.parametrize(
