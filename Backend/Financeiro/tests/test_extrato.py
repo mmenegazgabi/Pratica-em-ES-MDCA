@@ -129,16 +129,73 @@ def test_formatos_de_data(data):
     assert resposta.json()["itens"][0]["data"] == "2026-10-05"
 
 
-def test_linha_repetida_nao_duplica_dentro_do_arquivo_e_entre_importacoes():
+def test_reimportar_o_mesmo_arquivo_nao_duplica_e_iguais_do_mesmo_arquivo_entram():
     texto = "data;descricao;valor\n2026-10-05;PIX;10,00\n05/10/2026;PIX;10,00\n2026-10-06;PIX;10,00\n"
 
     primeira = importar(texto).json()
     segunda = importar(texto).json()
 
-    assert (primeira["importados"], primeira["ignorados_repetidos"]) == (2, 1)
+    assert (primeira["importados"], primeira["ignorados_repetidos"]) == (3, 0)
     assert (segunda["importados"], segunda["ignorados_repetidos"]) == (0, 3)
     assert segunda["itens"] == []
+    assert len(listar().json()) == 3
+
+
+def test_multiconjunto_entra_so_o_que_passa_do_ja_guardado():
+    importar("data;descricao;valor\n2026-10-05;PIX;10,00\n")
+
+    resposta = importar("data;descricao;valor\n2026-10-05;PIX;10,00\n2026-10-05;PIX;10,00\n").json()
+
+    assert (resposta["importados"], resposta["ignorados_repetidos"]) == (1, 1)
     assert len(listar().json()) == 2
+
+
+def test_csv_malformado_retorna_400_e_nao_500():
+    nao_fechada = b'data;descricao;valor\n2026-10-05;"' + b"x" * 200000 + b";1,00\n"
+    assert importar(nao_fechada).status_code == 400
+    resposta = importar(b'data;descricao;valor\n2026-10-05;"abc;1,00\n')
+    assert resposta.status_code in (400, 201)
+    campo_enorme = b"data;descricao;valor\n2026-10-05;" + b'"' + b"x" * 140000 + b'";1,00\n'
+    resposta = importar(campo_enorme)
+    assert resposta.status_code == 400
+    assert resposta.json()["detail"] == "Linha 2: linha mal formada."
+
+
+def test_valor_gigante_retorna_400():
+    resposta = importar("data;descricao;valor\n2026-10-05;A;" + "9" * 400 + "\n")
+
+    assert resposta.status_code == 400
+    assert resposta.json()["detail"] == "Linha 2: valor inválido."
+    assert importar("data;descricao;valor\n2026-10-05;A;1000000000000,00\n").status_code == 400
+
+
+def test_cp1252_reticencias_e_quebras_de_linha_mistas():
+    corpo = "data;descricao;valor\r2026-10-05;Pix…;1,00\r\n2026-10-06;Outro;2,00\n".encode("cp1252")
+
+    resposta = importar(corpo)
+
+    assert resposta.status_code == 201
+    assert [i["descricao"] for i in resposta.json()["itens"]] == ["Pix…", "Outro"]
+
+
+@pytest.mark.parametrize("texto, esperado", [("0.500", 0.5), ("12.5", 12.5), ("1.234.567", 1234567.0)])
+def test_ponto_so_decimal_ou_milhar(texto, esperado):
+    resposta = importar(f"data;descricao;valor\n2026-10-05;A;{texto}\n")
+
+    assert resposta.json()["itens"][0]["valor"] == esperado
+
+
+def test_ponto_mal_posicionado_e_invalido():
+    resposta = importar("data;descricao;valor\n2026-10-05;A;1.23.4\n")
+
+    assert resposta.status_code == 400
+    assert resposta.json()["detail"] == "Linha 2: valor inválido."
+
+
+def test_caracteres_de_controle_saem_da_descricao():
+    resposta = importar("data;descricao;valor\n2026-10-05;Pix\x00 \x07da\tAna;1,00\n")
+
+    assert resposta.json()["itens"][0]["descricao"] == "Pix da Ana"
 
 
 def test_mesma_data_e_descricao_com_valor_diferente_e_outro_item():

@@ -43,13 +43,15 @@ def consultar(
     if modulo:
         parametros["modulo"] = modulo
         condicoes.append("l.modulo = :modulo")
-    dia = f"(l.ocorrido_em AT TIME ZONE '{FUSO}')::date"
+    # Limites do dia no fuso local, comparados com a coluna crua (usa o índice).
     if desde:
         parametros["desde"] = desde
-        condicoes.append(f"{dia} >= :desde")
+        condicoes.append(f"l.ocorrido_em >= (CAST(:desde AS date)::timestamp AT TIME ZONE '{FUSO}')")
     if ate:
         parametros["ate"] = ate
-        condicoes.append(f"{dia} <= :ate")
+        condicoes.append(
+            f"l.ocorrido_em < ((CAST(:ate AS date) + 1)::timestamp AT TIME ZONE '{FUSO}')"
+        )
 
     onde = ("WHERE " + " AND ".join(condicoes)) if condicoes else ""
     linhas = conexao.execute(

@@ -160,3 +160,12 @@ def test_erro_de_banco_vira_503(cliente, cabecalhos, monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
     assert _ler(cliente, cabecalhos).status_code == 503
+
+
+def test_dia_e_o_de_sao_paulo(banco, cliente, cabecalhos):
+    # 01:00 UTC ainda é 22:00 do dia 4 em São Paulo.
+    _evento(banco, acao="noite", ocorrido_em="2026-10-05T01:00:00+00:00")
+
+    assert [e["acao"] for e in _ler(cliente, cabecalhos, desde="2026-10-04", ate="2026-10-04").json()] == ["noite"]
+    assert _ler(cliente, cabecalhos, desde="2026-10-05").json() == []
+    assert _ler(cliente, cabecalhos, ate="2026-10-03").json() == []

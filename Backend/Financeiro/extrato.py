@@ -6,6 +6,7 @@ lançamento a que ele foi ligado.
 """
 
 import csv
+from collections import Counter
 import io
 import re
 import threading
@@ -18,6 +19,9 @@ from typing import List, Optional, Tuple
 
 TAMANHO_MAXIMO_BYTES = 1024 * 1024
 DESCRICAO_TAMANHO_MAXIMO = 500
+LIMITE_VALOR = Decimal("1e12")
+_QUEBRA_DE_LINHA = re.compile(r"\r\n|\r|\n")
+_CONTROLE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
 
 class ExtratoInvalido(ValueError):
@@ -50,8 +54,8 @@ def _decodificar(conteudo: bytes) -> str:
     try:
         return conteudo.decode("utf-8-sig")
     except UnicodeDecodeError:
-        # Extratos de banco costumam sair em Windows-1252/Latin-1.
-        return conteudo.decode("latin-1")
+        # Extratos de banco costumam sair em Windows-1252.
+        return conteudo.decode("cp1252", errors="replace")
 
 
 def _converter_data(texto: str) -> date:
@@ -80,16 +84,20 @@ def _converter_valor(texto: str) -> float:
         if limpo.count(",") > 1:
             raise ValueError(texto)
         limpo = limpo.replace(",", ".")
-    elif limpo.count(".") > 1 or re.fullmatch(r"[+-]?\d{1,3}\.\d{3}", limpo):
-        # Só pontos: vários, ou um seguido de exatamente três dígitos, é milhar.
-        limpo = limpo.replace(".", "")
+    elif "." in limpo:
+        # Só pontos: milhar quando a parte inteira é "1.234" ou "1.234.567";
+        # um ponto só, com outra forma ("0.500", "12.5"), é decimal.
+        if re.fullmatch(r"[+-]?[1-9]\d{0,2}(\.\d{3})+", limpo):
+            limpo = limpo.replace(".", "")
+        elif limpo.count(".") > 1:
+            raise ValueError(texto)
     try:
         valor = Decimal(limpo)
+        if not valor.is_finite() or abs(valor) >= LIMITE_VALOR:
+            raise ValueError(texto)
+        return float(round(valor, 2))
     except InvalidOperation as erro:
         raise ValueError(texto) from erro
-    if not valor.is_finite():
-        raise ValueError(texto)
-    return float(round(valor, 2))
 
 
 def _achar_coluna(cabecalho: List[str], nomes: Tuple[str, ...]) -> Optional[int]:
@@ -100,20 +108,23 @@ def _achar_coluna(cabecalho: List[str], nomes: Tuple[str, ...]) -> Optional[int]
 
 
 def ler_csv(conteudo: bytes) -> List[ItemExtrato]:
-    """Converte o CSV em itens (repetidas são descartadas depois, na caixa).
+    """Converte o CSV em itens (linhas iguais no mesmo arquivo são transações distintas).
 
     Falha inteira, com o número da linha, se qualquer linha for inválida.
     """
     if len(conteudo) > TAMANHO_MAXIMO_BYTES:
         raise ExtratoInvalido("Arquivo acima de 1 MB.")
-    linhas = _decodificar(conteudo).splitlines()
+    linhas = _QUEBRA_DE_LINHA.split(_decodificar(conteudo))
     primeira = next((i for i, linha in enumerate(linhas) if linha.strip()), None)
     if primeira is None:
         raise ExtratoInvalido("Arquivo vazio.")
     separador = ";" if linhas[primeira].count(";") > linhas[primeira].count(",") else ","
 
     leitor = csv.reader(io.StringIO("\n".join(linhas[primeira:])), delimiter=separador)
-    cabecalho = [_normalizar_cabecalho(c) for c in next(leitor)]
+    try:
+        cabecalho = [_normalizar_cabecalho(c) for c in next(leitor)]
+    except csv.Error:
+        raise ExtratoInvalido(f"Linha {primeira + 1}: linha mal formada.") from None
     col_data = _achar_coluna(cabecalho, ("data",))
     col_descricao = _achar_coluna(cabecalho, ("descricao", "historico"))
     col_valor = _achar_coluna(cabecalho, ("valor",))
@@ -123,7 +134,13 @@ def ler_csv(conteudo: bytes) -> List[ItemExtrato]:
         )
 
     itens: List[ItemExtrato] = []
-    for celulas in leitor:
+    while True:
+        try:
+            celulas = next(leitor)
+        except StopIteration:
+            break
+        except csv.Error:
+            raise ExtratoInvalido(f"Linha {primeira + leitor.line_num}: linha mal formada.") from None
         if not any(c.strip() for c in celulas):
             continue
         # Linha do arquivo original (o cabeçalho pode não ser a primeira).
@@ -134,7 +151,7 @@ def ler_csv(conteudo: bytes) -> List[ItemExtrato]:
             data = _converter_data(celulas[col_data])
         except ValueError:
             raise ExtratoInvalido(f"Linha {numero}: data inválida.") from None
-        descricao = " ".join(celulas[col_descricao].split())
+        descricao = " ".join(_CONTROLE.sub(" ", celulas[col_descricao]).split())
         if not descricao:
             raise ExtratoInvalido(f"Linha {numero}: descrição obrigatória.")
         if len(descricao) > DESCRICAO_TAMANHO_MAXIMO:
@@ -160,15 +177,20 @@ class CaixaDoExtrato:
         self._itens: List[ItemExtrato] = []
 
     def importar(self, novos: List[ItemExtrato]) -> Tuple[List[ItemExtrato], int]:
-        """Guarda os itens que ainda não existem; devolve (guardados, repetidos)."""
+        """Guarda os itens novos; devolve (guardados, repetidos).
+
+        Regra de multiconjunto: para cada (data, descrição, valor), entram
+        ``max(0, quantas_no_arquivo - quantas_já_guardadas)``. Importar o mesmo
+        arquivo de novo não muda nada; dois PIX iguais no mesmo dia entram os dois.
+        """
         with self._lock:
-            existentes = {(i.data, i.descricao, i.valor) for i in self._itens}
+            ja_guardados = Counter((i.data, i.descricao, i.valor) for i in self._itens)
             guardados = []
             for item in novos:
                 chave = (item.data, item.descricao, item.valor)
-                if chave in existentes:
+                if ja_guardados[chave] > 0:
+                    ja_guardados[chave] -= 1
                     continue
-                existentes.add(chave)
                 self._itens.append(item)
                 guardados.append(item)
         return guardados, len(novos) - len(guardados)
