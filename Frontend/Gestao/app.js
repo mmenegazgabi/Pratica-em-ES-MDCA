@@ -12,7 +12,7 @@ import { mostrarUsuarios } from './telas/usuarios.js';
 import { mostrarCadastroDePessoa, mostrarPessoa, mostrarPessoas } from './telas/pessoas.js';
 import { mostrarCadastroDeTurma, mostrarTurma, mostrarTurmas } from './telas/turmas.js';
 import { mostrarVisaoIntegrada } from './telas/visao-integrada.js';
-import { mostrarAgenda, mostrarRegistro, mostrarSincronizacao } from './telas/atividades.js';
+import { mostrarAgenda, mostrarEncontro, mostrarRegistro, mostrarSincronizacao } from './telas/atividades.js';
 import { mostrarAlerta, mostrarAlertas } from './telas/alertas.js';
 import { armazenamentoDoAparelho, criarFila } from './base/fila.js';
 import { apagarCopias } from './base/copia-local.js';
@@ -252,8 +252,8 @@ function classesApiPage(id,tab,step){const tela='<div id="tela-api"></div>',volt
 function mountClassesApi(id,tab,step){const tela=$('#tela-api');if(!tela)return;const pid=id&&id!=='nova'?id:'';if(!pid||!tab)return mostrarTurmas(tela,{programaInicial:pid,podeGerenciar:can('manage')});if(tab==='nova')return mostrarCadastroDeTurma(tela,pid,{ir:go,avisar:toast});if(step==='editar')return mostrarCadastroDeTurma(tela,pid,{turmaId:tab,ir:go,avisar:toast});mostrarTurma(tela,pid,tab,{aba:step||'participantes',podeGerenciar:can('manage'),avisar:toast})}
 /* Atividades, registro em campo e sincronização ligados à API da T-56 (T-57). Os ids do protótipo (a1…) continuam na demonstração. */
 const activitiesApiRoute=(s,id)=>s==='atividades'&&id!=='nova'&&!find('activities',id);
-function activitiesApiPage(id,tab){const tela='<div id="tela-api"></div>';if(id&&tab==='registro')return can('record')?head('Registrar o encontro','Atividade, chamada e evidências. Sem conexão, o registro fica no dispositivo.',link('Voltar à agenda','/atividades/'+encodeURIComponent(id)))+tela:denied();return head('Atividades e frequência','Registre o que acontece em cada encontro.')+tela}
-function mountActivitiesApi(id,tab,step){const tela=$('#tela-api');if(!tela)return;if(id&&tab==='registro'&&step){const data=new URLSearchParams(location.hash.split('?')[1]||'').get('data')||'';return mostrarRegistro(tela,id,step,data,{fila:filaDeCampo,ir:go,avisar:toast})}mostrarAgenda(tela,{programaInicial:id||'',podeRegistrar:can('record'),fila:filaDeCampo})}
+function activitiesApiPage(id,tab){const tela='<div id="tela-api"></div>';if(id&&tab==='encontro')return head('Encontro registrado','Chamada e evidências do encontro.',link('Voltar à agenda','/atividades/'+encodeURIComponent(id)))+tela;if(id&&tab==='registro')return can('record')?head('Registrar o encontro','Atividade, chamada e evidências. Sem conexão, o registro fica no dispositivo.',link('Voltar à agenda','/atividades/'+encodeURIComponent(id)))+tela:denied();return head('Atividades e frequência','Registre o que acontece em cada encontro.')+tela}
+function mountActivitiesApi(id,tab,step){const tela=$('#tela-api');if(!tela)return;if(id&&tab==='encontro'&&step)return mostrarEncontro(tela,id,step,{avisar:toast});if(id&&tab==='registro'&&step){const data=new URLSearchParams(location.hash.split('?')[1]||'').get('data')||'';return mostrarRegistro(tela,id,step,data,{fila:filaDeCampo,ir:go,avisar:toast})}mostrarAgenda(tela,{programaInicial:id||'',podeRegistrar:can('record'),fila:filaDeCampo})}
 /* Alertas de infrequência e busca ativa pela API da T-59 (T-60): #/alertas[/id]. Os alertas fictícios do protótipo (al1…) seguem na demonstração. */
 const alertsApiRoute=(s,id)=>s==='alertas'&&(!id||!find('alerts',id));
 function alertsApiPage(id){const tela='<div id="tela-api"></div>';if(id)return head('Acompanhamento','',link('Voltar aos alertas','/alertas'))+tela;return head('Alertas e busca ativa','Transforme cada sinal de atenção em um próximo cuidado.')+sectionNav('acompanhamento','alertas')+tela}

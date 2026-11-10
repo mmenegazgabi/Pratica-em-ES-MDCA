@@ -174,6 +174,24 @@ function linhaDoTempo(acoes) {
   );
 }
 
+/** Encontros da sequência de faltas (T-89), do mais antigo para o mais recente. */
+function encontrosComFalta(a) {
+  const faltas = a.faltas || [];
+  if (!faltas.length) return vazio("Sem encontros", "Os encontros da sequência não estão mais disponíveis.");
+  return el(
+    "ul",
+    { class: "alerta-faltas" },
+    faltas.map((f) =>
+      el(
+        "li",
+        {},
+        el("a", { href: `#/atividades/${encodeURIComponent(a.programa_id)}/encontro/${encodeURIComponent(f.atividade_id)}` }, `${dataBr(f.data)} · ${a.turma}`),
+        " — ausente",
+      ),
+    ),
+  );
+}
+
 function detalhes(a) {
   const itens = [
     ["Pessoa", a.pessoa],
@@ -261,7 +279,13 @@ export function mostrarAlerta(container, alertaId, { avisar = () => {}, hoje = h
       el(
         "div",
         { class: "detail-grid" },
-        el("div", { class: "stack" }, cartao("Alerta", a.titulo, detalhes(a)), cartao("Histórico do acompanhamento", "Da ação mais recente para a mais antiga", linhaDoTempo(a.acoes))),
+        el(
+          "div",
+          { class: "stack" },
+          cartao("Alerta", a.titulo, detalhes(a)),
+          cartao("Encontros com falta", "A sequência que gerou o alerta; cada um abre a chamada", encontrosComFalta(a)),
+          cartao("Histórico do acompanhamento", "Da ação mais recente para a mais antiga", linhaDoTempo(a.acoes)),
+        ),
         proximoPasso(a),
       ),
     ),

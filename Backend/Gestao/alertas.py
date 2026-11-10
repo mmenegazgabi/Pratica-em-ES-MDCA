@@ -58,6 +58,14 @@ class Acao:
 
 
 @dataclass(frozen=True)
+class FaltaDoAlerta:
+    """Encontro da sequência que gerou o alerta (falta sem justificativa)."""
+
+    atividade_id: str
+    data: date
+
+
+@dataclass(frozen=True)
 class Alerta:
     id: str
     tipo: str
@@ -78,6 +86,8 @@ class Alerta:
     encerrado_por: Optional[str]
     justificativa_encerramento: Optional[str]
     acoes: List[Acao] = field(default_factory=list)
+    # Só no detalhe: os encontros da sequência, do mais antigo para o mais recente (T-89).
+    faltas: List[FaltaDoAlerta] = field(default_factory=list)
 
     @property
     def titulo(self) -> str:
@@ -275,7 +285,24 @@ def obter(conexao: Connection, alerta_id: str) -> Alerta:
     linha = conexao.execute(sa.text(f"{_SELECIONAR_ALERTA} WHERE al.id = :id"), {"id": alerta_id}).first()
     if linha is None:
         raise NaoEncontrado(ALERTA_NAO_ENCONTRADO)
-    return Alerta(**linha._mapping, acoes=_acoes(conexao, alerta_id))
+    return Alerta(**linha._mapping, acoes=_acoes(conexao, alerta_id), faltas=_faltas(conexao, linha))
+
+
+def _faltas(conexao: Connection, alerta) -> List[FaltaDoAlerta]:
+    """Encontros da turma, no período do alerta, em que a pessoa faltou sem justificativa."""
+    linhas = conexao.execute(
+        sa.text(
+            """
+            SELECT a.id AS atividade_id, a.data
+            FROM atividades a JOIN chamadas c ON c.atividade_id = a.id
+            WHERE a.turma_id = :turma AND c.pessoa_id = :pessoa AND NOT c.presente AND c.justificativa IS NULL
+              AND a.data BETWEEN :primeira AND :ultima
+            ORDER BY a.data, a.id
+            """
+        ),
+        {"turma": alerta.turma_id, "pessoa": alerta.pessoa_id, "primeira": alerta.primeira_falta, "ultima": alerta.ultima_falta},
+    )
+    return [FaltaDoAlerta(**l._mapping) for l in linhas]
 
 
 def programa_do_alerta(conexao: Connection, alerta_id: str) -> Optional[str]:

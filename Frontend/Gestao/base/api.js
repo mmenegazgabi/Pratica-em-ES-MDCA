@@ -167,7 +167,7 @@ export function salvarUsuario(usuario) {
  * Chama a API e devolve o corpo JSON (ou `null` sem corpo).
  * Qualquer falha vira `ErroApi`: sem conexão, tempo esgotado ou status de erro.
  */
-export async function requisitar(caminho, { metodo = "GET", dados, formulario, tempoLimite = TEMPO_LIMITE_MS } = {}) {
+export async function requisitar(caminho, { metodo = "GET", dados, formulario, arquivo = false, tempoLimite = TEMPO_LIMITE_MS } = {}) {
   const cabecalhos = { Accept: "application/json" };
   const sessao = sessaoAtiva();
   if (sessao) {
@@ -194,6 +194,8 @@ export async function requisitar(caminho, { metodo = "GET", dados, formulario, t
   let corpo = null;
   try {
     resposta = await fetch(urlDaApi() + caminho, { ...opcoes, signal: controle.signal });
+    // Download de arquivo (`arquivo: true`): devolve o Blob; erros continuam em JSON.
+    if (arquivo && resposta.ok) return await resposta.blob();
     const texto = await resposta.text();
     if (texto) {
       try {
@@ -377,6 +379,10 @@ export const registrarAtividade = (programaId, turmaId, dados) =>
 
 export const obterAtividade = (programaId, atividadeId) =>
   requisitar(`${programa(programaId)}/atividades/${encodeURIComponent(atividadeId)}`);
+
+/** Arquivo da evidência (Blob); o download fica na trilha de auditoria (T-89). */
+export const baixarEvidencia = (programaId, evidenciaId) =>
+  requisitar(`${programa(programaId)}/evidencias/${encodeURIComponent(evidenciaId)}/arquivo`, { arquivo: true, tempoLimite: 60000 });
 
 /** evidencia: { registro_id, arquivo (Blob), nome, data?, descricao? } */
 export function enviarEvidencia(programaId, atividadeId, { registro_id, arquivo, nome, data = "", descricao = "" }) {

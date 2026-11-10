@@ -21,6 +21,8 @@ const API_PADRAO = {
   listarProgramas: api.listarProgramas,
   obterAgenda: api.obterAgenda,
   obterTurma: api.obterTurma,
+  obterAtividade: api.obterAtividade,
+  baixarEvidencia: api.baixarEvidencia,
 };
 
 // Mesmo limite e mesmos tipos que a API aceita (comprovantes do Financeiro).
@@ -116,6 +118,10 @@ function cartaoDoCelular({ titulo, situacao, meta, inferior = [], href = "", ext
 const avisoDeCopia = (copiaDe, o_que) =>
   copiaDe ? aviso(`Sem conexão: mostrando ${o_que} salva neste aparelho em ${momento(copiaDe)}.`, "amber") : null;
 
+/** Encontro já registrado: chamada e evidências (T-89). */
+export const rotaDoEncontro = (programaId, atividadeId) =>
+  `#/atividades/${encodeURIComponent(programaId)}/encontro/${encodeURIComponent(atividadeId)}`;
+
 const rotaDoRegistro = (programaId, turmaId, data) =>
   `#/atividades/${encodeURIComponent(programaId)}/registro/${encodeURIComponent(turmaId)}?data=${data}`;
 
@@ -136,11 +142,13 @@ function agendaEmDoisFormatos(programaId, encontros, naFila, { podeRegistrar, ho
   const linhas = encontros.map((e) => {
     const situacao = situacaoDoEncontro(e, naFila, hoje);
     const destino = podeRegistrar && !situacao.registrado && e.data <= hoje ? rotaDoRegistro(programaId, e.turma_id, e.data) : "";
-    return { e, situacao, destino, quando: `${diaDaSemana(e.data)} ${dataBr(e.data)}`, horario: `${hora(e.hora_inicio)}–${hora(e.hora_fim)}` };
+    // Encontro já gravado na API: abre a chamada e as evidências.
+    const detalhe = e.atividades.length ? rotaDoEncontro(programaId, e.atividades[0]) : "";
+    return { e, situacao, destino, detalhe, quando: `${diaDaSemana(e.data)} ${dataBr(e.data)}`, horario: `${hora(e.hora_inicio)}–${hora(e.hora_fim)}` };
   });
   const tabelaDoComputador = tabela(
     ["Data · hora", "Turma", "Local", "Educador", "Situação", ""],
-    linhas.map(({ e, situacao, destino, quando, horario }) =>
+    linhas.map(({ e, situacao, destino, detalhe, quando, horario }) =>
       el(
         "tr",
         {},
@@ -149,17 +157,25 @@ function agendaEmDoisFormatos(programaId, encontros, naFila, { podeRegistrar, ho
         el("td", {}, e.espaco),
         el("td", {}, e.responsavel),
         el("td", {}, badge(situacao.texto, situacao.tom)),
-        el("td", {}, destino ? el("a", { class: "btn small primary", href: destino }, "Fazer chamada") : "—"),
+        el(
+          "td",
+          {},
+          destino
+            ? el("a", { class: "btn small primary", href: destino }, "Fazer chamada")
+            : detalhe
+              ? el("a", { class: "btn small", href: detalhe }, "Ver chamada")
+              : "—",
+        ),
       ),
     ),
   );
-  const cartoes = linhas.map(({ e, situacao, destino, quando, horario }) =>
+  const cartoes = linhas.map(({ e, situacao, destino, detalhe, quando, horario }) =>
     cartaoDoCelular({
       titulo: e.turma,
       situacao: badge(situacao.texto, situacao.tom),
       meta: `${e.espaco}${e.previsto ? "" : " · fora da agenda da turma"}`,
-      inferior: [`${quando} · ${horario}`, destino ? "Fazer chamada →" : e.responsavel.split(" ")[0]],
-      href: destino,
+      inferior: [`${quando} · ${horario}`, destino ? "Fazer chamada →" : detalhe ? "Ver chamada →" : e.responsavel.split(" ")[0]],
+      href: destino || detalhe,
     }),
   );
   return emDoisFormatos(tabelaDoComputador, cartoes, `${encontros.length} encontro(s)`);
@@ -558,6 +574,107 @@ function situacaoDoItem(item, itens) {
     if (encontro && encontro.situacao !== SITUACAO.ENVIADO) return { selo: badge("Aguardando o envio da chamada", "amber"), erro: [] };
   }
   return { selo: badge("Aguardando sincronização", "amber"), erro: [] };
+}
+
+// --- Encontro registrado (T-89) --------------------------------------------------------
+
+/** "Presente", "Ausente" ou "Falta justificada", como no registro. */
+export const situacaoDaPresenca = (p) => (p.presente ? "Presente" : p.justificativa ? "Falta justificada" : "Ausente");
+const TOM_DA_PRESENCA = { Presente: "green", Ausente: "amber", "Falta justificada": "gray" };
+
+/**
+ * Encontro já registrado: registro da atividade, chamada (presentes, ausentes e faltas
+ * justificadas com o motivo) e evidências com "Baixar". A API aplica a regra de acesso às
+ * pessoas da US-03 (a direção vê acesso restrito) e audita cada download.
+ */
+export function mostrarEncontro(container, programaId, atividadeId, { avisar = () => {}, ...substitutos } = {}) {
+  const chamadas = { ...API_PADRAO, ...substitutos };
+
+  async function baixar(evidencia, botao) {
+    botao.disabled = true;
+    try {
+      const arquivo = await chamadas.baixarEvidencia(programaId, evidencia.id);
+      const endereco = URL.createObjectURL(arquivo);
+      const link = el("a", { href: endereco, download: evidencia.nome_arquivo, hidden: true });
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(endereco), 60000);
+    } catch (e) {
+      avisar(e?.detalhe || e?.message || "Não foi possível baixar o arquivo.");
+    } finally {
+      botao.disabled = false;
+    }
+  }
+
+  function chamada(a) {
+    if (!a.chamada.length) return vazio("Sem chamada", "Ninguém estava matriculado neste encontro.");
+    const linhas = a.chamada.map((p) => {
+      const situacao = situacaoDaPresenca(p);
+      return el(
+        "tr",
+        {},
+        el("td", {}, el("a", { href: `#/pessoas/${encodeURIComponent(p.pessoa_id)}` }, p.pessoa)),
+        el("td", {}, badge(situacao, TOM_DA_PRESENCA[situacao])),
+        el("td", {}, p.justificativa || "—"),
+      );
+    });
+    return tabela(["Pessoa", "Presença", "Motivo da falta"], linhas);
+  }
+
+  function evidencias(a) {
+    if (!a.evidencias.length) return vazio("Sem evidências", "Nenhuma foto ou documento foi vinculado a este encontro.");
+    return el(
+      "div",
+      {},
+      a.evidencias.map((ev) =>
+        el(
+          "div",
+          { class: "file-item" },
+          el(
+            "span",
+            {},
+            ev.nome_arquivo,
+            el("small", { style: "display:block" }, `${ev.autor} · ${dataBr(ev.data)} · ${tamanhoLegivel(ev.tamanho)}${ev.descricao ? ` · ${ev.descricao}` : ""}`),
+          ),
+          el("button", { type: "button", class: "btn small", onclick: (e) => baixar(ev, e.currentTarget) }, "Baixar"),
+        ),
+      ),
+    );
+  }
+
+  return carregarNaTela(container, () => chamadas.obterAtividade(programaId, atividadeId), (a) => {
+    const justificadas = a.chamada.filter((p) => !p.presente && p.justificativa).length;
+    const detalhes = [
+      ["Turma", a.turma],
+      ["Data", `${diaDaSemana(a.data)} ${dataBr(a.data)}`],
+      ["Educador", a.educador],
+      ["Presença", `${a.presentes} presente(s), ${a.ausentes} ausência(s)${justificadas ? `, ${justificadas} justificada(s)` : ""}`],
+    ];
+    return el(
+      "div",
+      { class: "detail-grid" },
+      el(
+        "div",
+        { class: "stack" },
+        cartao(
+          "Registro da atividade",
+          a.turma,
+          el(
+            "div",
+            {},
+            el("dl", { class: "details" }, detalhes.map(([k, v]) => el("div", {}, el("dt", {}, k), el("dd", {}, v)))),
+            el("h3", {}, "Conteúdo trabalhado"),
+            el("p", {}, a.conteudo),
+            a.observacao ? el("h3", {}, "Observação") : null,
+            a.observacao ? el("p", {}, a.observacao) : null,
+          ),
+        ),
+        cartao("Frequência", "Chamada do encontro", chamada(a)),
+      ),
+      cartao("Evidências", "Arquivos vinculados ao encontro; cada download fica registrado", evidencias(a)),
+    );
+  });
 }
 
 /** A fila do aparelho: confirmação de cada envio, erros visíveis e o que fazer. */

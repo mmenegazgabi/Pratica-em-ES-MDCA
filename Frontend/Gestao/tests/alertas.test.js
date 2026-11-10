@@ -31,6 +31,11 @@ const ALERTA = {
   encerrado_em: null,
   encerrado_por: null,
   justificativa_encerramento: null,
+  faltas: [
+    { atividade_id: "a-3", data: "2026-11-03" },
+    { atividade_id: "a-4", data: "2026-11-04" },
+    { atividade_id: "a-5", data: "2026-11-05" },
+  ],
   acoes: [
     { id: "ac-2", tipo: "busca_ativa", tipo_nome: "Busca ativa", data: "2026-11-08", resultado: "Visita: família localizada.", responsavel_id: "patricia", responsavel: "Patrícia Souza", criado_em: "2026-11-08T12:00:00Z" },
     { id: "ac-1", tipo: "contato_familia", tipo_nome: "Contato com a família", data: "2026-11-06", resultado: "Telefone sem resposta.", responsavel_id: "ana", responsavel: "Ana Martins", criado_em: "2026-11-06T12:00:00Z" },
@@ -265,4 +270,20 @@ test("erro da API aparece no formulário e não fecha o diálogo", async () => {
   await enviar(form);
 
   assert.match(texto(dialogo()), /O alerta já foi encerrado/);
+});
+
+
+test("o detalhe do alerta lista os encontros com falta, cada um levando à chamada (T-89)", async () => {
+  await mostrarAlerta(container, "al-1", api());
+  await esperar();
+
+  const encontros = [...container.querySelectorAll(".alerta-faltas a")];
+  assert.deepEqual(
+    encontros.map((a) => [texto(a), a.getAttribute("href")]),
+    [
+      ["03/11/2026 · Oficina de arte", "#/atividades/p-1/encontro/a-3"],
+      ["04/11/2026 · Oficina de arte", "#/atividades/p-1/encontro/a-4"],
+      ["05/11/2026 · Oficina de arte", "#/atividades/p-1/encontro/a-5"],
+    ],
+  );
 });

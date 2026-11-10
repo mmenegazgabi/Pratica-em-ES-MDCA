@@ -77,12 +77,19 @@ class AlertaResumoSaida(_Saida):
     criado_em: datetime
 
 
+class FaltaSaida(_Saida):
+    atividade_id: str
+    data: date
+
+
 class AlertaSaida(AlertaResumoSaida):
     encerrado_em: Optional[datetime]
     encerrado_por: Optional[str]
     justificativa_encerramento: Optional[str]
     # Linha do tempo do acompanhamento, da ação mais recente para a mais antiga.
     acoes: List[AcaoSaida]
+    # Encontros da sequência de faltas, do mais antigo para o mais recente (T-89).
+    faltas: List[FaltaSaida]
 
 
 # --- Apoio ---------------------------------------------------------------------

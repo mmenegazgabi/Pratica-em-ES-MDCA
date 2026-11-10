@@ -360,3 +360,16 @@ test("sem autorização vigente, o uso externo aparece bloqueado", async () => {
   assert.match(texto(), /Uso externo de imagem bloqueado/);
   assert.equal(botao("Revogar"), undefined);
 });
+
+
+test("na trajetória, a falta leva ao encontro com a chamada (T-89)", async () => {
+  const { linhaDoTempo } = await import("../telas/pessoas.js");
+  const linha = linhaDoTempo([
+    { data: "2026-10-05T03:00:00Z", tipo: "frequencia", titulo: "Falta na turma Oficina de arte", descricao: "Ausente no encontro.", programa_id: "p-1", atividade_id: "a-1" },
+    { data: "2026-03-01T10:00:00Z", tipo: "cadastro", titulo: "Cadastro no programa Semear", descricao: "Núcleo familiar Oliveira.", programa_id: null, atividade_id: null },
+  ]);
+
+  const [falta, cadastro] = linha.querySelectorAll(".timeline-item");
+  assert.equal(falta.querySelector("h3 a").getAttribute("href"), "#/atividades/p-1/encontro/a-1");
+  assert.equal(cadastro.querySelector("h3 a"), null);
+});

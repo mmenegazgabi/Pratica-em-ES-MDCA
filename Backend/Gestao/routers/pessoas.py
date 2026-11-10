@@ -165,10 +165,13 @@ class BloqueioSaida(_Saida):
 
 class EventoSaida(_Saida):
     data: datetime
-    # cadastro, responsavel, documento ou autorizacao (crescem com as próximas US).
+    # cadastro, responsavel, documento, autorizacao, matricula, frequencia, alerta ou busca_ativa.
     tipo: str
     titulo: str
     descricao: str
+    # Frequência (T-89): o encontro, para a tela abrir a chamada.
+    programa_id: Optional[str] = None
+    atividade_id: Optional[str] = None
 
 
 class UsoDeImagemSaida(BaseModel):
