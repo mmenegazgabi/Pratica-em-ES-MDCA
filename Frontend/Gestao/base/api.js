@@ -326,7 +326,17 @@ export const cadastrarPessoa = (dados) => requisitar("/gestao/pessoas", { metodo
 export const incluirResponsavel = (id, dados) => requisitar(`${pessoa(id)}/responsaveis`, { metodo: "POST", dados });
 
 /** dados: { tipo, nome_arquivo, tamanho? } — só os dados do arquivo, que ainda não é enviado. */
-export const registrarDocumento = (id, dados) => requisitar(`${pessoa(id)}/documentos`, { metodo: "POST", dados });
+/** documento: { tipo, arquivo (File) }. O arquivo vai para o R2; a API guarda a chave (T-88). */
+export function registrarDocumento(id, { tipo, arquivo }) {
+  const formulario = new FormData();
+  formulario.append("tipo", tipo);
+  formulario.append("arquivo", arquivo, arquivo.name || "documento");
+  return requisitar(`${pessoa(id)}/documentos`, { metodo: "POST", formulario, tempoLimite: 60000 });
+}
+
+/** Arquivo do documento (Blob); o download fica na trilha de auditoria. */
+export const baixarDocumento = (id, documentoId) =>
+  requisitar(`${pessoa(id)}/documentos/${encodeURIComponent(documentoId)}/arquivo`, { arquivo: true, tempoLimite: 60000 });
 
 /** dados: { tipo: "uso_de_imagem", valida_de?, valida_ate, documento_id? } */
 export const registrarAutorizacao = (id, dados) => requisitar(`${pessoa(id)}/autorizacoes`, { metodo: "POST", dados });

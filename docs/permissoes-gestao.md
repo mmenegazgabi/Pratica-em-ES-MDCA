@@ -82,7 +82,8 @@ Os cadastros têm dados de crianças e famílias. A Direção não vê cadastros
 | Listar, consultar o cadastro e a trajetória, buscar núcleos familiares | Programa | Programa | Programa | Programa | — | Todos |
 | Verificar o uso de imagem de um material | Programa | Programa | Programa | Programa | — | Todos |
 | Cadastrar pessoa (inclui a checagem de duplicidade) | Programa | — | Programa | — | — | Todos |
-| Incluir responsável, registrar documento | Programa | — | Programa | — | — | Todos |
+| Incluir responsável, registrar documento (com o arquivo, T-88) | Programa | — | Programa | — | — | Todos |
+| Baixar o arquivo de um documento (registrado na auditoria) | Programa | Programa | Programa | Programa | — | Todos |
 | Registrar e revogar autorização (uso de imagem) | Programa | — | Programa | — | — | Todos |
 
 Rotas: `/gestao/pessoas…` e `GET /gestao/nucleos-familiares`. Sem filtro de programa,
