@@ -114,7 +114,7 @@ export function montarFormData(campos) {
 /** Mensagem amigável a partir da resposta de erro da API. */
 export function mensagemDeErro(status, corpo) {
   if (status === 0) return "Sem conexão com o servidor. Verifique a internet e tente de novo.";
-  if (status === 401) return "Acesso não autorizado. Confira o código de acesso deste aparelho.";
+  if (status === 401) return "Sua sessão expirou. Entre de novo pela página inicial.";
   if (status === 413) return "O comprovante passa de 5 MB. Tire outra foto ou escolha um arquivo menor.";
   if (status === 503) return "O servidor não conseguiu salvar o comprovante agora. Tente de novo em instantes.";
   const detalhe = corpo?.detail;

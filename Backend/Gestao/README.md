@@ -9,19 +9,12 @@ Dono: time de Gestão.
 ```
 Gestao/
   banco.py        # conexão com o PostgreSQL (DATABASE_URL), via Depends(obter_conexao)
-  acesso.py       # quem pode consultar e gerenciar cada programa (provisório até a T-33);
-                  # regras documentadas em docs/permissoes-gestao.md
+  acesso.py       # quem pode consultar e gerenciar cada programa (provisório até a T-33)
   auditoria.py    # registro de eventos na trilha única (log_auditoria)
   programas.py    # programas, convênios e vagas (regras e consultas, um arquivo por assunto)
   plano_de_acao.py  # objetivos, ações, metas, registros do realizado e painel
   equipe.py       # equipe e espaços de cada programa
   usuarios.py     # usuários e papéis da plataforma (só consulta)
-  pessoas.py      # pessoas atendidas, núcleos familiares, responsáveis e duplicidade (US-03)
-  autorizacoes.py # autorizações (uso de imagem): situação, revogação e uso externo
-  trajetoria.py   # linha do tempo da pessoa atendida (T-49)
-  turmas.py       # turmas, matrículas, lista de espera e conflito de horário (US-04)
-  atividades.py   # agenda, encontros com chamada e evidências; reenvio sem duplicar (US-05)
-  erros.py        # erros de regra do cadastro de pessoas, traduzidos em HTTP pelas rotas
   routers/        # rotas FastAPI, todas com prefixo /gestao
     __init__.py   # junta todos os routers de Gestão num só
   tests/          # testes do módulo, rodados pelo job backend-gestao do CI
@@ -34,9 +27,8 @@ Gestao/
   [`Backend/Shared/migrations`](../Shared/migrations) (head único, compartilhado com
   o Financeiro). O código de Gestão só lê e grava.
 - Sem `DATABASE_URL` configurada ou com o banco fora do ar, as rotas respondem 503.
-- Autenticação: o token de sessão do login único (T-35, veja
-  [`docs/login-unico.md`](../../docs/login-unico.md)) ou, durante a transição, o token de
-  serviço do Financeiro (`FINANCEIRO_API_TOKEN`).
+- Autenticação provisória: o mesmo token de serviço do Financeiro
+  (`FINANCEIRO_API_TOKEN`), até o login único (T-35) e o RBAC (T-33).
 
 ## Rotas
 
@@ -47,10 +39,9 @@ Sobre o cadastro canônico de Programas/Projetos
 
 | Rota | O que faz |
 |---|---|
-| `GET /gestao/programas` | Lista os programas (id, nome, identificador e vigência) |
+| `GET /gestao/programas` | Lista os programas (id e nome) |
 | `POST /gestao/programas` | Cadastra um programa: `nome`, `identificador`, `publico`, `responsavel`, `vigencia_inicio`, `vigencia_fim` e `descricao` opcional |
 | `GET /gestao/programas/{id}` | Dados completos do programa |
-| `PATCH /gestao/programas/{id}` | Edita os dados do programa: só os campos enviados mudam, e o resultado segue as regras do cadastro (um programa antigo, só com nome, precisa ganhar os obrigatórios) |
 | `GET`/`POST …/{id}/convenios` | Convênios e parcerias: `nome`, `concedente` e vigência opcionais |
 | `GET`/`POST …/{id}/vagas` | Vagas ofertadas: `descricao` e `quantidade` |
 | `GET`/`POST …/{id}/objetivos` | Objetivos do plano de ação: `descricao` |
@@ -88,104 +79,13 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 409 (vínculo ativo repetido, desligamento já registrado, espaço com nome repetido),
 400 (usuário ou papel inexistente, saída antes da entrada) e 422 (corpo inválido).
 
-### Pessoas atendidas (US-03)
+## Acesso às rotas de programa (provisório até a T-33)
 
-| Rota | O que faz |
-|---|---|
-| `GET /gestao/pessoas?programa_id=&busca=` | Pessoas dos programas em que a pessoa usuária atua (administração: todas); busca por nome, núcleo ou responsável |
-| `POST /gestao/pessoas/duplicidades` | Possíveis duplicados de um cadastro ainda não concluído (etapa de revisão); não grava nada |
-| `POST /gestao/pessoas` | Cadastra a pessoa com núcleo familiar (`nucleo_familiar_id` existente ou `nucleo_familiar_nome` novo) e responsáveis (`id` existente ou `nome` novo, com `parentesco` e `responsavel_legal`) |
-| `GET /gestao/pessoas/{pessoa_id}` | Detalhe com idade, núcleo, responsáveis, documentos e autorizações |
-| `GET /gestao/pessoas/{pessoa_id}/trajetoria` | Linha do tempo, do mais recente ao mais antigo: cadastro, responsáveis incluídos depois, documentos e autorizações (registro, revogação e vencimento), matrículas (US-04), faltas e faltas justificadas ligadas ao encontro (`programa_id` e `atividade_id`, T-89) e alertas de infrequência com a busca ativa e o encerramento (US-06, T-60: o resultado das ações e a justificativa só para quem acompanha os alertas do programa). Frequência e atendimentos entram com as US delas (T-49) |
-| `POST /gestao/pessoas/{pessoa_id}/responsaveis` | Inclui um responsável |
-| `POST /gestao/pessoas/{pessoa_id}/documentos` | Multipart com `tipo` e `arquivo` (T-88): o arquivo vai para o bucket privado do R2 em `gestao/documentos/AAAA/MM/<uuid>.<ext>` e o banco guarda a `chave_arquivo`. Mesmas regras das evidências: foto (JPG, PNG, WEBP, HEIC) ou PDF reconhecidos pelo conteúdo, até 5 MB; fora disso, 400. Sem R2 configurado, 503 |
-| `GET /gestao/pessoas/{pessoa_id}/documentos/{documento_id}/arquivo` | Arquivo do documento, para quem vê o cadastro (direção e outros programas: 403, registrado). Cada download vai para `log_auditoria` (`download_documento`). Documento antigo, registrado sem arquivo (`tem_arquivo: false`): 404 |
-| `POST /gestao/pessoas/{pessoa_id}/autorizacoes` | Registra autorização (`tipo: uso_de_imagem`, `valida_ate`, `valida_de` opcional = hoje, `documento_id` opcional) |
-| `POST /gestao/pessoas/{pessoa_id}/autorizacoes/{autorizacao_id}/revogacao` | Revoga; fica na auditoria (`autorizacao_revogada`) |
-| `POST /gestao/pessoas/uso-de-imagem` | `{pessoa_ids, uso}`: uso externo só com autorização de imagem vigente de todos |
-| `GET /gestao/nucleos-familiares?busca=` | Núcleos com alguém nos programas em que a pessoa usuária atua |
-
-**Quem pode:** consultam quem tem vínculo ativo no programa da pessoa e a
-administração; a direção não vê cadastros individuais. Cadastram e alteram a
-coordenação e a assistência social vinculadas ao programa, e a administração.
-
-**Regras:**
-
-- **Possível duplicidade:** mesmo nome (sem diferenciar maiúsculas, espaços e acentos)
-  e, além disso, mesmo nascimento **ou** mesmo responsável. O `POST /gestao/pessoas`
-  responde **409** com `detail.codigo = "possivel_duplicidade"` e `detail.candidatos`, e
-  não grava nada. Para cadastrar mesmo assim, reenvie com `confirmar_duplicidade: true`;
-  a confirmação fica na auditoria (`duplicidade_confirmada`).
-- **Responsável legal:** menor de 18 anos sem nenhum responsável com
-  `responsavel_legal: true` → **400**.
-- **Situação da autorização** (calculada, não gravada): `revogada` se tem revogação,
-  `vencida` se `valida_ate` já passou, senão `vigente`. O início da validade não pode
-  estar no futuro.
-- **Uso externo de imagem:** liberado só se cada pessoa tem ao menos uma autorização de
-  imagem vigente; senão **409** com `detail.codigo = "uso_de_imagem_bloqueado"` e
-  `detail.bloqueios` (motivo `vencida`, `revogada` ou `sem_autorizacao`). Uso interno é
-  sempre liberado. A mesma regra (`autorizacoes.verificar_uso_de_imagem`) serve às
-  evidências de atividade (T-56).
-
-### Turmas e matrículas (US-04)
-
-Todas em `/gestao/programas/{programa_id}`:
-
-| Rota | O que faz | Quem pode |
-|---|---|---|
-| `GET …/turmas` | Turmas com local, responsável, horário, vagas, matrículas ativas e lista de espera (só contagens) | Quem consulta o programa |
-| `POST …/turmas` | Cadastra: `nome`, `espaco_id`, `responsavel_id`, `capacidade`, `dias_semana` (1 = segunda … 7 = domingo), `hora_inicio`, `hora_fim` | Quem gerencia |
-| `GET …/turmas/{turma_id}` | Matrículas ativas, lista de espera em ordem (`posicao_espera`) e desligadas | Regra das pessoas (US-03): a direção recebe 403 |
-| `PATCH …/turmas/{turma_id}` | Edita só os campos enviados; a capacidade não fica abaixo das ativas (409) | Quem gerencia |
-| `POST …/turmas/{turma_id}/matriculas` | `pessoa_id`: matricula se há vaga; turma lotada, entra na lista de espera | Quem gerencia |
-| `POST …/turmas/{turma_id}/lista-de-espera/chamada` | Passa o primeiro da fila para a turma; 409 se lotada ou sem fila | Quem gerencia |
-| `PATCH …/turmas/{turma_id}/matriculas/{matricula_id}/desligamento` | `data_saida` e `motivo` obrigatórios (400 sem eles); a matrícula fica no histórico | Quem gerencia |
-
-Regras:
-
-- O local é um espaço do próprio programa, e o responsável precisa ter vínculo ativo na
-  equipe do programa (**400**). Campo obrigatório ausente: **400** com a lista do que falta.
-- Nome repetido no programa: **409**. A pessoa precisa ser do mesmo programa da turma
-  (**400**) e não pode ter outra inscrição em aberto na mesma turma (**409**).
-- **Conflito de horário:** outra matrícula ativa da pessoa em turma com dia em comum e
-  horário sobreposto. A inscrição é salva, os conflitos voltam em `conflitos` e ficam em
-  `log_auditoria` (ação `conflito_de_horario`), como alerta para a coordenação. O detalhe
-  da turma mostra os conflitos de cada matrícula ativa.
-- Matrícula, lista de espera e desligamento entram na trajetória da pessoa.
-
-### Atividades, chamada e evidências (US-05)
-
-Todas em `/gestao/programas/{programa_id}`:
-
-| Rota | O que faz | Quem pode |
-|---|---|---|
-| `GET …/agenda?inicio&fim` | Encontros previstos das turmas no período (padrão: hoje; até 62 dias), com os encontros já registrados em `atividades`. Sem nomes de pessoas | Quem consulta o programa |
-| `POST …/turmas/{turma_id}/atividades` | Encerra o encontro com a chamada: `registro_id`, `data`, `conteudo`, `presencas` (`pessoa_id`, `presente`, `justificativa` só para ausência), `educador_id` (padrão: quem envia) e `observacao` | Coordenação e educadores do programa, administração |
-| `GET …/atividades/{atividade_id}` | O encontro com a chamada (nomes), presentes, ausentes e evidências | Regra das pessoas (US-03): a direção recebe 403 |
-| `POST …/atividades/{atividade_id}/evidencias` | Multipart: `arquivo`, `registro_id`, `data` (padrão: a do encontro) e `descricao`. Foto (JPG, PNG, WEBP, HEIC) ou PDF até 5 MB | Coordenação e educadores do programa, administração |
-| `GET …/evidencias/{evidencia_id}/arquivo` | Devolve o arquivo pela API (bucket privado); o download fica em `log_auditoria` (`download_evidencia`) | Regra das pessoas (US-03) |
-
-Regras:
-
-- **Sem duplicar na sincronização:** o `registro_id` vem do aparelho. O primeiro envio
-  responde **201**; o reenvio do mesmo `registro_id` responde **200** com o que já estava
-  gravado, sem gravar de novo nem subir o arquivo outra vez (vale a primeira versão). O
-  mesmo `registro_id` em outra turma ou em outro encontro: **409** (`registro_id_em_uso`).
-- **Chamada:** só entra quem estava matriculado na turma na data do encontro (**400**
-  `fora_da_turma`, com a lista); cada pessoa uma vez. O encontro não pode estar no futuro,
-  o conteúdo é obrigatório e o educador precisa ter vínculo ativo no programa na data.
-  Erros de regra voltam como `detail.codigo` e `detail.mensagem`.
-- **Evidência:** o arquivo vai para o R2 em `gestao/evidencias/AAAA/MM/<uuid>.<ext>`,
-  usando o armazenamento dos comprovantes do Financeiro (validação pelo conteúdo do
-  arquivo); o banco guarda só os metadados, ligados à atividade, ao programa, ao autor e
-  à data. Sem R2 configurado: **503**.
-
-## Acesso às rotas de programa
-
-- Quem chama vem do **token de sessão** do login único (T-35). Sem sessão, durante a
-  transição, vale o cabeçalho `X-Usuario-Id` junto com o token de serviço, como no
-  Financeiro; sem nenhum dos dois, a resposta é 400. Com token de sessão, o
-  `X-Usuario-Id` é ignorado.
+- O backend aceita a sessão do login único (`docs/login.md`): com o token da sessão,
+  quem chama é o dono dela. Também aceita o token de serviço com o cabeçalho
+  `X-Usuario-Id`, como no Financeiro (sem ele, 400). O front da Gestão usa a sessão
+  quando a pessoa entrou pela tela inicial (`mdca.sessao`); sem sessão, cai no código de
+  acesso e no `X-Usuario-Id`, como antes.
 - Os papéis vêm do banco, não de cabeçalho: os da plataforma em `usuarios_papeis`
   (direção e administração) e os do programa em `vinculos_equipe`.
 - **Vínculo ativo** é o que não tem data de saída ou tem a saída no futuro. A partir
@@ -194,13 +94,11 @@ Regras:
 - Toda negação grava em `log_auditoria` (módulo `gestao`, ação `acesso_negado`,
   programa, método e rota) antes de responder 403. Na lista de usuários o alvo é
   `usuarios`, sem id.
-- Pelo caminho antigo (token de serviço + `X-Usuario-Id`), quem tem o token ainda pode
-  se identificar como qualquer usuário; esse caminho sai quando os dois frontends
-  usarem o login.
-- Ainda não há rota de cadastro de usuários (a API só consulta): para começar, inclua
-  um administrador direto no banco. Para entrar pelo login, a conta precisa de e-mail e
-  de senha, definida com `scripts/definir-senha.py <email>`. Para testar as telas de
-  Gestão, vale incluir também um programa, uma coordenação e uma educadora:
+- No modo serviço, quem tem o token pode se identificar como qualquer usuário; a
+  proteção real vem quando o front migrar para a sessão e com a T-33 (RBAC).
+- O cadastro de pessoas e papéis da plataforma é feito na tela Administração (ou com
+  `python -m Acesso.criar_admin`, veja `docs/login.md`). Para testar as telas de Gestão, vale incluir também
+  um programa, uma coordenação e uma educadora:
 
   ```sql
   INSERT INTO usuarios (id, nome) VALUES ('admin', 'Administração');

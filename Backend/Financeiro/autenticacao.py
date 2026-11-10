@@ -1,83 +1,84 @@
-"""Autenticação das rotas do Financeiro (T-11 · US-03).
+"""Autenticação das rotas do Financeiro (T-11 · US-03, login único T-35).
 
-Enquanto o login de usuários (US-08) não existe, as rotas protegidas exigem
-um token de serviço no cabeçalho ``Authorization: Bearer <token>``. O valor
-esperado vem da variável de ambiente ``FINANCEIRO_API_TOKEN``, configurada no
-Cloud Run e nunca versionada.
+As rotas protegidas exigem ``Authorization: Bearer <token>``. Há dois modos:
 
-Quando a US-08 for implementada, basta trocar o corpo de
-``exigir_autenticacao`` pela validação do usuário logado; as rotas que já
-dependem dela continuam iguais.
+- **serviço**: o token é o ``FINANCEIRO_API_TOKEN`` (variável de ambiente do Cloud
+  Run, nunca versionada). Papel e usuário chegam nos cabeçalhos ``X-Papel-Usuario``
+  e ``X-Usuario-Id``, como antes do login. Fica para testes, scripts e o front da
+  Gestão enquanto ele não migra.
+- **sessão**: qualquer outro token é procurado nas sessões do login único
+  (``DATABASE_URL``). Quem chama é o dono da sessão; o papel precisa ser um dos dele.
 
-A verificação falha fechada: sem token configurado no servidor, nenhuma
-requisição é aceita.
+``exigir_autenticacao`` devolve a ``Identidade`` (``Acesso/identidade.py``); as rotas
+que já dependem dela, de ``exigir_papel`` ou de ``exigir_usuario`` continuam iguais.
 
-Login único (T-35 · US-08): o ``Authorization: Bearer`` também aceita o token de
-sessão devolvido por ``POST /auth/entrar`` (``Shared/sessao.py``). Com ele, quem
-chama vem do token, e não do cabeçalho ``X-Usuario-Id``. O código de acesso continua
-valendo enquanto os frontends migram para o login.
+A verificação falha fechada: sem token de serviço nem banco configurados, nenhuma
+requisição é aceita. ``Acesso`` e SQLAlchemy só são importados dentro das funções:
+o job do Financeiro no CI não instala o SQLAlchemy e roda só no modo serviço.
 """
 
 import hmac
 import os
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import Depends, Header, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from Shared import sessao
+if TYPE_CHECKING:
+    from Acesso.identidade import Identidade
 
 VARIAVEL_TOKEN = "FINANCEIRO_API_TOKEN"
 
 _esquema_bearer = HTTPBearer(
     auto_error=False,
-    description="Token de sessão (POST /auth/entrar) ou código de acesso do Financeiro.",
+    description="Token da sessão do login único ou token de serviço do Financeiro.",
 )
 
 
-def _token_recebido(credenciais: Optional[HTTPAuthorizationCredentials]) -> str:
-    return credenciais.credentials if credenciais else ""
-
-
-def exigir_autenticacao(
-    credenciais: Optional[HTTPAuthorizationCredentials] = Depends(_esquema_bearer),
-) -> str:
-    token_esperado = os.getenv(VARIAVEL_TOKEN, "")
-    if not token_esperado and not sessao.chave_configurada():
-        raise HTTPException(
-            status_code=503,
-            detail="Autenticação da API não configurada no servidor.",
-        )
-
-    token_recebido = _token_recebido(credenciais)
-    if token_recebido and token_esperado and hmac.compare_digest(
-        token_recebido.encode(), token_esperado.encode()
-    ):
-        return "servico-financeiro"
-    # Token de sessão: válido, não expirado e com a conta ainda ativa no banco.
-    if token_recebido and sessao.usuario_da_sessao(token_recebido):
-        return "sessao"
-
-    raise HTTPException(
+def _nao_autenticado() -> HTTPException:
+    return HTTPException(
         status_code=401,
         detail="Autenticação obrigatória.",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
 
+def exigir_autenticacao(
+    credenciais: Optional[HTTPAuthorizationCredentials] = Depends(_esquema_bearer),
+) -> "Identidade":
+    from Acesso import identidade
+
+    token_esperado = os.getenv(VARIAVEL_TOKEN, "")
+    token_recebido = credenciais.credentials if credenciais else ""
+
+    if token_esperado and token_recebido and hmac.compare_digest(
+        token_recebido.encode(), token_esperado.encode()
+    ):
+        return identidade.SERVICO
+
+    if token_recebido and identidade.sessoes_configuradas():
+        quem = identidade.pela_sessao(token_recebido)
+        if quem is None:
+            raise _nao_autenticado()
+        return quem
+
+    # Sem sessão possível, vale a regra de antes do login: sem token de serviço
+    # configurado no servidor, nada é aceito.
+    if not token_esperado:
+        raise HTTPException(
+            status_code=503,
+            detail="Autenticação da API não configurada no servidor.",
+        )
+    raise _nao_autenticado()
+
+
 # --- Papel do usuário (T-15 · US-04) ----------------------------------------
 #
-# Com token de sessão (T-35), o papel vem do banco: ``usuarios_papeis`` e os
-# vínculos ativos em ``vinculos_equipe``. O cabeçalho ``X-Papel-Usuario`` só
-# escolhe entre os papéis que a pessoa tem; sem ele, vale o primeiro permitido
-# que ela tiver. Assim não dá para se declarar coordenação pelo cabeçalho.
-# Limitação até a T-33: o papel de um vínculo vale para o Financeiro inteiro,
-# porque os projetos do Financeiro ainda não estão ligados aos programas.
-#
-# Com o código de acesso compartilhado, o papel ainda vem só do cabeçalho, até
-# os frontends migrarem para o login (T-35). As rotas continuam usando
-# ``exigir_papel`` do mesmo jeito.
+# O papel com que a pessoa age chega no cabeçalho ``X-Papel-Usuario``.
+# No modo serviço ele é aceito como veio (quem tem o token sabe quem está logado).
+# Na sessão, precisa ser um dos papéis da pessoa; sem cabeçalho, vale o único papel
+# permitido na rota que ela tiver. As rotas usam ``exigir_papel`` do mesmo jeito.
 
 CABECALHO_PAPEL = "X-Papel-Usuario"
 
@@ -90,48 +91,44 @@ class Papel(str, Enum):
 
 
 def exigir_papel(*permitidos: Papel):
-    def negado() -> HTTPException:
+    valores_permitidos = {p.value for p in permitidos}
+
+    def negar() -> HTTPException:
         return HTTPException(
             status_code=403,
-            detail="Ação permitida apenas para: " + ", ".join(p.value for p in permitidos) + ".",
+            detail="Ação permitida apenas para: "
+            + ", ".join(p.value for p in permitidos)
+            + ".",
         )
 
+    # Sem anotação de tipo: ``Identidade`` só é importada dentro das funções.
     def verificar(
-        autenticacao: str = Depends(exigir_autenticacao),
+        identidade=Depends(exigir_autenticacao),
         papel: Optional[str] = Header(None, alias=CABECALHO_PAPEL),
-        credenciais: Optional[HTTPAuthorizationCredentials] = Depends(_esquema_bearer),
     ) -> Papel:
         papel_normalizado = (papel or "").strip().lower()
-        if autenticacao == "sessao":
-            usuario_id = sessao.ler_token(_token_recebido(credenciais))
-            if usuario_id is None:
-                # Expirou entre a autenticação e aqui: pede login de novo, não é falta de papel.
-                raise HTTPException(
-                    status_code=401,
-                    detail="Autenticação obrigatória.",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            do_usuario = set(sessao.papeis_da_sessao(usuario_id))
-            candidatos = [
-                p
-                for p in permitidos
-                if p.value in do_usuario and papel_normalizado in ("", p.value)
-            ]
-            if not candidatos:
-                raise negado()
-            return candidatos[0]
-        if papel_normalizado not in {p.value for p in permitidos}:
-            raise negado()
-        return Papel(papel_normalizado)
+        if identidade.servico:
+            if papel_normalizado not in valores_permitidos:
+                raise negar()
+            return Papel(papel_normalizado)
+
+        possiveis = identidade.papeis & valores_permitidos
+        if papel_normalizado:
+            if papel_normalizado not in possiveis:
+                raise negar()
+            return Papel(papel_normalizado)
+        if len(possiveis) != 1:
+            raise negar()
+        return Papel(next(iter(possiveis)))
 
     return verificar
 
 
 # --- Identificação do usuário (T-17 · US-04) --------------------------------
 #
-# Provisório até a US-08, no mesmo esquema do papel: quem está logado chega no
-# cabeçalho ``X-Usuario-Id``, sempre junto com o token de serviço. Serve para
-# saber quem é o autor de um lançamento e de quem são as notificações.
+# Serve para saber quem é o autor de um lançamento e de quem são as notificações.
+# Na sessão, é o dono dela e o ``X-Usuario-Id`` é ignorado; no modo serviço, quem
+# está logado chega nesse cabeçalho, como antes do login.
 
 CABECALHO_USUARIO = "X-Usuario-Id"
 USUARIO_TAMANHO_MAXIMO = 100
@@ -139,16 +136,16 @@ USUARIO_TAMANHO_MAXIMO = 100
 
 def obter_usuario(
     usuario: Optional[str] = Header(None, alias=CABECALHO_USUARIO),
-    credenciais: Optional[HTTPAuthorizationCredentials] = Depends(_esquema_bearer),
+    identidade=Depends(exigir_autenticacao),
 ) -> Optional[str]:
-    """Usuário do token de sessão; sem ele, o do cabeçalho; ``None`` quando ausente.
+    """Usuário da sessão; no modo serviço, o do cabeçalho (``None`` quando ausente).
 
-    Com token de sessão o cabeçalho é ignorado: não dá para se passar por outra pessoa.
-    A conta ativa já foi conferida por ``exigir_autenticacao``.
+    Todas as rotas que usam esta dependência já exigem autenticação (o router de
+    lançamentos declara ``exigir_autenticacao``); o FastAPI reaproveita o resultado
+    na mesma requisição, então a sessão é consultada uma vez só.
     """
-    da_sessao = sessao.ler_token(_token_recebido(credenciais))
-    if da_sessao is not None:
-        return da_sessao
+    if not identidade.servico:
+        return identidade.usuario_id
     usuario = (usuario or "").strip()
     if not usuario:
         return None
@@ -161,7 +158,6 @@ def obter_usuario(
 
 
 def exigir_usuario(
-    _servico: str = Depends(exigir_autenticacao),
     usuario: Optional[str] = Depends(obter_usuario),
 ) -> str:
     if usuario is None:

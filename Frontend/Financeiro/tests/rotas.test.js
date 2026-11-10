@@ -21,8 +21,9 @@ test("projetos e detalhe do projeto", () => {
   assert.deepEqual(lerRota("#/projetos/a%20b"), { tela: "projeto", parametros: { id: "a b" } });
 });
 
-test("entrar e rota desconhecida", () => {
-  assert.equal(lerRota("#/entrar").tela, "entrar");
+test("escolha de papel e rota desconhecida", () => {
+  assert.equal(lerRota("#/papel").tela, "papel");
+  assert.equal(lerRota("#/entrar").tela, "inicio");
   assert.deepEqual(lerRota("#/qualquer-coisa"), { tela: "inicio", parametros: {} });
 });
 
@@ -34,7 +35,7 @@ test("direção não abre lançamentos; coordenação abre o projeto", () => {
   assert.equal(rotaPermitida("projeto", "voluntario_financeiro"), false);
   assert.equal(rotaPermitida("lancamentos", "voluntario_financeiro"), true);
   assert.equal(rotaPermitida("inicio", "educador"), false);
-  assert.equal(rotaPermitida("entrar", "educador"), true);
+  assert.equal(rotaPermitida("papel", "educador"), true);
 });
 
 test("telas novas: conciliação, relatórios e auditoria por papel", () => {
