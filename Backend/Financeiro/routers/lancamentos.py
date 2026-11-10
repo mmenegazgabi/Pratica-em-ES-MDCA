@@ -54,6 +54,7 @@ if __package__ == "routers":
         limpar_nome_original,
         validar_comprovante,
     )
+    from extrato import ItemJaConciliado, caixa_do_extrato
     from notificacoes import caixa_de_notificacoes
     from orcamento import (
         AprovacaoInvalida,
@@ -81,6 +82,7 @@ else:
         limpar_nome_original,
         validar_comprovante,
     )
+    from ..extrato import ItemJaConciliado, caixa_do_extrato
     from ..notificacoes import caixa_de_notificacoes
     from ..orcamento import (
         AprovacaoInvalida,
@@ -565,11 +567,22 @@ def conciliar_lancamento(
             detail=f"Referência do extrato deve ter no máximo {REFERENCIA_TAMANHO_MAXIMO} caracteres.",
         )
 
+    # Referência que é o id de um item do extrato liga os dois lados; qualquer
+    # outro texto continua valendo como referência livre.
+    try:
+        recem_ligado = caixa_do_extrato.vincular(referencia, lancamento_id)
+    except ItemJaConciliado as erro:
+        raise HTTPException(status_code=400, detail=str(erro)) from erro
+
     try:
         lancamento = orcamento.conciliar_lancamento(lancamento_id, referencia)
     except ConciliacaoInvalida as erro:
+        if recem_ligado:
+            caixa_do_extrato.desvincular(referencia, lancamento_id)
         raise HTTPException(status_code=409, detail=str(erro)) from erro
     except LancamentoInvalido as erro:
+        if recem_ligado:
+            caixa_do_extrato.desvincular(referencia, lancamento_id)
         raise HTTPException(status_code=400, detail=str(erro)) from erro
 
     return LancamentoConciliado(

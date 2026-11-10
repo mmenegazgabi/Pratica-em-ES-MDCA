@@ -3,6 +3,7 @@ from fastapi import FastAPI
 if __package__:
     from .routers.comprovantes import router as comprovantes_router
     from .routers.dashboard import router as dashboard_router
+    from .routers.extrato import router as extrato_router
     from .routers.lancamentos import router as lancamentos_router
     from .routers.notificacoes import router as notificacoes_router
     from .routers.orcamentos import router as orcamentos_router
@@ -13,6 +14,7 @@ if __package__:
 else:
     from routers.comprovantes import router as comprovantes_router
     from routers.dashboard import router as dashboard_router
+    from routers.extrato import router as extrato_router
     from routers.lancamentos import router as lancamentos_router
     from routers.notificacoes import router as notificacoes_router
     from routers.orcamentos import router as orcamentos_router
@@ -32,6 +34,7 @@ app.include_router(rascunhos_router)
 app.include_router(projetos_router)
 app.include_router(dashboard_router)
 app.include_router(relatorios_router)
+app.include_router(extrato_router)
 
 
 if __name__ == "__main__":
