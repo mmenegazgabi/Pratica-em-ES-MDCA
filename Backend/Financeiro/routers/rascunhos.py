@@ -20,6 +20,7 @@ if __package__ == "routers":
     from rascunhos import Rascunho, RascunhoNaoEncontrado
     from routers.comprovantes import obter_armazenamento
     from routers.lancamentos import (
+        auditar_lancamento,
         LancamentoCriado,
         _criar_lancamento,
         _receber_comprovante,
@@ -33,6 +34,7 @@ else:
     from ..rascunhos import Rascunho, RascunhoNaoEncontrado
     from .comprovantes import obter_armazenamento
     from .lancamentos import (
+        auditar_lancamento,
         LancamentoCriado,
         _criar_lancamento,
         _receber_comprovante,
@@ -132,6 +134,11 @@ def completar_rascunho(
         repositorio, orcamento, valor, descricao, categoria, data_despesa,
         rascunho.comprovante_chave, rascunho.content_type,
         rascunho.nome_original, rascunho.tamanho, autor_id,
+    )
+    lancamento = next(l for l in orcamento.lancamentos if l.id == criado.id)
+    auditar_lancamento(
+        repositorio, identidade, "criar_lancamento", orcamento, lancamento,
+        detalhes={"rascunho_id": rascunho_id},
     )
     repositorio.confirmar()
     return criado

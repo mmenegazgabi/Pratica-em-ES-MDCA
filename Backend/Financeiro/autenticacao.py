@@ -19,13 +19,14 @@ valendo enquanto os frontends migram para o login.
 """
 
 import hmac
+import logging
 import os
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 from typing import FrozenSet, Optional
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from Shared import sessao
@@ -160,12 +161,14 @@ class Identidade:
     via_sessao: bool
     # None: todos os programas. Conjunto: só esses (quem só é educador).
     programas: Optional[FrozenSet[str]] = None
+    # "PATCH /lancamentos/x/aprovar": vai para a auditoria quando o acesso é negado.
+    rota: str = ""
 
     def ve_programa(self, programa_id: str) -> bool:
         return self.programas is None or programa_id in self.programas
 
 
-def papeis_no_banco(usuario_id: str, hoje: Optional[date] = None) -> Identidade:
+def papeis_no_banco(usuario_id: str, hoje: Optional[date] = None, rota: str = "") -> Identidade:
     """Papéis do Financeiro da pessoa e os programas que ela pode ver."""
     import sqlalchemy as sa
     from sqlalchemy.exc import SQLAlchemyError
@@ -196,27 +199,64 @@ def papeis_no_banco(usuario_id: str, hoje: Optional[date] = None) -> Identidade:
     programas = None
     if not papeis & PAPEIS_QUE_VEEM_TODOS_OS_PROGRAMAS:
         programas = frozenset(v.programa_id for v in vinculos)
-    return Identidade(usuario_id, papeis, via_sessao=True, programas=programas)
+    return Identidade(usuario_id, papeis, via_sessao=True, programas=programas, rota=rota)
 
 
 def obter_identidade(
+    request: Request,
     modo: str = Depends(exigir_autenticacao),
     usuario: Optional[str] = Depends(obter_usuario),
     papel: Optional[str] = Header(None, alias=CABECALHO_PAPEL),
 ) -> Identidade:
+    rota = f"{request.method} {request.url.path}"
     if modo == "sessao":
         # O cabeçalho de papel é ignorado: o papel vem do banco, não da tela.
-        return papeis_no_banco(usuario)
+        return papeis_no_banco(usuario, rota=rota)
     papel = (papel or "").strip().lower()
     papeis = frozenset({papel}) if papel in PAPEIS_DO_FINANCEIRO else frozenset()
-    return Identidade(usuario, papeis, via_sessao=False)
+    return Identidade(usuario, papeis, via_sessao=False, rota=rota)
 
 
-def _negar(permitidos) -> HTTPException:
-    return HTTPException(
-        status_code=403,
-        detail="Ação permitida apenas para: " + ", ".join(p.value for p in permitidos) + ".",
+_log = logging.getLogger(__name__)
+
+
+def registrar_acesso_negado(identidade: Identidade, motivo: str) -> None:
+    """T-34: a tentativa negada vai para a trilha, em transação própria (a ação não acontece).
+
+    Uma falha ao gravar não muda a resposta: o acesso continua negado.
+    """
+    if __package__:
+        from .auditoria import ACESSO_NEGADO, MODULO
+        from .persistencia import MEMORIA, usa_banco
+    else:
+        from auditoria import ACESSO_NEGADO, MODULO
+        from persistencia import MEMORIA, usa_banco
+    evento = dict(
+        usuario_id=identidade.usuario_id,
+        acao=ACESSO_NEGADO,
+        alvo_tipo="rota",
+        alvo_id=identidade.rota or None,
+        descricao=identidade.rota or None,
+        detalhes={"motivo": motivo, "papeis": sorted(identidade.papeis), "login": identidade.via_sessao},
     )
+    try:
+        if not usa_banco():
+            MEMORIA.auditar(**evento)
+            return
+        from Shared.auditoria import registrar
+        from Shared.banco import conectar
+
+        with conectar() as conexao:
+            registrar(conexao, modulo=MODULO, **evento)
+            conexao.commit()
+    except Exception:  # noqa: BLE001 — a auditoria não pode transformar um 403 em 500
+        _log.warning("Não foi possível registrar o acesso negado na auditoria", exc_info=True)
+
+
+def _negar(identidade: Identidade, permitidos) -> HTTPException:
+    detalhe = "Ação permitida apenas para: " + ", ".join(p.value for p in permitidos) + "."
+    registrar_acesso_negado(identidade, detalhe)
+    return HTTPException(status_code=403, detail=detalhe)
 
 
 def exigir_papel(*permitidos: Papel):
@@ -226,7 +266,7 @@ def exigir_papel(*permitidos: Papel):
         for papel in PRIORIDADE:
             if papel in permitidos and papel.value in identidade.papeis:
                 return papel
-        raise _negar(permitidos)
+        raise _negar(identidade, permitidos)
 
     return verificar
 
@@ -239,11 +279,12 @@ def exigir_acesso_financeiro(identidade: Identidade = Depends(obter_identidade))
     exigiam).
     """
     if identidade.via_sessao and not identidade.papeis:
-        raise _negar(PRIORIDADE)
+        raise _negar(identidade, PRIORIDADE)
     return identidade
 
 
 def exigir_programa(identidade: Identidade, programa_id: str) -> None:
     """403 quando a pessoa não tem vínculo com o programa (educador em outro programa)."""
     if not identidade.ve_programa(programa_id):
+        registrar_acesso_negado(identidade, SEM_VINCULO)
         raise HTTPException(status_code=403, detail=SEM_VINCULO)

@@ -39,6 +39,7 @@ from fastapi import (
 from pydantic import BaseModel
 
 if __package__ == "routers":
+    import auditoria
     from autenticacao import (
         Identidade,
         Papel,
@@ -46,6 +47,7 @@ if __package__ == "routers":
         exigir_papel,
         exigir_programa,
         exigir_usuario,
+        obter_identidade,
         obter_usuario,
     )
     from comprovantes import (
@@ -66,8 +68,10 @@ if __package__ == "routers":
     )
     from persistencia import obter_repositorio
     from routers.comprovantes import obter_armazenamento
+    from projetos import buscar_projeto
     from routers.orcamentos import _buscar_orcamento
 else:
+    from .. import auditoria
     from ..autenticacao import (
         Identidade,
         Papel,
@@ -75,6 +79,7 @@ else:
         exigir_papel,
         exigir_programa,
         exigir_usuario,
+        obter_identidade,
         obter_usuario,
     )
     from ..comprovantes import (
@@ -95,6 +100,7 @@ else:
     )
     from ..persistencia import obter_repositorio
     from .comprovantes import obter_armazenamento
+    from ..projetos import buscar_projeto
     from .orcamentos import _buscar_orcamento
 
 router = APIRouter(
@@ -229,6 +235,35 @@ def _criar_lancamento(
     )
 
 
+def auditar_lancamento(
+    repositorio,
+    identidade: Optional[Identidade],
+    acao: str,
+    orcamento: Orcamento,
+    lancamento: Lancamento,
+    *extra: Optional[str],
+    detalhes: Optional[dict] = None,
+) -> None:
+    """T-34: registra a ação no lançamento, na mesma transação (antes do confirmar)."""
+    projeto = buscar_projeto(orcamento.projeto_id, repositorio)
+    auditoria.registrar(
+        repositorio,
+        identidade,
+        acao,
+        alvo_tipo="lancamento",
+        alvo_id=lancamento.id,
+        descricao=auditoria.alvo_lancamento(lancamento, projeto.nome if projeto else None, *extra),
+        detalhes={
+            "orcamento_id": orcamento.id,
+            "projeto_id": orcamento.projeto_id,
+            "valor": lancamento.valor,
+            "categoria": lancamento.categoria,
+            "status": lancamento.status.value,
+            **(detalhes or {}),
+        },
+    )
+
+
 @router.post("", response_model=LancamentoCriado, status_code=201)
 async def criar_lancamento(
     orcamento_id: str = Form(...),
@@ -266,6 +301,8 @@ async def criar_lancamento(
         repositorio, orcamento, valor, descricao, categoria, data_despesa,
         chave, content_type, nome_original, tamanho, autor_id,
     )
+    lancamento = next(l for l in orcamento.lancamentos if l.id == criado.id)
+    auditar_lancamento(repositorio, identidade, "criar_lancamento", orcamento, lancamento)
     repositorio.confirmar()
     return criado
 
@@ -298,6 +335,7 @@ def aprovar_lancamento(
     lancamento_id: str,
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
     repositorio=Depends(obter_repositorio),
+    identidade: Identidade = Depends(obter_identidade),
 ) -> LancamentoAprovado:
     orcamento = _buscar_orcamento_do_lancamento(repositorio, lancamento_id, para_alterar=True)
     try:
@@ -307,6 +345,10 @@ def aprovar_lancamento(
 
     repositorio.salvar_lancamento(orcamento, lancamento)
     repositorio.notificar_resultado(lancamento)
+    auditar_lancamento(
+        repositorio, identidade, "aprovar_lancamento", orcamento, lancamento,
+        detalhes={"saldo_orcamento": orcamento.saldo},
+    )
     repositorio.confirmar()
 
     return LancamentoAprovado(
@@ -360,6 +402,7 @@ def rejeitar_lancamento(
     payload: Optional[RejeicaoPayload] = Body(None),
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
     repositorio=Depends(obter_repositorio),
+    identidade: Identidade = Depends(obter_identidade),
 ) -> LancamentoRejeitado:
     orcamento = _buscar_orcamento_do_lancamento(repositorio, lancamento_id, para_alterar=True)
 
@@ -381,6 +424,10 @@ def rejeitar_lancamento(
 
     repositorio.salvar_lancamento(orcamento, lancamento)
     repositorio.notificar_resultado(lancamento)
+    auditar_lancamento(
+        repositorio, identidade, "rejeitar_lancamento", orcamento, lancamento,
+        detalhes={"motivo": lancamento.motivo_rejeicao},
+    )
     repositorio.confirmar()
 
     return LancamentoRejeitado(
@@ -535,6 +582,7 @@ async def reenviar_lancamento(
     armazenamento: ArmazenamentoComprovantes = Depends(obter_armazenamento),
     autor_id: str = Depends(exigir_usuario),
     repositorio=Depends(obter_repositorio),
+    identidade: Identidade = Depends(obter_identidade),
 ) -> LancamentoDetalhe:
     def conferir(orcamento: Orcamento) -> str:
         lancamento = next(l for l in orcamento.lancamentos if l.id == lancamento_id)
@@ -571,6 +619,10 @@ async def reenviar_lancamento(
     except LancamentoInvalido as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
     repositorio.salvar_lancamento(orcamento, lancamento)
+    auditar_lancamento(
+        repositorio, identidade, "reenviar_lancamento", orcamento, lancamento,
+        detalhes={"comprovante_novo": chave is not None},
+    )
     repositorio.confirmar()
     return _detalhe(orcamento, lancamento)
 
@@ -600,6 +652,7 @@ def conciliar_lancamento(
     payload: Optional[ConciliacaoPayload] = Body(None),
     _papel: Papel = Depends(exigir_papel(Papel.VOLUNTARIO_FINANCEIRO)),
     repositorio=Depends(obter_repositorio),
+    identidade: Identidade = Depends(obter_identidade),
 ) -> LancamentoConciliado:
     """Marca o lançamento como conciliado com um item do extrato bancário.
 
@@ -617,6 +670,7 @@ def conciliar_lancamento(
             detail=f"Referência do extrato deve ter no máximo {REFERENCIA_TAMANHO_MAXIMO} caracteres.",
         )
 
+    ja_conciliado = next(l for l in orcamento.lancamentos if l.id == lancamento_id).conciliado
     try:
         lancamento = orcamento.conciliar_lancamento(lancamento_id, referencia)
     except ConciliacaoInvalida as erro:
@@ -625,6 +679,11 @@ def conciliar_lancamento(
         raise HTTPException(status_code=400, detail=str(erro)) from erro
 
     repositorio.salvar_lancamento(orcamento, lancamento)
+    if not ja_conciliado:  # repetir a mesma referência não muda nada nem gera registro
+        auditar_lancamento(
+            repositorio, identidade, "conciliar_lancamento", orcamento, lancamento,
+            referencia, detalhes={"referencia_extrato": referencia},
+        )
     repositorio.confirmar()
 
     return LancamentoConciliado(

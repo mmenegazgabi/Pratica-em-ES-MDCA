@@ -1,25 +1,20 @@
 """Registro de eventos de Gestão na trilha única da plataforma (``log_auditoria``, T-32).
 
-A tabela só aceita inclusão (trigger no banco). Por enquanto Gestão registra as
-tentativas de acesso negadas (US-01); o registro de consultas e alterações em dados
-sensíveis chega com a US-13 (T-81).
+A gravação é a mesma do Financeiro (``Shared/auditoria.py``); aqui só fica o módulo
+``gestao``. A tabela só aceita inclusão (trigger no banco). Gestão registra as
+tentativas de acesso negadas (US-01) e as consultas e alterações em dados sensíveis.
 """
 
 from typing import Any, Dict, Optional
 
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection
 
-MODULO = "gestao"
-ACESSO_NEGADO = "acesso_negado"
+from Shared import auditoria as _trilha
+from Shared.auditoria import ACESSO_NEGADO
 
-_INSERIR = sa.text(
-    """
-    INSERT INTO log_auditoria (usuario_id, modulo, acao, alvo_tipo, alvo_id, descricao, detalhes)
-    VALUES (:usuario_id, :modulo, :acao, :alvo_tipo, :alvo_id, :descricao, :detalhes)
-    """
-).bindparams(sa.bindparam("detalhes", type_=JSONB))
+__all__ = ["ACESSO_NEGADO", "MODULO", "registrar"]
+
+MODULO = "gestao"
 
 
 def registrar(
@@ -32,16 +27,14 @@ def registrar(
     descricao: Optional[str] = None,
     detalhes: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """Inclui um evento. Quem chama decide quando fazer o commit."""
-    conexao.execute(
-        _INSERIR,
-        {
-            "usuario_id": usuario_id,
-            "modulo": MODULO,
-            "acao": acao,
-            "alvo_tipo": alvo_tipo,
-            "alvo_id": alvo_id,
-            "descricao": descricao,
-            "detalhes": detalhes,
-        },
+    """Inclui um evento de Gestão. Quem chama decide quando fazer o commit."""
+    _trilha.registrar(
+        conexao,
+        modulo=MODULO,
+        usuario_id=usuario_id,
+        acao=acao,
+        alvo_tipo=alvo_tipo,
+        alvo_id=alvo_id,
+        descricao=descricao,
+        detalhes=detalhes,
     )

@@ -30,6 +30,7 @@ from Financeiro.main import app
 from Financeiro.notificacoes import caixa_de_notificacoes
 from Financeiro.persistencia import VARIAVEL_ARMAZENAMENTO
 from Financeiro.projetos import _projetos
+from Financeiro.persistencia import AUDITORIA_EM_MEMORIA
 from Financeiro.rascunhos import caixa_de_rascunhos
 from Financeiro.routers.comprovantes import obter_armazenamento
 from Financeiro.routers.orcamentos import _orcamentos
@@ -68,6 +69,11 @@ class Normalizador:
         return self.rotulos[uid]
 
     def __call__(self, valor, chave=None):
+        # Número do registro na trilha: sequência do banco x contador da memória.
+        if chave == "id" and isinstance(valor, int):
+            return "<id>"
+        if chave == "quando":
+            return "<ts>"
         if isinstance(valor, dict):
             return {k: self(v, k) for k, v in valor.items()}
         if isinstance(valor, list):
@@ -149,6 +155,8 @@ class Rodada:
             self.chamar(f"{etiqueta}:lancamento", "get", f"/lancamentos/{lancamento_id}", headers=coord)
         for filtro in ({}, {"status": "ativo"}, {"data_inicio": "2026-03-01", "data_fim": "2026-06-30"}):
             self.chamar(f"{etiqueta}:dashboard{filtro}", "get", "/dashboard/projetos", params=filtro, headers=direcao)
+        # T-34: a trilha do Financeiro registra o mesmo nas duas formas de armazenamento.
+        self.chamar(f"{etiqueta}:auditoria", "get", "/auditoria", params={"tamanho": 200}, headers=coord)
         for projeto_id in self.projetos:
             self.chamar(
                 f"{etiqueta}:relatorio", "get", "/relatorios/prestacao-contas",
@@ -371,6 +379,7 @@ def _esvaziar_memoria():
     _orcamentos.clear()
     caixa_de_notificacoes.limpar()
     caixa_de_rascunhos.limpar()
+    AUDITORIA_EM_MEMORIA.clear()
 
 
 def _preparar_memoria(monkeypatch):
@@ -427,8 +436,20 @@ def test_banco_devolve_o_mesmo_depois_de_reiniciar(semente, banco_financeiro, mo
     _esvaziar_memoria()
     rodada.registro = []
     rodada.retrato("final")
+    depois = rodada.registro
 
-    _comparar(antes, rodada.registro)
+    # Gerar o relatório grava na auditoria (T-34): o segundo retrato vê, no topo da
+    # trilha, os relatórios gerados pelo primeiro. Fora isso, a trilha tem de ser igual.
+    def sem_auditoria(registro):
+        return [r for r in registro if r[0] != "final:auditoria"]
+
+    _comparar(sem_auditoria(antes), sem_auditoria(depois))
+    [(_, _, trilha_antes)] = [r for r in antes if r[0] == "final:auditoria"]
+    [(_, _, trilha_depois)] = [r for r in depois if r[0] == "final:auditoria"]
+    novos = trilha_depois["itens"][: len(trilha_depois["itens"]) - len(trilha_antes["itens"])]
+    assert {i["codigo"] for i in novos} <= {"gerar_relatorio"}
+    assert len(novos) == len(rodada.projetos)
+    assert trilha_depois["itens"][len(novos):] == trilha_antes["itens"]
 
 
 def test_cenarios_cobrem_os_caminhos_de_sucesso_e_de_erro(banco_financeiro, monkeypatch):

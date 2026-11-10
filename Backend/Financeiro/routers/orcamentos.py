@@ -12,7 +12,9 @@ if __package__ == "routers":
         calcular_realizado,
         classificar_nivel_alerta,
     )
-    from autenticacao import Identidade, Papel, exigir_acesso_financeiro, exigir_papel, exigir_programa
+    import auditoria
+    from autenticacao import Identidade, Papel, exigir_acesso_financeiro, exigir_papel, exigir_programa, obter_identidade
+    from moeda import formatar_reais
     from orcamento import (
         Orcamento,
         OrcamentoInvalido,
@@ -27,7 +29,9 @@ else:
         calcular_realizado,
         classificar_nivel_alerta,
     )
-    from ..autenticacao import Identidade, Papel, exigir_acesso_financeiro, exigir_papel, exigir_programa
+    from .. import auditoria
+    from ..autenticacao import Identidade, Papel, exigir_acesso_financeiro, exigir_papel, exigir_programa, obter_identidade
+    from ..moeda import formatar_reais
     from ..orcamento import (
         Orcamento,
         OrcamentoInvalido,
@@ -185,6 +189,20 @@ def detalhar_um(orcamento: Orcamento, repositorio) -> OrcamentoDetalhe:
     return detalhar(orcamento, {projeto.id: projeto.nome} if projeto else {})
 
 
+def _resumo_do_orcamento(orcamento: Orcamento) -> dict:
+    """O que a auditoria guarda de um orçamento (para comparar antes e depois)."""
+    return {
+        "projeto_id": orcamento.projeto_id,
+        "valor_total": orcamento.valor_total,
+        "data_inicio": orcamento.data_inicio.isoformat(),
+        "data_fim": orcamento.data_fim.isoformat(),
+        "categorias": [
+            {"nome": nome, "valor_orcado": orcamento.valores_categorias.get(nome)}
+            for nome in orcamento.categorias_despesa
+        ],
+    }
+
+
 def _nomes_dos_projetos(repositorio) -> dict:
     return {p.id: p.nome for p in listar_projetos(repositorio)}
 
@@ -216,6 +234,7 @@ def criar_orcamento(
     payload: OrcamentoCreate,
     repositorio=Depends(obter_repositorio),
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO)),
+    identidade: Identidade = Depends(obter_identidade),
 ) -> Orcamento:
     if payload.valor_total < 0:
         raise HTTPException(
@@ -256,6 +275,13 @@ def criar_orcamento(
         valores_categorias=valores,
     )
     repositorio.inserir_orcamento(orcamento)
+    projeto = buscar_projeto(orcamento.projeto_id, repositorio)
+    auditoria.registrar(
+        repositorio, identidade, "criar_orcamento",
+        alvo_tipo="orcamento", alvo_id=orcamento.id,
+        descricao=auditoria.alvo(projeto.nome if projeto else None, f"valor total {formatar_reais(orcamento.valor_total)}"),
+        detalhes=_resumo_do_orcamento(orcamento),
+    )
     repositorio.confirmar()
     return orcamento
 
@@ -299,9 +325,11 @@ def editar_orcamento(
     payload: OrcamentoEdicao,
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO)),
     repositorio=Depends(obter_repositorio),
+    identidade: Identidade = Depends(obter_identidade),
 ) -> OrcamentoDetalhe:
     """Coordenação edita valor, vigência e categorias (redesign + US-01)."""
     orcamento = _buscar_orcamento(repositorio, orcamento_id, para_alterar=True)
+    antes = _resumo_do_orcamento(orcamento)
     categorias = (
         None
         if payload.categorias is None
@@ -318,6 +346,13 @@ def editar_orcamento(
     except OrcamentoInvalido as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
     repositorio.salvar_orcamento(orcamento)
+    projeto = buscar_projeto(orcamento.projeto_id, repositorio)
+    auditoria.registrar(
+        repositorio, identidade, "editar_orcamento",
+        alvo_tipo="orcamento", alvo_id=orcamento.id,
+        descricao=auditoria.alvo(projeto.nome if projeto else None, f"valor total {formatar_reais(orcamento.valor_total)}"),
+        detalhes={"antes": antes, "depois": _resumo_do_orcamento(orcamento)},
+    )
     repositorio.confirmar()
     return detalhar_um(orcamento, repositorio)
 

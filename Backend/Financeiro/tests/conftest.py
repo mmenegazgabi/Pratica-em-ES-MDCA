@@ -20,6 +20,7 @@ from Financeiro.main import app
 from Financeiro.notificacoes import caixa_de_notificacoes
 from Financeiro.persistencia import VARIAVEL_ARMAZENAMENTO
 from Financeiro.projetos import _projetos
+from Financeiro.persistencia import AUDITORIA_EM_MEMORIA
 from Financeiro.rascunhos import caixa_de_rascunhos
 from Financeiro.routers.comprovantes import obter_armazenamento
 from Financeiro.routers.orcamentos import _orcamentos
@@ -89,6 +90,7 @@ def esvaziar_memoria() -> None:
     _orcamentos.clear()
     caixa_de_notificacoes.limpar()
     caixa_de_rascunhos.limpar()
+    AUDITORIA_EM_MEMORIA.clear()
 
 
 @pytest.fixture

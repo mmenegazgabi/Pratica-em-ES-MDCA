@@ -24,11 +24,12 @@ duas aprovações ao mesmo tempo no mesmo orçamento esperam uma pela outra, mes
 mais de uma instância da API no Cloud Run.
 """
 
+import itertools
 import logging
 import os
 from contextlib import contextmanager
-from datetime import datetime, timezone
-from typing import Iterator, List, Optional
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from Shared import banco
 
@@ -76,6 +77,25 @@ def usa_banco() -> bool:
 # Orçamentos em memória. ``routers/orcamentos.py`` reexporta esta lista como
 # ``_orcamentos``, que os testes preenchem e esvaziam diretamente.
 ORCAMENTOS_EM_MEMORIA: List[Orcamento] = []
+# Trilha de auditoria do Financeiro em memória (sem banco); no banco, log_auditoria.
+AUDITORIA_EM_MEMORIA: List[Dict[str, Any]] = []
+_ids_auditoria = itertools.count(1)
+
+
+def _filtrar_auditoria(
+    eventos, acao: Optional[str], usuario_id: Optional[str], desde: Optional[date], ate: Optional[date]
+):
+    for evento in eventos:
+        dia = evento["ocorrido_em"].date()
+        if acao and evento["acao"] != acao:
+            continue
+        if usuario_id and evento["usuario_id"] != usuario_id:
+            continue
+        if desde and dia < desde:
+            continue
+        if ate and dia > ate:
+            continue
+        yield evento
 
 
 class RepositorioMemoria:
@@ -164,6 +184,33 @@ class RepositorioMemoria:
 
     def retirar_rascunho(self, rascunho_id: str, autor_id: str) -> Rascunho:
         return self._rascunhos.retirar(rascunho_id, autor_id)
+
+    # Auditoria
+    def auditar(self, *, usuario_id, acao, alvo_tipo=None, alvo_id=None, descricao=None, detalhes=None) -> None:
+        AUDITORIA_EM_MEMORIA.append(
+            {
+                "id": next(_ids_auditoria),
+                "ocorrido_em": datetime.now(timezone.utc),
+                "usuario_id": usuario_id,
+                "usuario_nome": None,
+                "acao": acao,
+                "alvo_tipo": alvo_tipo,
+                "alvo_id": alvo_id,
+                "descricao": descricao,
+                "detalhes": detalhes,
+            }
+        )
+
+    def listar_auditoria(
+        self, *, acao=None, usuario_id=None, desde=None, ate=None, pagina=1, tamanho=50
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        eventos = sorted(
+            _filtrar_auditoria(AUDITORIA_EM_MEMORIA, acao, usuario_id, desde, ate),
+            key=lambda e: (e["ocorrido_em"], e["id"]),
+            reverse=True,
+        )
+        inicio = (pagina - 1) * tamanho
+        return eventos[inicio : inicio + tamanho], len(eventos)
 
 
 MEMORIA = RepositorioMemoria(
@@ -550,6 +597,55 @@ class RepositorioBanco:
         if linha is None:
             raise RascunhoNaoEncontrado("Rascunho não encontrado")
         return self._rascunho(linha)
+
+    # Auditoria ----------------------------------------------------------------
+
+    def auditar(self, *, usuario_id, acao, alvo_tipo=None, alvo_id=None, descricao=None, detalhes=None) -> None:
+        # Na mesma transação da ação: vai junto no confirmar() da rota, ou não vai.
+        from Shared.auditoria import registrar
+
+        registrar(
+            self._conexao,
+            modulo="financeiro",
+            usuario_id=usuario_id,
+            acao=acao,
+            alvo_tipo=alvo_tipo,
+            alvo_id=alvo_id,
+            descricao=descricao,
+            detalhes=detalhes,
+        )
+
+    def listar_auditoria(
+        self, *, acao=None, usuario_id=None, desde=None, ate=None, pagina=1, tamanho=50
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        filtros = ["l.modulo = 'financeiro'"]
+        parametros: Dict[str, Any] = {}
+        if acao:
+            filtros.append("l.acao = :acao")
+            parametros["acao"] = acao
+        if usuario_id:
+            filtros.append("l.usuario_id = :usuario")
+            parametros["usuario"] = usuario_id
+        if desde:
+            filtros.append("l.ocorrido_em >= :desde")
+            parametros["desde"] = datetime.combine(desde, datetime.min.time(), timezone.utc)
+        if ate:
+            filtros.append("l.ocorrido_em < :ate")
+            parametros["ate"] = datetime.combine(ate + timedelta(days=1), datetime.min.time(), timezone.utc)
+        onde = " AND ".join(filtros)
+        total = self._executar(f"SELECT count(*) FROM log_auditoria l WHERE {onde}", parametros).scalar_one()
+        linhas = self._executar(
+            f"""
+            SELECT l.id, l.ocorrido_em, l.usuario_id, u.nome AS usuario_nome, l.acao, l.alvo_tipo,
+                   l.alvo_id, l.descricao, l.detalhes
+            FROM log_auditoria l LEFT JOIN usuarios u ON u.id = l.usuario_id
+            WHERE {onde}
+            ORDER BY l.ocorrido_em DESC, l.id DESC
+            LIMIT :tamanho OFFSET :inicio
+            """,
+            {**parametros, "tamanho": tamanho, "inicio": (pagina - 1) * tamanho},
+        )
+        return [dict(linha._mapping) for linha in linhas], total
 
 
 # --- Dependência das rotas ------------------------------------------------------

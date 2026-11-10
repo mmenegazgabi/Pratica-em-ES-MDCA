@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 if __package__ == "routers":
-    from autenticacao import Identidade, Papel, exigir_acesso_financeiro, exigir_papel
+    import auditoria
+    from autenticacao import Identidade, Papel, exigir_acesso_financeiro, exigir_papel, obter_identidade
     from projetos import (
         Projeto,
         ProjetoDuplicado,
@@ -16,7 +17,8 @@ if __package__ == "routers":
     )
     from persistencia import obter_repositorio
 else:
-    from ..autenticacao import Identidade, Papel, exigir_acesso_financeiro, exigir_papel
+    from .. import auditoria
+    from ..autenticacao import Identidade, Papel, exigir_acesso_financeiro, exigir_papel, obter_identidade
     from ..projetos import (
         Projeto,
         ProjetoDuplicado,
@@ -52,6 +54,7 @@ def criar_projeto(
     payload: ProjetoCreate,
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO)),
     repositorio=Depends(obter_repositorio),
+    identidade: Identidade = Depends(obter_identidade),
 ) -> Projeto:
     try:
         projeto = registrar_projeto(payload.nome, repositorio)
@@ -59,6 +62,10 @@ def criar_projeto(
         raise HTTPException(status_code=409, detail=str(erro)) from erro
     except ProjetoInvalido as erro:
         raise HTTPException(status_code=400, detail=str(erro)) from erro
+    auditoria.registrar(
+        repositorio, identidade, "criar_projeto",
+        alvo_tipo="projeto", alvo_id=projeto.id, descricao=projeto.nome,
+    )
     repositorio.confirmar()
     return projeto
 
@@ -79,10 +86,15 @@ def editar_status(
     payload: StatusEdicao,
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
     repositorio=Depends(obter_repositorio),
+    identidade: Identidade = Depends(obter_identidade),
 ) -> Projeto:
     # T-29 · US-07: encerrar (ou reabrir) o projeto para o filtro do dashboard.
     projeto = alterar_status(projeto_id, payload.status, repositorio)
     if projeto is None:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
+    acao = "encerrar_projeto" if payload.status == StatusProjeto.ENCERRADO else "reabrir_projeto"
+    auditoria.registrar(
+        repositorio, identidade, acao, alvo_tipo="projeto", alvo_id=projeto.id, descricao=projeto.nome,
+    )
     repositorio.confirmar()
     return projeto
