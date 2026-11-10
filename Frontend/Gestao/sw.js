@@ -11,6 +11,9 @@ const VERSAO = "mdca-gestao-v1";
 // O teste tests/pwa.test.js confere que todo arquivo .js do app está nesta lista.
 // (Script clássico, sem import/export: nem todo navegador aceita service worker módulo.)
 const ARQUIVOS = [
+  // Visual do Financeiro (T-00j): carregado pelo index.html, guardado para abrir sem rede.
+  "../Financeiro/base/tokens.css",
+  "../Financeiro/base/componentes.css",
   "./",
   "index.html",
   "style.css",
@@ -32,12 +35,6 @@ const ARQUIVOS = [
   "telas/turmas.js",
   "telas/usuarios.js",
   "telas/visao-integrada.js",
-  "assets/bitter-italic-latin.woff2",
-  "assets/bitter-latin.woff2",
-  "assets/general-sans-400.woff2",
-  "assets/general-sans-500.woff2",
-  "assets/general-sans-600.woff2",
-  "assets/general-sans-700.woff2",
 ];
 
 self.addEventListener("install", (evento) => {

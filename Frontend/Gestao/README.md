@@ -16,8 +16,7 @@ Gestao/
   index.html      # entrada (carrega app.js como módulo)
   sw.js           # service worker: guarda os arquivos do app para abrir sem rede no navegador
   app.js          # moldura, rotas e telas de demonstração vindas do protótipo
-  style.css       # design system MDCA + estilos da aplicação (bloco no fim)
-  assets/         # fontes locais (Bitter e General Sans)
+  style.css       # estilos da Gestão sobre o visual do Financeiro (T-00j)
   base/
     api.js        # cliente único da API: toda chamada HTTP passa por aqui
     estados.js    # estados carregando, erro e acesso restrito
@@ -131,3 +130,19 @@ cd Frontend/Gestao
 npm install
 npm test
 ```
+
+## Visual
+
+A Gestão usa o mesmo visual do Financeiro ("B · Neutro e funcional": Inter, branco,
+verde `#3f8a3a`, bordas finas). O `index.html` carrega, antes do `style.css`, os arquivos
+`../Financeiro/base/tokens.css` e `../Financeiro/base/componentes.css`, só para leitura,
+como a página de Administração (`Frontend/Admin`). O `sw.js` guarda os dois, para o
+registro em campo abrir sem internet.
+
+O `style.css` não cria cor nem fonte própria: as variáveis que as telas já usavam
+(`--color-*`, `--pine`, `--line`…) apontam para as do Financeiro, e a seção do fim dá aos
+componentes da Gestão (botões, etiquetas, caixas, tabelas, campos, abas, avisos e
+diálogo) os tamanhos e o acabamento do Financeiro. O teste `tests/visual.test.js`
+confere isso. Plano completo: `plano-identidade-visual-gestao.md` (arquivo de contexto
+da Gestão), cards T-00j a T-00m.
+
