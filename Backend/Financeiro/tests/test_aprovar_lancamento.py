@@ -84,7 +84,7 @@ def test_aprovacao_reflete_no_saldo_do_get_orcamento():
 
     aprovar(lancamento.id)
 
-    detalhe = client.get("/orcamentos/orcamento-1").json()
+    detalhe = client.get("/orcamentos/orcamento-1", headers=cabecalhos()).json()
     assert detalhe["saldo"] == 750
     assert detalhe["realizado"] == 250
 

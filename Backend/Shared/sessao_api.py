@@ -61,19 +61,12 @@ def _usuario(conexao: Connection, usuario_id: str) -> UsuarioDaSessao:
     linha = conexao.execute(
         sa.text("SELECT id, nome, email FROM usuarios WHERE id = :id"), {"id": usuario_id}
     ).one()
-    papeis = conexao.execute(
-        sa.text(
-            """
-            SELECT papel_id FROM usuarios_papeis WHERE usuario_id = :id
-            UNION
-            SELECT papel_id FROM vinculos_equipe
-            WHERE usuario_id = :id AND (data_saida IS NULL OR data_saida > CURRENT_DATE)
-            ORDER BY 1
-            """
-        ),
-        {"id": usuario_id},
-    ).scalars()
-    return UsuarioDaSessao(id=linha.id, nome=linha.nome, email=linha.email, papeis=list(papeis))
+    return UsuarioDaSessao(
+        id=linha.id,
+        nome=linha.nome,
+        email=linha.email,
+        papeis=sessao.papeis_do_usuario(conexao, usuario_id),
+    )
 
 
 @router.post("/entrar", response_model=Sessao)

@@ -26,7 +26,7 @@ import secrets
 import time
 from datetime import datetime, timezone
 from functools import lru_cache
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from fastapi import HTTPException
 
@@ -179,3 +179,38 @@ def usuario_da_sessao(token: str) -> Optional[str]:
     except SQLAlchemyError as erro:
         raise HTTPException(status_code=503, detail=BANCO_INDISPONIVEL) from erro
     return usuario_id if ativo else None
+
+
+def papeis_do_usuario(conexao, usuario_id: str) -> List[str]:
+    """Papéis da plataforma e papéis com vínculo ativo em algum programa, sem repetição.
+
+    Vínculo ativo: já começou (``data_entrada``) e não terminou (``data_saida``).
+    """
+    import sqlalchemy as sa
+
+    return list(
+        conexao.execute(
+            sa.text(
+                """
+                SELECT papel_id FROM usuarios_papeis WHERE usuario_id = :id
+                UNION
+                SELECT papel_id FROM vinculos_equipe
+                WHERE usuario_id = :id AND data_entrada <= CURRENT_DATE
+                  AND (data_saida IS NULL OR data_saida > CURRENT_DATE)
+                ORDER BY 1
+                """
+            ),
+            {"id": usuario_id},
+        ).scalars()
+    )
+
+
+def papeis_da_sessao(usuario_id: str) -> List[str]:
+    """``papeis_do_usuario`` abrindo a própria conexão; 503 se o banco cair."""
+    from sqlalchemy.exc import SQLAlchemyError
+
+    try:
+        with conectar() as conexao:
+            return papeis_do_usuario(conexao, usuario_id)
+    except SQLAlchemyError as erro:
+        raise HTTPException(status_code=503, detail=BANCO_INDISPONIVEL) from erro

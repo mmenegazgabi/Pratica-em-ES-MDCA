@@ -58,8 +58,9 @@ Uma conta só para a Gestão e o Financeiro: a pessoa entra uma vez na tela inic
   "Entrar" própria; sem sessão válida, mandar para a tela inicial (`../`).
 - Mandar `Authorization: Bearer <token da sessão>` no lugar do código de acesso. O
   `X-Usuario-Id` deixa de ser necessário.
-- Oferecer só os papéis de `usuario.papeis` na escolha de papel e continuar mandando
-  `X-Papel-Usuario` até a T-33 (RBAC), que vai conferir o papel no banco.
+- Oferecer só os papéis de `usuario.papeis` na escolha de papel. Com o token de sessão,
+  o backend já confere o papel no banco: `X-Papel-Usuario` só escolhe entre os papéis
+  que a pessoa tem (sem ele, vale o primeiro permitido) e um papel que ela não tem dá 403.
 - Fazer o mesmo no app do celular (`lancamento/`), e o "Sair" apagar `mdca.sessao`.
 - O autor dos lançamentos passa a ser o `id` da tabela `usuarios` (ex.: `ana`).
 

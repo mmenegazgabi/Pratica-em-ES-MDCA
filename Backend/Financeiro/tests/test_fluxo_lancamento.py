@@ -142,7 +142,7 @@ def test_lancamento_criado_aparece_pendente_na_consulta_e_nao_mexe_no_saldo():
     criado = enviar(corpo_do_formulario()).json()
 
     consulta = client.get(f"/lancamentos/{criado['id']}", headers=EDUCADOR)
-    orcamento = client.get("/orcamentos/orc-semear").json()
+    orcamento = client.get("/orcamentos/orc-semear", headers=EDUCADOR).json()
 
     assert consulta.status_code == 200
     assert consulta.json()["status_descricao"] == "Pendente de aprovação"

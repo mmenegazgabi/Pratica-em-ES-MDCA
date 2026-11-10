@@ -68,10 +68,16 @@ def exigir_autenticacao(
 
 # --- Papel do usuário (T-15 · US-04) ----------------------------------------
 #
-# Provisório até a US-08: o papel chega no cabeçalho ``X-Papel-Usuario`` e só
-# é aceito junto com o token de serviço (quem tem o token é o frontend, que já
-# sabe quem está logado). Na US-08 o papel passa a vir do usuário autenticado;
-# as rotas continuam usando ``exigir_papel`` do mesmo jeito.
+# Com token de sessão (T-35), o papel vem do banco: ``usuarios_papeis`` e os
+# vínculos ativos em ``vinculos_equipe``. O cabeçalho ``X-Papel-Usuario`` só
+# escolhe entre os papéis que a pessoa tem; sem ele, vale o primeiro permitido
+# que ela tiver. Assim não dá para se declarar coordenação pelo cabeçalho.
+# Limitação até a T-33: o papel de um vínculo vale para o Financeiro inteiro,
+# porque os projetos do Financeiro ainda não estão ligados aos programas.
+#
+# Com o código de acesso compartilhado, o papel ainda vem só do cabeçalho, até
+# os frontends migrarem para o login (T-35). As rotas continuam usando
+# ``exigir_papel`` do mesmo jeito.
 
 CABECALHO_PAPEL = "X-Papel-Usuario"
 
@@ -84,18 +90,38 @@ class Papel(str, Enum):
 
 
 def exigir_papel(*permitidos: Papel):
+    def negado() -> HTTPException:
+        return HTTPException(
+            status_code=403,
+            detail="Ação permitida apenas para: " + ", ".join(p.value for p in permitidos) + ".",
+        )
+
     def verificar(
-        _servico: str = Depends(exigir_autenticacao),
+        autenticacao: str = Depends(exigir_autenticacao),
         papel: Optional[str] = Header(None, alias=CABECALHO_PAPEL),
+        credenciais: Optional[HTTPAuthorizationCredentials] = Depends(_esquema_bearer),
     ) -> Papel:
         papel_normalizado = (papel or "").strip().lower()
+        if autenticacao == "sessao":
+            usuario_id = sessao.ler_token(_token_recebido(credenciais))
+            if usuario_id is None:
+                # Expirou entre a autenticação e aqui: pede login de novo, não é falta de papel.
+                raise HTTPException(
+                    status_code=401,
+                    detail="Autenticação obrigatória.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            do_usuario = set(sessao.papeis_da_sessao(usuario_id))
+            candidatos = [
+                p
+                for p in permitidos
+                if p.value in do_usuario and papel_normalizado in ("", p.value)
+            ]
+            if not candidatos:
+                raise negado()
+            return candidatos[0]
         if papel_normalizado not in {p.value for p in permitidos}:
-            raise HTTPException(
-                status_code=403,
-                detail="Ação permitida apenas para: "
-                + ", ".join(p.value for p in permitidos)
-                + ".",
-            )
+            raise negado()
         return Papel(papel_normalizado)
 
     return verificar

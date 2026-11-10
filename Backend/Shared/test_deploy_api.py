@@ -20,16 +20,16 @@ def test_financial_routes_are_served_by_deploy_app():
     headers = {"Authorization": "Bearer token-deploy", "X-Papel-Usuario": "coordenacao"}
     with patch.dict(os.environ, {"FINANCEIRO_API_TOKEN": "token-deploy"}):
         projeto = client.post("/projetos", json={"nome": "Infra Integration"}, headers=headers)
-    assert projeto.status_code == 201
-    response = client.post("/orcamentos", json={
-        "projeto_id": projeto.json()["id"],
-        "valor_total": 1000,
-        "data_inicio": "2026-01-01",
-        "data_fim": "2026-12-31",
-        "categorias_despesa": ["materiais"],
-    })
-    assert response.status_code == 201
-    detail = client.get("/orcamentos/" + response.json()["id"])
+        assert projeto.status_code == 201
+        response = client.post("/orcamentos", json={
+            "projeto_id": projeto.json()["id"],
+            "valor_total": 1000,
+            "data_inicio": "2026-01-01",
+            "data_fim": "2026-12-31",
+            "categorias_despesa": ["materiais"],
+        }, headers=headers)
+        assert response.status_code == 201
+        detail = client.get("/orcamentos/" + response.json()["id"], headers=headers)
     assert detail.status_code == 200
     assert detail.json()["saldo"] == 1000
 
@@ -48,9 +48,13 @@ def test_deploy_app_responde_422_para_nan_no_corpo():
         '{"projeto_id": "p", "valor_total": NaN, "data_inicio": "2026-01-01",'
         ' "data_fim": "2026-12-31", "categorias_despesa": ["materiais"]}'
     )
-    response = client.post(
-        "/orcamentos", content=corpo, headers={"Content-Type": "application/json"}
-    )
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer token-deploy",
+        "X-Papel-Usuario": "coordenacao",
+    }
+    with patch.dict(os.environ, {"FINANCEIRO_API_TOKEN": "token-deploy"}):
+        response = client.post("/orcamentos", content=corpo, headers=headers)
     assert response.status_code == 422
     assert "input" not in response.json()["detail"][0]
 

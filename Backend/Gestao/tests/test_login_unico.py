@@ -189,6 +189,65 @@ def test_token_vale_no_financeiro_e_identifica_quem_chama(cliente, contas):
     assert resposta.status_code == 200
 
 
+# --- Papel no Financeiro vem do banco, não do cabeçalho ------------------------
+
+
+@pytest.fixture
+def sem_projetos_em_memoria():
+    from Financeiro.projetos import _projetos
+
+    _projetos.clear()
+    yield
+    _projetos.clear()
+
+
+def test_com_token_o_papel_vem_do_banco(cliente, contas, sem_projetos_em_memoria):
+    resposta = cliente.post(
+        "/projetos", json={"nome": "Horta"}, headers=token_de(cliente, "ana@mdca.org")
+    )
+
+    assert resposta.status_code == 201
+
+
+def test_com_token_nao_da_para_se_declarar_coordenacao(cliente, contas, sem_projetos_em_memoria):
+    cabecalhos = {**token_de(cliente, "jessica@mdca.org"), "X-Papel-Usuario": "coordenacao"}
+
+    assert cliente.post("/projetos", json={"nome": "Horta"}, headers=cabecalhos).status_code == 403
+    assert cliente.patch("/orcamentos/qualquer", json={"valor_total": 1}, headers=cabecalhos).status_code == 403
+
+
+def test_vinculo_que_ainda_nao_comecou_nao_da_o_papel(cliente, contas, sem_projetos_em_memoria):
+    with contas.begin() as conexao:
+        conexao.execute(
+            sa.text(
+                "INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) "
+                "VALUES ('v-futuro', 'jessica', 'p-1', 'coordenacao', CURRENT_DATE + 30)"
+            )
+        )
+    cabecalhos = token_de(cliente, "jessica@mdca.org")
+
+    assert cliente.post("/projetos", json={"nome": "Horta"}, headers=cabecalhos).status_code == 403
+
+
+def test_com_token_direcao_ve_o_dashboard_e_educadora_nao(cliente, contas):
+    assert cliente.get("/dashboard/projetos", headers=token_de(cliente, "dora@mdca.org")).status_code == 200
+    assert cliente.get("/dashboard/projetos", headers=token_de(cliente, "jessica@mdca.org")).status_code == 403
+
+
+def test_com_token_o_cabecalho_escolhe_entre_os_papeis_da_pessoa(cliente, contas):
+    with contas.begin() as conexao:
+        conexao.execute(
+            sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('ana', 'direcao')")
+        )
+    cabecalhos = token_de(cliente, "ana@mdca.org")
+
+    assert cliente.get("/dashboard/projetos", headers=cabecalhos).status_code == 200
+    assert (
+        cliente.get("/dashboard/projetos", headers={**cabecalhos, "X-Papel-Usuario": "coordenacao"}).status_code
+        == 403
+    )
+
+
 def test_conta_desativada_perde_o_acesso_na_hora(cliente, contas):
     cabecalhos = token_de(cliente, "jessica@mdca.org")
     with contas.begin() as conexao:

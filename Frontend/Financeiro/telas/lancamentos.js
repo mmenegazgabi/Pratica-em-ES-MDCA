@@ -171,6 +171,41 @@ export async function mostrar(container, { parametros = {}, sessao, navegar }) {
     campo.focus();
   }
 
+  // T-18: aprovar debita o saldo, então pede confirmação antes de enviar.
+  function abrirDialogoDeAprovacao() {
+    const { meta } = painel;
+    const origem = document.activeElement;
+    const cancelar = el("button", { type: "button", class: "btn btn--sec" }, "Cancelar");
+    const confirmar = el("button", { type: "submit", class: "btn" }, "Confirmar aprovação");
+    const dialogo = el(
+      "dialog",
+      { class: "dialogo", "aria-labelledby": "aprovar-titulo" },
+      el(
+        "form",
+        { method: "dialog", novalidate: true },
+        el("h2", { id: "aprovar-titulo", style: "font-size:15px;margin:0 0 4px" }, "Aprovar despesa"),
+        el("p", { style: "color:var(--texto-suave);font-size:12px;margin:0 0 12px" }, `${formatarMoeda(meta.valor)} de ${nomeDoProjeto(meta)} serão debitados do saldo do orçamento.`),
+        el("div", { style: "display:flex;gap:8px;justify-content:flex-end;margin-top:14px" }, cancelar, confirmar),
+      ),
+    );
+    const fechar = () => {
+      dialogo.remove();
+      if (origem?.isConnected) origem.focus();
+    };
+    cancelar.addEventListener("click", fechar);
+    dialogo.addEventListener("cancel", fechar);
+    dialogo.querySelector("form").addEventListener("submit", (evento) => {
+      evento.preventDefault();
+      fechar();
+      // Sem showModal o painel continua clicável: só aprova se ainda for o mesmo lançamento.
+      if (painel?.meta?.id === meta.id) decidir(() => aprovarLancamento(meta.id));
+    });
+    container.append(dialogo);
+    if (typeof dialogo.showModal === "function") dialogo.showModal();
+    else dialogo.setAttribute("open", "");
+    confirmar.focus();
+  }
+
   function comprovante(p) {
     if (!p.detalhe?.comprovante_url) return null;
     const caixa = { style: "margin:12px 0;border:1px solid var(--borda);border-radius:8px;background:var(--fundo-suave);min-height:120px;display:flex;align-items:center;justify-content:center;overflow:hidden" };
@@ -203,7 +238,7 @@ export async function mostrar(container, { parametros = {}, sessao, navegar }) {
           "div",
           { style: "margin-top:auto;padding-top:16px;display:flex;gap:8px" },
           el("button", { type: "button", class: "btn btn--perigo", style: "flex:1;justify-content:center", disabled: ocupado, onclick: abrirDialogoDeRejeicao }, "Rejeitar"),
-          el("button", { type: "button", class: "btn", style: "flex:1;justify-content:center", disabled: ocupado, onclick: () => decidir(() => aprovarLancamento(meta.id)) }, "Aprovar"),
+          el("button", { type: "button", class: "btn", style: "flex:1;justify-content:center", disabled: ocupado, onclick: abrirDialogoDeAprovacao }, "Aprovar"),
         ),
       );
     }

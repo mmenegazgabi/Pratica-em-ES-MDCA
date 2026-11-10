@@ -2,13 +2,23 @@
 
 from datetime import date
 
+import pytest
 from fastapi.testclient import TestClient
 
 from Financeiro.main import app
 from Financeiro.orcamento import Orcamento
 from Financeiro.routers.orcamentos import _orcamentos
 
-client = TestClient(app)
+TOKEN = "token-de-teste-123"
+# As rotas de orçamento exigem login (T-11); a criação e a aprovação, Coordenação.
+COORDENACAO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
+
+client = TestClient(app, headers=COORDENACAO)
+
+
+@pytest.fixture(autouse=True)
+def token_configurado(monkeypatch):
+    monkeypatch.setenv("FINANCEIRO_API_TOKEN", TOKEN)
 
 
 def setup_function():

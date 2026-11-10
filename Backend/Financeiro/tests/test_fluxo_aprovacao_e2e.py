@@ -63,6 +63,7 @@ def criar_orcamento(valor_total=1000):
             "data_fim": "2026-12-31",
             "categorias_despesa": ["materiais", "alimentacao"],
         },
+        headers=COORDENACAO,
     )
     assert resposta.status_code == 201
     return resposta.json()["id"]
@@ -103,7 +104,7 @@ def rejeitar(lancamento_id, corpo):
 
 
 def saldo(orcamento_id):
-    return client.get(f"/orcamentos/{orcamento_id}").json()["saldo"]
+    return client.get(f"/orcamentos/{orcamento_id}", headers=COORDENACAO).json()["saldo"]
 
 
 def notificacoes(usuario="educadora-ana"):
@@ -135,7 +136,7 @@ def test_fluxo_de_aprovacao_completo():
     assert resposta.json()["saldo_orcamento"] == 700
 
     # Saldo debitado e indicador de consumo atualizado
-    orcamento = client.get(f"/orcamentos/{orcamento_id}").json()
+    orcamento = client.get(f"/orcamentos/{orcamento_id}", headers=COORDENACAO).json()
     assert orcamento["saldo"] == 700
     assert orcamento["realizado"] == 300
     assert orcamento["percentual_consumido"] == 30
@@ -249,7 +250,8 @@ def test_rota_antiga_de_aprovacao_tambem_bloqueia_dupla_aprovacao():
     aprovar(lancamento_id)
 
     resposta = client.post(
-        f"/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/aprovar"
+        f"/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/aprovar",
+        headers=COORDENACAO,
     )
 
     assert resposta.status_code == 409
@@ -273,7 +275,7 @@ def test_fila_com_varios_autores_e_decisoes():
     aprovar(da_ana_2)
 
     # Só os aprovados contam: 1000 - 400 - 450
-    orcamento = client.get(f"/orcamentos/{orcamento_id}").json()
+    orcamento = client.get(f"/orcamentos/{orcamento_id}", headers=COORDENACAO).json()
     assert orcamento["saldo"] == 150
     assert orcamento["nivel_alerta"] == "atencao"  # 85% consumido
     assert fila_de_pendentes() == []

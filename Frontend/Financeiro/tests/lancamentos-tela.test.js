@@ -120,6 +120,27 @@ test("rejeitado mostra o motivo", async () => {
   assert.equal(painel.querySelector(".btn--perigo"), null);
 });
 
+function aprovarComConfirmacao() {
+  [...container().querySelectorAll(".painel-lateral button")].find((b) => b.textContent === "Aprovar").click();
+  container().querySelector("dialog form").dispatchEvent(new window.Event("submit", { cancelable: true }));
+}
+
+test("aprovar pede confirmação e cancelar não envia nada", async () => {
+  preparar();
+  simular();
+  await mostrar(container(), { parametros: { abrir: "l1" }, sessao: coord, navegar() {} });
+  await esperar();
+  [...container().querySelectorAll(".painel-lateral button")].find((b) => b.textContent === "Aprovar").click();
+  const dialogo = container().querySelector("dialog");
+  assert.ok(dialogo);
+  assert.match(dialogo.textContent, /serão debitados do saldo/);
+  [...dialogo.querySelectorAll("button")].find((b) => b.textContent === "Cancelar").click();
+  await esperar();
+  assert.equal(container().querySelector("dialog"), null);
+  assert.ok(!chamadas.some((c) => c.includes("/aprovar")));
+  assert.ok(container().querySelector(".painel-lateral"));
+});
+
 test("aprovar fecha o painel, recarrega a lista e atualiza o contador", async () => {
   preparar();
   simular({
@@ -130,7 +151,7 @@ test("aprovar fecha o painel, recarrega a lista e atualiza o contador", async ()
   });
   await mostrar(container(), { parametros: { abrir: "l1" }, sessao: coord, navegar() {} });
   await esperar();
-  [...container().querySelectorAll(".painel-lateral button")].find((b) => b.textContent === "Aprovar").click();
+  aprovarComConfirmacao();
   await esperar();
   assert.ok(chamadas.includes("PATCH /lancamentos/l1/aprovar"));
   assert.equal(container().querySelector(".painel-lateral"), null);
@@ -143,7 +164,7 @@ test("409 ao aprovar mostra a mensagem do servidor no painel", async () => {
   simular({ aprovar: () => resposta(409, { detail: "Lançamento já foi analisado." }) });
   await mostrar(container(), { parametros: { abrir: "l1" }, sessao: coord, navegar() {} });
   await esperar();
-  [...container().querySelectorAll(".painel-lateral button")].find((b) => b.textContent === "Aprovar").click();
+  aprovarComConfirmacao();
   await esperar();
   assert.match(container().querySelector(".painel-lateral [role=alert]").textContent, /já foi analisado/);
 });
