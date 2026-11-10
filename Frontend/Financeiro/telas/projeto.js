@@ -1,10 +1,13 @@
-// Detalhe do projeto: números, gasto por categoria, últimos lançamentos e edição do orçamento.
+// Detalhe do projeto: números, gasto por categoria, últimos lançamentos, edição do orçamento
+// e encerrar/reativar o projeto (PATCH /projetos/{id}/status).
 import { el, limpar } from "../base/dom.js";
 import { formatarData, formatarDataCurta, formatarMoeda } from "../base/formatar.js";
 import { nomeDoAutor } from "../base/sessao.js";
-import { editarOrcamento, listarLancamentos, obterOrcamento } from "../base/api.js";
+import { alterarStatusProjeto, editarOrcamento, listarLancamentos, listarProjetos, obterOrcamento } from "../base/api.js";
 import { categoriasDoOrcamento } from "./projetos-dados.js";
-import { abrirDialogoOrcamento, falhou } from "./orcamento-dialogo.js";
+import { abrirDialogoOrcamento, abrirDocumento, falhou, mensagemDeErro } from "./orcamento-dialogo.js";
+
+const MUDAM_STATUS = ["coordenacao", "direcao"];
 
 const ROTULO_STATUS = { pendente: "Aguardando", aprovado: "Aprovado", rejeitado: "Rejeitado" };
 const DESTAQUE = {
@@ -29,14 +32,63 @@ export async function mostrar(container, { parametros = {}, sessao, navegar }) {
   let orcamento = null;
   let lancamentos = [];
   let lancamentosOk = true;
+  let projeto = null; // {id, nome, status} de GET /projetos; null se não carregou
 
   async function carregar() {
-    const [o, l] = await Promise.all([obterOrcamento(parametros.id), listarLancamentos({ orcamento_id: parametros.id })]);
+    const [o, l, p] = await Promise.all([obterOrcamento(parametros.id), listarLancamentos({ orcamento_id: parametros.id }), listarProjetos()]);
     if (falhou(o)) return o;
     orcamento = o.corpo;
     lancamentosOk = !falhou(l);
     lancamentos = lancamentosOk ? l.corpo.filter((x) => x.orcamento_id === orcamento.id) : [];
+    projeto = !falhou(p) && Array.isArray(p.corpo) ? p.corpo.find((x) => x.id === orcamento.projeto_id) || null : null;
     return o;
+  }
+
+  function dialogoStatus() {
+    const encerrar = projeto.status !== "encerrado";
+    const nome = projeto.nome || orcamento.projeto_nome || orcamento.projeto_id;
+    const erro = el("p", { role: "alert", style: "color:var(--perigo-texto);font-size:12px;margin:12px 0 0", hidden: true });
+    const cancelar = el("button", { type: "button", class: "btn btn--sec" }, "Cancelar");
+    const confirmar = el("button", { type: "submit", class: "btn" }, encerrar ? "Encerrar projeto" : "Reativar projeto");
+    const dialogo = el(
+      "dialog",
+      { class: "dialogo", "aria-labelledby": "status-titulo", style: "width:400px" },
+      el(
+        "form",
+        { method: "dialog", novalidate: true },
+        el("h2", { id: "status-titulo", style: "font-size:15px;margin:0 0 4px" }, encerrar ? "Encerrar projeto?" : "Reativar projeto?"),
+        el(
+          "p",
+          { style: "color:var(--texto-suave);font-size:12px;margin:8px 0 0;line-height:1.5" },
+          encerrar
+            ? `${nome} passa a aparecer como encerrado em Projetos e no painel da direção. Dá para reativar depois.`
+            : `${nome} volta a aparecer como ativo em Projetos e no painel da direção.`,
+        ),
+        erro,
+        el("div", { style: "display:flex;gap:8px;justify-content:flex-end;margin-top:16px" }, cancelar, confirmar),
+      ),
+    );
+    const fechar = () => dialogo.remove();
+    cancelar.addEventListener("click", fechar);
+    dialogo.addEventListener("cancel", fechar);
+    dialogo.querySelector("form").addEventListener("submit", async (evento) => {
+      evento.preventDefault();
+      confirmar.disabled = true;
+      cancelar.disabled = true;
+      erro.hidden = true;
+      const novo = encerrar ? "encerrado" : "ativo";
+      const resposta = await alterarStatusProjeto(projeto.id, novo);
+      if (!falhou(resposta)) {
+        fechar();
+        projeto = { ...projeto, status: resposta.corpo?.status || novo };
+        return desenhar();
+      }
+      confirmar.disabled = false;
+      cancelar.disabled = false;
+      erro.hidden = false;
+      erro.textContent = mensagemDeErro(resposta, encerrar ? "Não foi possível encerrar o projeto. Tente de novo." : "Não foi possível reativar o projeto. Tente de novo.");
+    });
+    abrirDocumento(container, dialogo, cancelar);
   }
 
   function dialogoEdicao() {
@@ -113,13 +165,25 @@ export async function mostrar(container, { parametros = {}, sessao, navegar }) {
 
   function desenhar() {
     const nome = orcamento.projeto_nome || orcamento.projeto_id;
+    const encerrado = projeto?.status === "encerrado";
+    const mudaStatus = projeto && MUDAM_STATUS.includes(sessao.papel);
     limpar(container).append(
       voltar,
       el(
         "div",
-        { style: "display:flex;justify-content:space-between;align-items:flex-start;margin-top:4px" },
-        el("div", {}, el("h1", {}, nome), el("p", { class: "sub" }, `${formatarData(orcamento.data_inicio)} a ${formatarData(orcamento.data_fim)}`)),
-        coordenacao ? el("button", { type: "button", class: "btn btn--sec", onclick: dialogoEdicao }, "Editar orçamento") : null,
+        { style: "display:flex;justify-content:space-between;align-items:flex-start;margin-top:4px;gap:12px" },
+        el(
+          "div",
+          {},
+          el("h1", {}, nome, encerrado ? el("span", { class: "etiqueta etiqueta--encerrado", style: "margin-left:8px;vertical-align:middle" }, "Encerrado") : null),
+          el("p", { class: "sub" }, `${formatarData(orcamento.data_inicio)} a ${formatarData(orcamento.data_fim)}`),
+        ),
+        el(
+          "div",
+          { style: "display:flex;gap:8px" },
+          coordenacao ? el("button", { type: "button", class: "btn btn--sec", onclick: dialogoEdicao }, "Editar orçamento") : null,
+          mudaStatus ? el("button", { type: "button", class: "btn btn--sec", onclick: dialogoStatus }, encerrado ? "Reativar projeto" : "Encerrar projeto") : null,
+        ),
       ),
       el(
         "div",

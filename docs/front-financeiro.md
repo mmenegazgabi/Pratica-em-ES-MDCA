@@ -33,13 +33,13 @@ mais enviado. Quem só tem o papel educador é levado ao app do celular (`lancam
 
 | Tela | Coordenação | Direção | Voluntário financeiro |
 | --- | --- | --- | --- |
-| Início (`#/inicio`) | Despesas aguardando aprovação e alertas de orçamento (>= 80%) | Alertas de orçamento e prestações de contas a gerar (vigência terminou ou termina em até 30 dias) | Aprovados sem conciliação |
+| Início (`#/inicio`) | Despesas aguardando aprovação e alertas de orçamento (>= 80%) | Alertas de orçamento, prestações de contas a gerar (vigência terminou ou termina em até 30 dias) e orçado, realizado e saldo por projeto (`GET /dashboard/projetos`, com total) | Aprovados sem conciliação |
 | Lançamentos (`#/lancamentos`) | Filas Aguardando/Aprovados/Rejeitados/Todos, filtro por projeto, painel com Aprovar e Rejeitar (motivo obrigatório) | não aparece | Abre em Aprovados (consulta) |
-| Projetos (`#/projetos`) | Totais, uso por projeto, Novo projeto/Criar orçamento | Só leitura | não aparece |
-| Detalhe do projeto (`#/projetos/<orçamento>`) | Orçado, gasto, disponível, gasto / limite por categoria, últimos lançamentos e **Editar orçamento** | Igual, sem Editar orçamento | não aparece |
-| Conciliação (`#/conciliacao`) | não aparece | não aparece | Extrato e aprovados lado a lado; marca um de cada e concilia (`PATCH /lancamentos/{id}/conciliar`) |
-| Relatórios (`#/relatorios`) | Prestação de contas: projeto, período, PDF (impressão) ou planilha (CSV) | Igual | não aparece |
-| Auditoria (`#/auditoria`) | Histórico de ações com busca | Igual | não aparece |
+| Projetos (`#/projetos`) | Totais, uso por projeto (projeto encerrado aparece como "Encerrado"), Novo projeto/Criar orçamento | Só leitura | não aparece |
+| Detalhe do projeto (`#/projetos/<orçamento>`) | Orçado, gasto, disponível, gasto / limite por categoria, últimos lançamentos, **Editar orçamento** e **Encerrar/Reativar projeto** (com confirmação, `PATCH /projetos/{id}/status`) | Igual, sem Editar orçamento | não aparece |
+| Conciliação (`#/conciliacao`) | não aparece no menu (a tela aceita importar) | não aparece | Extrato em aberto (`GET /extrato?em_aberto=true`) e aprovados lado a lado; marca um de cada e concilia (`PATCH /lancamentos/{id}/conciliar` com o `id` do item em `referencia_extrato`); **Importar extrato (CSV)** (`POST /extrato`) |
+| Relatórios (`#/relatorios`) | Prestação de contas: projeto, período, prévia na tela e arquivo oficial da API em PDF ou Planilha (XLSX) (`GET /relatorios/prestacao-contas`) | Igual | não aparece |
+| Auditoria (`#/auditoria`) | Histórico de ações da plataforma (`GET /auditoria`): busca (espera 300 ms), módulo e período | Igual | não aparece |
 
 O papel **Educador** vai direto para o app do celular (`lancamento/`). A gestão de
 pessoas e papéis fica na tela Administração da página inicial (`Frontend/Admin/`,
@@ -49,13 +49,33 @@ As barras de uso são verdes abaixo de 80%, amarelas de 80% a 99,99% e vermelhas
 partir de 100% (campo `nivel_alerta`: normal, atencao, estourado). Rotas fora do
 papel voltam para o Início.
 
-### O que ainda usa dados de exemplo
+### Dados de exemplo
 
-`telas/dados-exemplo.js` guarda dados fixos para o que ainda não tem backend: o
-**extrato bancário** da Conciliação e o **histórico** da Auditoria. As telas avisam ("exemplo") e nada disso é salvo. "Importar extrato" só
-mostra um aviso. O resto (lançamentos, orçamentos, conciliar, prévia e arquivos do
-relatório) já usa a API de verdade. Quando existirem as rotas, troque as importações
-de `dados-exemplo.js` por chamadas em `base/api.js` e apague o arquivo.
+Nenhum. `telas/dados-exemplo.js` (extrato e histórico fixos) saiu: a Conciliação e a
+Auditoria usam a API. A geração do relatório também deixou de ser feita no navegador
+(saíram o CSV montado no front e a impressão com `window.print`): o arquivo é o oficial
+do backend, com o nome do `Content-Disposition` (ou
+`prestacao-de-contas-<projeto>-<início>-a-<fim>.<pdf|xlsx>` se o cabeçalho não vier).
+A prévia na tela continua calculada dos lançamentos aprovados.
+
+Detalhes das telas ligadas à API:
+
+- **Relatórios**: `baixarRelatorio(parametros)` em `base/api.js` devolve
+  `{status, blob, nome, corpo}`; o projeto é o `projeto_id` do orçamento escolhido.
+  Erros (404, 422, 403, sem conexão) aparecem abaixo do botão.
+- **Conciliação**: o extrato tem saída negativa; "mesmo valor" e o aviso de valor
+  diferente comparam sem o sinal. A importação mostra "N itens importados, M repetidos
+  ignorados." (repetidos = linhas que já estavam guardadas) ou o erro da API, que diz
+  a linha ("Linha 3: valor inválido."). Arquivo acima de 1 MB nem é enviado. Se o
+  extrato não carregar, só a coluna dele mostra o erro. O extrato fica em memória no
+  backend (como os outros dados do Financeiro até a E3): reiniciar a API apaga o que
+  foi importado.
+- **Auditoria**: colunas Data/hora (horário de Brasília), Pessoa (nome, ou o id),
+  Módulo, Ação (códigos conhecidos com rótulo em português) e Descrição. Só a
+  resposta do pedido mais recente aparece; período invertido avisa sem chamar a API.
+- **Início da direção**: o painel "Projetos" lista ativos primeiro e os encerrados
+  marcados, com uma linha de total. Se `GET /dashboard/projetos` falhar, as pendências
+  continuam e o painel mostra o aviso.
 
 ## Rotas do backend adicionadas na parte 1
 
@@ -75,10 +95,9 @@ CORS só permite GET, POST, PATCH e OPTIONS; por isso não há PUT nem DELETE.
 
 ## Falta no backend
 
-- Extrato: importar o arquivo do banco e listar os itens (a Conciliação usa o extrato
-  de exemplo).
-- Registro de ações para a Auditoria. Pessoas, papéis e convites (tela Acessos)
-  dependem da US-08, login.
+- As ações do Financeiro ainda não entram em `log_auditoria` (os dados do Financeiro
+  estão em memória até a E3): a Auditoria mostra hoje as ações da plataforma e da
+  Gestão.
 - Quem rejeitou e quando, para mostrar no aviso da despesa rejeitada no celular.
 
 Tickets de acompanhamento:

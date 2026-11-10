@@ -32,6 +32,7 @@ test("sem pendências mostra 'Nada pendente'", async () => {
   globalThis.fetch = async () => resposta(200, []);
   await mostrar(container(), { parametros: {}, sessao: { papel: "direcao", nome: "Jane Almeida" }, navegar() {} });
   assert.match(container().textContent, /Nada pendente/);
+  assert.match(container().textContent, /Nenhum projeto cadastrado ainda\./);
   assert.equal(container().querySelector("table"), null);
 });
 
@@ -39,4 +40,47 @@ test("falha da API mostra mensagem em vez de quebrar", async () => {
   globalThis.fetch = async () => { throw new Error("offline"); };
   await mostrar(container(), { parametros: {}, sessao: { papel: "coordenacao", nome: "Luana" }, navegar() {} });
   assert.match(container().querySelector("[role=alert]").textContent, /Não foi possível carregar/);
+});
+
+test("direção vê orçado, realizado e saldo por projeto do painel (GET /dashboard/projetos)", async () => {
+  const urls = [];
+  globalThis.fetch = async (url) => {
+    const u = String(url).replace(/^https?:\/\/[^/]+/, "");
+    urls.push(u);
+    if (u.startsWith("/dashboard/projetos"))
+      return resposta(200, [
+        { projeto_id: "p2", nome: "Horta <i>", status: "encerrado", orcado: 500, realizado: 500, saldo: 0 },
+        { projeto_id: "p1", nome: "Esporte", status: "ativo", orcado: 10000, realizado: 8500, saldo: 1500 },
+      ]);
+    return resposta(200, []);
+  };
+  await mostrar(container(), { parametros: {}, sessao: { papel: "direcao", nome: "Jane Almeida" }, navegar() {} });
+  assert.ok(urls.includes("/dashboard/projetos"));
+  assert.match(container().textContent, /Nada pendente/);
+  const linhas = [...container().querySelectorAll("tbody tr")].map((tr) => tr.textContent);
+  assert.equal(linhas.length, 3);
+  assert.match(linhas[0], /Esporte.*R\$\s10\.000,00.*R\$\s8\.500,00.*R\$\s1\.500,00/);
+  assert.match(linhas[1], /Horta <i>.*Encerrado/);
+  assert.match(linhas[2], /Total.*R\$\s10\.500,00.*R\$\s9\.000,00.*R\$\s1\.500,00/);
+});
+
+test("direção: falha do painel aparece sem esconder as pendências", async () => {
+  globalThis.fetch = async (url) =>
+    String(url).includes("/dashboard/projetos")
+      ? resposta(503, {})
+      : resposta(200, [{ id: "o1", projeto_id: "p1", projeto_nome: "Esporte", saldo: 1500, realizado: 8500, percentual_consumido: 85, nivel_alerta: "atencao", data_fim: "2099-12-31" }]);
+  await mostrar(container(), { parametros: {}, sessao: { papel: "direcao", nome: "Jane" }, navegar() {} });
+  assert.match(container().textContent, /Esporte passou de 80%/);
+  assert.match(container().querySelector("[role=alert]").textContent, /Não foi possível carregar o resumo dos projetos/);
+});
+
+test("outros papéis não chamam o painel da direção", async () => {
+  const urls = [];
+  globalThis.fetch = async (url) => {
+    urls.push(String(url));
+    return resposta(200, []);
+  };
+  await mostrar(container(), { parametros: {}, sessao: { papel: "coordenacao", nome: "Luana" }, navegar() {} });
+  await mostrar(container(), { parametros: {}, sessao: { papel: "voluntario_financeiro", nome: "Lucas" }, navegar() {} });
+  assert.equal(urls.some((u) => u.includes("/dashboard")), false);
 });

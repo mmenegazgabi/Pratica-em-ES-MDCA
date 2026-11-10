@@ -2,8 +2,8 @@
 import { el, limpar } from "../base/dom.js";
 import { definirContador } from "../base/contador.js";
 import { formatarMoeda } from "../base/formatar.js";
-import { listarLancamentos, listarOrcamentos } from "../base/api.js";
-import { montarPendencias } from "./inicio-dados.js";
+import { listarLancamentos, listarOrcamentos, resumoDosProjetos } from "../base/api.js";
+import { montarPendencias, painelDaDirecao } from "./inicio-dados.js";
 
 const COM_LANCAMENTOS = ["coordenacao", "voluntario_financeiro"];
 const COM_ORCAMENTOS = ["coordenacao", "direcao", "voluntario_financeiro"];
@@ -61,6 +61,44 @@ function tabelaDaSecao(secao, navegar) {
   );
 }
 
+/** Direção: orçado, realizado e saldo de cada projeto, do painel do backend. */
+function painelDosProjetos(resposta) {
+  const titulo = el("h2", { style: "font-size:13px;font-weight:600;margin:20px 0 0" }, "Projetos");
+  if (falhou(resposta) || !Array.isArray(resposta.corpo)) {
+    return el("div", {}, titulo, el("p", { class: "aviso-tela", role: "alert" }, "Não foi possível carregar o resumo dos projetos. Verifique a conexão e tente de novo."));
+  }
+  const { linhas, total } = painelDaDirecao(resposta.corpo);
+  if (linhas.length === 0) return el("div", {}, titulo, el("p", { class: "vazio" }, "Nenhum projeto cadastrado ainda."));
+  const celulas = (orcado, realizado, saldo) => [el("td", { class: "num" }, formatarMoeda(orcado)), el("td", { class: "num" }, formatarMoeda(realizado)), el("td", { class: "num" }, formatarMoeda(saldo))];
+  return el(
+    "div",
+    {},
+    titulo,
+    el(
+      "div",
+      { class: "caixa", style: "margin-top:12px" },
+      el(
+        "table",
+        { class: "tabela" },
+        el("thead", {}, el("tr", {}, el("th", {}, "Projeto"), el("th", { class: "num" }, "Orçado"), el("th", { class: "num" }, "Realizado"), el("th", { class: "num" }, "Saldo"))),
+        el(
+          "tbody",
+          {},
+          linhas.map((p) =>
+            el(
+              "tr",
+              {},
+              el("td", {}, p.nome, p.status === "encerrado" ? el("small", {}, "Encerrado") : null),
+              ...celulas(p.orcado, p.realizado, p.saldo),
+            ),
+          ),
+          el("tr", { style: "font-weight:600" }, el("td", {}, "Total"), ...celulas(total.orcado, total.realizado, total.saldo)),
+        ),
+      ),
+    ),
+  );
+}
+
 function carregarDados(papel) {
   return Promise.all([
     COM_LANCAMENTOS.includes(papel) ? listarLancamentos() : { status: 200, corpo: [] },
@@ -77,7 +115,8 @@ export async function atualizarContadorDePendencias(papel) {
 
 export async function mostrar(container, { sessao, navegar }) {
   limpar(container).append(el("p", { class: "carregando" }, "Carregando…"));
-  const [lancamentos, orcamentos] = await carregarDados(sessao.papel);
+  const direcao = sessao.papel === "direcao";
+  const [[lancamentos, orcamentos], painel] = await Promise.all([carregarDados(sessao.papel), direcao ? resumoDosProjetos() : null]);
 
   const agora = new Date();
   const primeiroNome = String(sessao.nome || "").trim().split(/\s+/)[0];
@@ -100,6 +139,7 @@ export async function mostrar(container, { sessao, navegar }) {
       el("p", { class: "sub" }, resumo),
       total === 0 ? el("p", { class: "vazio" }, "Quando algo precisar de uma decisão sua, aparece aqui.") : null,
       secoes.map((s) => tabelaDaSecao(s, navegar)),
+      direcao ? painelDosProjetos(painel) : null,
     ),
   );
 }

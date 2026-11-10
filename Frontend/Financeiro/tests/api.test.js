@@ -134,3 +134,70 @@ test("criarRascunho envia o comprovante em multipart", async () => {
   assert.equal(chamadas[0].body.get("comprovante").name, "nota.jpg");
   assert.equal("Content-Type" in chamadas[0].headers, false);
 });
+
+test("baixarRelatorio pede o relatório oficial e usa o nome do Content-Disposition", async () => {
+  globalThis.fetch = async (url, opcoes = {}) => {
+    chamadas.push({ url, ...opcoes });
+    return new Response(new Uint8Array([37, 80, 68, 70]), {
+      status: 200,
+      headers: { "Content-Type": "application/pdf", "Content-Disposition": 'attachment; filename="prestacao-contas-leitura-2026-01-01-a-2026-12-31.pdf"' },
+    });
+  };
+  const r = await modulo.baixarRelatorio({ projeto_id: "p 1", data_inicio: "2026-01-01", data_fim: "2026-12-31", formato: "pdf" });
+  assert.equal(chamadas[0].url, `${API_PADRAO}/relatorios/prestacao-contas?projeto_id=p+1&data_inicio=2026-01-01&data_fim=2026-12-31&formato=pdf`);
+  assert.equal(chamadas[0].headers.Authorization, "Bearer tok-sessao");
+  assert.equal(r.status, 200);
+  assert.equal(r.nome, "prestacao-contas-leitura-2026-01-01-a-2026-12-31.pdf");
+  assert.equal(r.blob.size, 4);
+});
+
+test("baixarRelatorio sem Content-Disposition devolve nome nulo; erro traz o corpo", async () => {
+  globalThis.fetch = async () => new Response("x", { status: 200 });
+  assert.equal((await modulo.baixarRelatorio({ projeto_id: "p1" })).nome, null);
+  globalThis.fetch = async () => new Response(JSON.stringify({ detail: "Projeto não encontrado." }), { status: 404 });
+  assert.deepEqual(await modulo.baixarRelatorio({ projeto_id: "p9" }), { status: 404, blob: null, nome: null, corpo: { detail: "Projeto não encontrado." } });
+  globalThis.fetch = async () => {
+    throw new TypeError("rede fora");
+  };
+  assert.deepEqual(await modulo.baixarRelatorio({ projeto_id: "p1" }), { status: 0, blob: null, nome: null, corpo: null });
+});
+
+test("baixarRelatorio trata o 401 como as outras", async () => {
+  globalThis.fetch = async () => new Response(null, { status: 401 });
+  const r = await modulo.baixarRelatorio({ projeto_id: "p1" });
+  assert.equal(r.status, 401);
+  assert.equal(localStorage.getItem("mdca.sessao"), null);
+  assert.deepEqual(destinos, ["../"]);
+});
+
+test("nomeDoArquivo lê filename com e sem aspas e filename*", () => {
+  assert.equal(modulo.nomeDoArquivo('attachment; filename="a b.pdf"'), "a b.pdf");
+  assert.equal(modulo.nomeDoArquivo("attachment; filename=rel.xlsx"), "rel.xlsx");
+  assert.equal(modulo.nomeDoArquivo("attachment; filename*=UTF-8''presta%C3%A7%C3%A3o.pdf"), "prestação.pdf");
+  assert.equal(modulo.nomeDoArquivo('attachment; filename="../../x.pdf"'), "x.pdf");
+  assert.equal(modulo.nomeDoArquivo(null), null);
+  assert.equal(modulo.nomeDoArquivo("attachment"), null);
+});
+
+test("status do projeto, painel da direção, extrato e auditoria", async () => {
+  await modulo.alterarStatusProjeto("p/1", "encerrado");
+  await modulo.resumoDosProjetos();
+  await modulo.listarExtrato(true);
+  await modulo.listarAuditoria({ texto: "aprov", modulo: "financeiro", desde: "2026-10-01", ate: "", limite: undefined });
+  await modulo.listarAuditoria();
+  assert.equal(chamadas[0].url, `${API_PADRAO}/projetos/p%2F1/status`);
+  assert.equal(chamadas[0].method, "PATCH");
+  assert.equal(chamadas[0].body, JSON.stringify({ status: "encerrado" }));
+  assert.equal(chamadas[1].url, `${API_PADRAO}/dashboard/projetos`);
+  assert.equal(chamadas[2].url, `${API_PADRAO}/extrato?em_aberto=true`);
+  assert.equal(chamadas[3].url, `${API_PADRAO}/auditoria?texto=aprov&modulo=financeiro&desde=2026-10-01`);
+  assert.equal(chamadas[4].url, `${API_PADRAO}/auditoria`);
+});
+
+test("importarExtrato envia o CSV no campo arquivo, em multipart", async () => {
+  await modulo.importarExtrato(new File(["data;descricao;valor\n"], "extrato.csv", { type: "text/csv" }));
+  assert.equal(chamadas[0].url, `${API_PADRAO}/extrato`);
+  assert.equal(chamadas[0].method, "POST");
+  assert.equal(chamadas[0].body.get("arquivo").name, "extrato.csv");
+  assert.equal("Content-Type" in chamadas[0].headers, false);
+});

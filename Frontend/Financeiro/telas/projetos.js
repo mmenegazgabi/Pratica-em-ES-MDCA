@@ -11,6 +11,8 @@ const hojeISO = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+const encerrado = (projeto) => projeto.status === "encerrado";
+
 export const vigenciaTexto = (o) => `${formatarData(o.data_inicio)} a ${formatarData(o.data_fim)}`;
 
 function numero(rotulo, valor) {
@@ -108,7 +110,7 @@ export async function mostrar(container, { sessao, navegar }) {
       return el(
         "tr",
         {},
-        el("td", {}, projeto.nome, el("small", {}, "Sem orçamento")),
+        el("td", {}, projeto.nome, el("small", {}, encerrado(projeto) ? "Encerrado · sem orçamento" : "Sem orçamento")),
         el("td", { class: "num" }, "—"),
         el("td", { class: "num" }, "—"),
         el("td", {}, ""),
@@ -119,7 +121,7 @@ export async function mostrar(container, { sessao, navegar }) {
     return el(
       "tr",
       { tabindex: "0", style: "cursor:pointer", onclick: abrir, onkeydown: (e) => { if (e.key === "Enter") abrir(); } },
-      el("td", {}, projeto.nome, el("small", {}, vigenciaTexto(o))),
+      el("td", {}, projeto.nome, el("small", {}, encerrado(projeto) ? `Encerrado · ${vigenciaTexto(o)}` : vigenciaTexto(o))),
       el("td", { class: "num" }, formatarMoeda(o.valor_total)),
       el("td", { class: "num" }, formatarMoeda(o.realizado)),
       el("td", {}, barraDeUso(o)),

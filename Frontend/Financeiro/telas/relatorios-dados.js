@@ -25,25 +25,13 @@ export function validarPeriodo(inicio, fim) {
   return null;
 }
 
-function celula(texto) {
-  const t = String(texto ?? "");
-  return /[;"\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
-}
-
-const decimal = (valor) => Number(valor).toFixed(2).replace(".", ",");
-
-/** Planilha CSV (separador ";" e vírgula decimal, como o Excel em português abre). */
-export function montarCsv(orcamento, doPeriodo, inicio, fim) {
-  const resumo = resumoDoPeriodo(orcamento, doPeriodo);
-  const linhas = [
-    ["Prestação de contas", orcamento.projeto_nome || orcamento.projeto_id],
-    ["Período", `${inicio} a ${fim}`],
-    ["Orçado", decimal(resumo.orcado)],
-    ["Executado no período", decimal(resumo.executado)],
-    ["Saldo", decimal(resumo.saldo)],
-    [],
-    ["Data", "Categoria", "Descrição", "Valor", "Conciliado"],
-    ...doPeriodo.map((l) => [l.data_despesa, l.categoria, l.descricao, decimal(l.valor), l.conciliado ? "sim" : "não"]),
-  ];
-  return linhas.map((linha) => linha.map(celula).join(";")).join("\r\n") + "\r\n";
+/** Nome do arquivo quando a API não manda o Content-Disposition. */
+export function nomePadraoDoRelatorio(orcamento, inicio, fim, formato) {
+  const projeto = String(orcamento.projeto_nome || orcamento.projeto_id || "projeto")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `prestacao-de-contas-${projeto || "projeto"}-${inicio}-a-${fim}.${formato}`;
 }

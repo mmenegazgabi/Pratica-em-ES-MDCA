@@ -63,6 +63,29 @@ export async function baixarArquivo(caminho) {
   }
 }
 
+/**
+ * Nome do arquivo em `Content-Disposition` (filename* ou filename), sem pastas;
+ * null quando não vem.
+ */
+export function nomeDoArquivo(cabecalho) {
+  const texto = String(cabecalho || "");
+  let nome = null;
+  const codificado = /filename\*\s*=\s*(?:[\w-]+'[^']*')?([^;]+)/i.exec(texto);
+  if (codificado) {
+    try {
+      nome = decodeURIComponent(codificado[1].trim().replace(/^"|"$/g, ""));
+    } catch {
+      nome = null;
+    }
+  }
+  if (!nome) {
+    const simples = /filename\s*=\s*(?:"([^"]*)"|([^;]+))/i.exec(texto);
+    nome = simples ? (simples[1] ?? simples[2]).trim() : null;
+  }
+  const semPasta = nome ? nome.split(/[\\/]/).pop().trim() : "";
+  return semPasta || null;
+}
+
 function comJson(metodo, dados) {
   return { method: metodo, headers: { "Content-Type": "application/json" }, body: JSON.stringify(dados) };
 }
@@ -80,6 +103,35 @@ const rota = (id) => encodeURIComponent(id);
 
 export const listarProjetos = () => requisitar("/projetos");
 export const criarProjeto = (nome) => requisitar("/projetos", comJson("POST", { nome }));
+/** status: "encerrado" ou "ativo" (coordenação e direção). */
+export const alterarStatusProjeto = (id, status) => requisitar(`/projetos/${rota(id)}/status`, comJson("PATCH", { status }));
+
+/** Orçado, realizado e saldo de cada projeto (só direção). */
+export const resumoDosProjetos = (filtros = {}) => requisitar(`/dashboard/projetos${consulta(filtros)}`);
+
+/**
+ * Relatório oficial de prestação de contas (PDF ou XLSX) como Blob.
+ * parametros: {projeto_id, data_inicio, data_fim, formato}. Devolve {status, blob, nome, corpo}:
+ * `nome` vem do Content-Disposition (ou null) e `corpo` é o JSON do erro.
+ */
+export async function baixarRelatorio(parametros = {}) {
+  try {
+    const resposta = await fetch(urlDaApi() + `/relatorios/prestacao-contas${consulta(parametros)}`, { headers: cabecalhos() });
+    sessaoRecusada(resposta.status);
+    if (!resposta.ok) {
+      let corpo = null;
+      try {
+        corpo = await resposta.json();
+      } catch {
+        /* resposta sem JSON */
+      }
+      return { status: resposta.status, blob: null, nome: null, corpo };
+    }
+    return { status: resposta.status, blob: await resposta.blob(), nome: nomeDoArquivo(resposta.headers.get("Content-Disposition")), corpo: null };
+  } catch {
+    return { status: 0, blob: null, nome: null, corpo: null };
+  }
+}
 
 export const listarOrcamentos = (vigentesEm) => requisitar(`/orcamentos${consulta({ vigentes_em: vigentesEm })}`);
 export const obterOrcamento = (id) => requisitar(`/orcamentos/${rota(id)}`);
@@ -90,6 +142,14 @@ export const listarLancamentos = (filtros = {}) => requisitar(`/lancamentos${con
 export const obterLancamento = (id) => requisitar(`/lancamentos/${rota(id)}`);
 export const aprovarLancamento = (id) => requisitar(`/lancamentos/${rota(id)}/aprovar`, { method: "PATCH" });
 export const rejeitarLancamento = (id, motivo) => requisitar(`/lancamentos/${rota(id)}/rejeitar`, comJson("PATCH", { motivo }));
+/** Itens do extrato bancário; emAberto=true traz só os que não estão ligados a lançamento. */
+export const listarExtrato = (emAberto) => requisitar(`/extrato${consulta({ em_aberto: emAberto })}`);
+export function importarExtrato(arquivo) {
+  const formData = new FormData();
+  formData.append("arquivo", arquivo);
+  return requisitar("/extrato", { method: "POST", body: formData });
+}
+/** `referenciaExtrato`: id do item do extrato (ou texto livre). */
 export const conciliarLancamento = (id, referenciaExtrato) =>
   requisitar(`/lancamentos/${rota(id)}/conciliar`, comJson("PATCH", { referencia_extrato: referenciaExtrato }));
 
@@ -107,3 +167,6 @@ export const completarRascunho = (id, formData) => requisitar(`/rascunhos/${rota
 
 export const listarNotificacoes = () => requisitar("/notificacoes");
 export const marcarNotificacaoLida = (id) => requisitar(`/notificacoes/${rota(id)}/lida`, { method: "PATCH" });
+
+/** Histórico de ações (coordenação e direção). filtros: {texto, modulo, desde, ate, limite}. */
+export const listarAuditoria = (filtros = {}) => requisitar(`/auditoria${consulta(filtros)}`);

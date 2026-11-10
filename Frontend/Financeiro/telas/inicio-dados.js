@@ -1,6 +1,6 @@
 // Início: monta as pendências de cada papel (sem DOM, testável no Node).
 import { nomeDoAutor } from "../base/sessao.js";
-import { diasDesde, formatarData, formatarMoeda, tempoRelativo } from "../base/formatar.js";
+import { diasDesde, formatarData, formatarMoeda, somarReais, tempoRelativo } from "../base/formatar.js";
 
 const LIMITE_DIAS_ABERTO = 7;
 
@@ -95,4 +95,11 @@ const SECOES_POR_PAPEL = {
 export function montarPendencias(papel, dados, agora = new Date()) {
   const secoes = (SECOES_POR_PAPEL[papel] || []).map((montar) => montar(dados, agora)).filter((s) => s.itens.length > 0);
   return { total: secoes.reduce((soma, s) => soma + s.itens.length, 0), secoes };
+}
+
+/** Painel da direção (GET /dashboard/projetos): ativos primeiro, por nome, e o total. */
+export function painelDaDirecao(resumo) {
+  const linhas = [...resumo].sort((a, b) => (a.status === "encerrado") - (b.status === "encerrado") || String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+  const total = (campo) => somarReais(linhas.map((l) => l[campo]));
+  return { linhas, total: { orcado: total("orcado"), realizado: total("realizado"), saldo: total("saldo") } };
 }
