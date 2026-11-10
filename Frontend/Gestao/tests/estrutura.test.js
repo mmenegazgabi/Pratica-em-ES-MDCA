@@ -21,5 +21,7 @@ test("só base/api.js faz requisições HTTP", () => {
     // Separador do POSIX também no Windows, para a comparação valer em qualquer máquina.
     .map((arquivo) => relative(RAIZ, arquivo).split(sep).join("/"));
 
-  assert.deepEqual(usam, ["base/api.js"]);
+  // sw.js é o service worker do PWA (T-57): repassa só os arquivos do próprio site para o
+  // cache e nunca chama a API (tests/pwa.test.js confere).
+  assert.deepEqual(usam.sort(), ["base/api.js", "sw.js"]);
 });

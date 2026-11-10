@@ -14,6 +14,7 @@ o aviso **Demonstração** no topo.
 ```
 Gestao/
   index.html      # entrada (carrega app.js como módulo)
+  sw.js           # service worker: guarda os arquivos do app para abrir sem rede no navegador
   app.js          # moldura, rotas e telas de demonstração vindas do protótipo
   style.css       # design system MDCA + estilos da aplicação (bloco no fim)
   assets/         # fontes locais (Bitter e General Sans)
@@ -23,6 +24,8 @@ Gestao/
     papeis.js     # perfis e menu por perfil
     dom.js        # montagem de DOM sem innerHTML
     formulario.js # formulário em diálogo que mostra a recusa da API sem fechar
+    fila.js       # fila do aparelho (IndexedDB) do registro em campo e sincronização
+    copia-local.js # última agenda e lista da turma, para a chamada sem rede
   telas/          # telas ligadas à API (programas, equipe, usuarios)
   tests/          # node --test + jsdom
 ```
@@ -37,6 +40,9 @@ Gestao/
 | Plano e metas (`#/programas/{id}/plano`) | `…/objetivos`, `…/acoes`, `…/metas`, `…/metas/{meta}/registros`, `…/painel` | ligada (T-45) |
 | Equipe e espaços do programa (`#/programas/{id}/equipe`) | `…/equipe`, `…/equipe/{vinculo}/desligamento`, `…/espacos`, `/gestao/usuarios`, `/gestao/papeis` | ligada (T-40) |
 | Usuários e acessos (administração) | `GET /gestao/usuarios` | ligada, só consulta (T-40) |
+| Atividades e frequência (`#/atividades`, `#/atividades/{programa}`) | `…/agenda` | ligada (T-57) |
+| Registrar o encontro, em 4 passos (`#/atividades/{programa}/registro/{turma}?data=`) | `…/turmas/{turma}` (lista), `…/turmas/{turma}/atividades`, `…/atividades/{id}/evidencias` (pela fila) | ligada (T-57) |
+| Registros no dispositivo · fila local (`#/sincronizacao`) | a fila do aparelho | ligada (T-57) |
 | Demais telas | — | demonstração, até a US de cada uma |
 
 - **Equipe e espaços:** aberta pelo link de cada programa na lista. Mostra a equipe com
@@ -65,6 +71,27 @@ Para ligar uma tela nova:
 4. Teste em `tests/`.
 
 Nenhum outro arquivo deve chamar `fetch`: o teste `estrutura.test.js` falha se isso acontecer.
+
+## Registro em campo sem conexão (T-57)
+
+- **Tudo passa pela fila do aparelho** (`base/fila.js`): salvar o registro grava o
+  encontro (com a chamada) e cada evidência no IndexedDB. Com conexão, a fila envia em
+  seguida; sem conexão, o registro fica no aparelho e a fila envia sozinha quando a rede
+  volta (evento `online`) ou quando o app é aberto.
+- **Sem duplicar:** cada item tem um `registro_id` gerado no aparelho. A API (T-56)
+  responde 200 com o que já estava gravado se o mesmo registro chega de novo, então
+  reenviar é seguro, mesmo quando a resposta do primeiro envio se perdeu.
+- **Fila local** (`#/sincronizacao`, "Registros no dispositivo") mostra cada registro com a confirmação
+  ("Enviado em 05/10 às 17:32") ou o erro. Falha de conexão ou do servidor é tentada de
+  novo sozinha; recusa da API (por exemplo, pessoa fora da turma) fica com a mensagem e
+  os botões "Tentar de novo" e "Descartar". Os enviados saem da lista depois de 7 dias.
+- **Sem rede**, a agenda e a lista da turma vêm da última consulta salva no aparelho
+  (`base/copia-local.js`), com o aviso da data da cópia. Essas cópias têm nomes de
+  crianças e saem ao clicar em "Sair".
+- **Abrir sem rede no navegador:** o sistema roda no navegador do celular, sem instalar.
+  `sw.js` guarda os arquivos do app (rede primeiro, cópia sem rede) e só atende arquivos
+  do próprio site; a API não passa por ele. Ao mudar a lista de arquivos do app, atualize
+  `ARQUIVOS` no `sw.js` (o teste `pwa.test.js` confere) e troque a `VERSAO`.
 
 ## Acesso e perfis (provisórios)
 
