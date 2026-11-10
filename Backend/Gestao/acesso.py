@@ -20,6 +20,9 @@ Cadastros de pessoas atendidas (US-03) são dados de crianças e famílias: cons
 quem tem vínculo ativo no programa da pessoa e a administração (a direção não vê
 cadastros individuais); cadastram e alteram a coordenação e a assistência social
 vinculadas ao programa, e a administração.
+
+Atividades, chamadas e evidências (US-05): registram a coordenação e os educadores
+vinculados ao programa, e a administração.
 """
 
 from dataclasses import dataclass
@@ -48,6 +51,9 @@ PAPEIS_QUE_CADASTRAM_PESSOAS = {"coordenacao", "assistente_social"}
 PESSOA_NAO_ENCONTRADA = "Pessoa não encontrada."
 SEM_ACESSO_A_PESSOAS = "Seu perfil não tem acesso aos cadastros de pessoas deste programa."
 SEM_PERMISSAO_PARA_CADASTRAR = "Seu perfil não pode cadastrar nem alterar pessoas deste programa."
+
+PAPEIS_QUE_REGISTRAM_ATIVIDADES = {"coordenacao", "educador"}
+SEM_PERMISSAO_PARA_REGISTRAR = "Seu perfil não pode registrar atividades neste programa."
 
 
 @dataclass(frozen=True)
@@ -351,6 +357,52 @@ def exigir_cadastro_na_pessoa(
     conexao: Connection = Depends(obter_conexao),
 ) -> AcessoAPessoas:
     return _acesso_a_pessoa(conexao, usuario_id, pessoa_id, requisicao, cadastrar=True)
+
+
+def verificar_registro_de_atividade(
+    conexao: Connection,
+    usuario_id: str,
+    programa_id: str,
+    *,
+    requisicao: Optional[Request] = None,
+    hoje: Optional[date] = None,
+) -> Acesso:
+    """Quem pode registrar encontros, chamadas e evidências no programa (US-05)."""
+    if not programa_existe(conexao, programa_id):
+        raise HTTPException(status_code=404, detail=PROGRAMA_NAO_ENCONTRADO)
+
+    papeis = papeis_do_usuario(conexao, usuario_id, programa_id, hoje or date.today())
+    if papeis is None:
+        consulta = registra = False
+    else:
+        globais, no_programa = papeis
+        registra = bool(globais & PAPEIS_QUE_GERENCIAM_TODOS) or bool(
+            no_programa & PAPEIS_QUE_REGISTRAM_ATIVIDADES
+        )
+        consulta = registra or bool(globais & PAPEIS_QUE_CONSULTAM_TODOS) or bool(no_programa)
+
+    if not registra:
+        _registrar_negacao(
+            conexao,
+            usuario_id,
+            alvo_tipo="programa",
+            alvo_id=programa_id,
+            operacao="registrar_atividade",
+            descricao="Tentativa de registrar atividade sem permissão",
+            requisicao=requisicao,
+        )
+        raise HTTPException(status_code=403, detail=SEM_PERMISSAO_PARA_REGISTRAR if consulta else SEM_ACESSO)
+    gerencia = bool(globais & PAPEIS_QUE_GERENCIAM_TODOS) or bool(no_programa & PAPEIS_QUE_GERENCIAM_O_PROGRAMA)
+    return Acesso(usuario_id=usuario_id, programa_id=programa_id, pode_gerenciar=gerencia)
+
+
+def exigir_registro_de_atividade(
+    programa_id: str,
+    requisicao: Request,
+    usuario_id: str = Depends(exigir_usuario),
+    conexao: Connection = Depends(obter_conexao),
+) -> Acesso:
+    return verificar_registro_de_atividade(conexao, usuario_id, programa_id, requisicao=requisicao)
 
 
 def exigir_acesso_aos_usuarios(

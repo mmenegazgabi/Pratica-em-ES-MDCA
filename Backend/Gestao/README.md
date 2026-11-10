@@ -20,6 +20,7 @@ Gestao/
   autorizacoes.py # autorizações (uso de imagem): situação, revogação e uso externo
   trajetoria.py   # linha do tempo da pessoa atendida (T-49)
   turmas.py       # turmas, matrículas, lista de espera e conflito de horário (US-04)
+  atividades.py   # agenda, encontros com chamada e evidências; reenvio sem duplicar (US-05)
   erros.py        # erros de regra do cadastro de pessoas, traduzidos em HTTP pelas rotas
   routers/        # rotas FastAPI, todas com prefixo /gestao
     __init__.py   # junta todos os routers de Gestão num só
@@ -150,6 +151,33 @@ Regras:
   `log_auditoria` (ação `conflito_de_horario`), como alerta para a coordenação. O detalhe
   da turma mostra os conflitos de cada matrícula ativa.
 - Matrícula, lista de espera e desligamento entram na trajetória da pessoa.
+
+### Atividades, chamada e evidências (US-05)
+
+Todas em `/gestao/programas/{programa_id}`:
+
+| Rota | O que faz | Quem pode |
+|---|---|---|
+| `GET …/agenda?inicio&fim` | Encontros previstos das turmas no período (padrão: hoje; até 62 dias), com os encontros já registrados em `atividades`. Sem nomes de pessoas | Quem consulta o programa |
+| `POST …/turmas/{turma_id}/atividades` | Encerra o encontro com a chamada: `registro_id`, `data`, `conteudo`, `presencas` (`pessoa_id`, `presente`, `justificativa` só para ausência), `educador_id` (padrão: quem envia) e `observacao` | Coordenação e educadores do programa, administração |
+| `GET …/atividades/{atividade_id}` | O encontro com a chamada (nomes), presentes, ausentes e evidências | Regra das pessoas (US-03): a direção recebe 403 |
+| `POST …/atividades/{atividade_id}/evidencias` | Multipart: `arquivo`, `registro_id`, `data` (padrão: a do encontro) e `descricao`. Foto (JPG, PNG, WEBP, HEIC) ou PDF até 5 MB | Coordenação e educadores do programa, administração |
+| `GET …/evidencias/{evidencia_id}/arquivo` | Devolve o arquivo pela API (bucket privado); o download fica em `log_auditoria` (`download_evidencia`) | Regra das pessoas (US-03) |
+
+Regras:
+
+- **Sem duplicar na sincronização:** o `registro_id` vem do aparelho. O primeiro envio
+  responde **201**; o reenvio do mesmo `registro_id` responde **200** com o que já estava
+  gravado, sem gravar de novo nem subir o arquivo outra vez (vale a primeira versão). O
+  mesmo `registro_id` em outra turma ou em outro encontro: **409** (`registro_id_em_uso`).
+- **Chamada:** só entra quem estava matriculado na turma na data do encontro (**400**
+  `fora_da_turma`, com a lista); cada pessoa uma vez. O encontro não pode estar no futuro,
+  o conteúdo é obrigatório e o educador precisa ter vínculo ativo no programa na data.
+  Erros de regra voltam como `detail.codigo` e `detail.mensagem`.
+- **Evidência:** o arquivo vai para o R2 em `gestao/evidencias/AAAA/MM/<uuid>.<ext>`,
+  usando o armazenamento dos comprovantes do Financeiro (validação pelo conteúdo do
+  arquivo); o banco guarda só os metadados, ligados à atividade, ao programa, ao autor e
+  à data. Sem R2 configurado: **503**.
 
 ## Acesso às rotas de programa
 
