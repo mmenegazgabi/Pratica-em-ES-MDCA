@@ -449,3 +449,54 @@ h1[tabindex="-1"]:focus{outline:none}
 .estado__servidor{width:100%;box-sizing:border-box;margin:0 auto;padding:0 22px 28px}
 .estado__servidor details .btn{margin-top:12px}
 @media (max-width:760px){.demo-banner{padding:10px 18px;font-size:11px}}
+/* Plano e metas (T-45): um bloco por ação dentro do cartão do objetivo. */
+.plano-acao{padding:16px 0;border-top:1px solid var(--line)}
+.plano-acao:first-child{border-top:0;padding-top:0}
+.plano-acao h3{font-size:17px;margin:0 0 4px}
+.plano-acao .table-wrap{margin-top:10px}
+.meta-percentual{min-width:110px}
+.meta-percentual .progress{margin-top:6px}
+
+/* Visão integrada (T-79): filtros, resumo do programa e as duas execuções lado a lado. */
+.integrada-filtros .filter-control{min-height:38px}
+.integrada-resumo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 16px}
+.integrada-grid{align-items:start}
+.integrada-stats{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:16px}
+.integrada-vinculo{margin-top:16px;font-size:12px}
+.integrada-grid .meta-percentual{min-width:110px}
+.integrada-grid .meta-percentual .progress{margin-top:6px}
+.integrada-grid td small{display:block;color:var(--color-neutral-700)}
+@media (max-width:760px){.integrada-grid{grid-template-columns:1fr}}
+
+/* Pessoas e famílias ligadas à API (T-49) */
+.stack{display:grid;gap:18px}
+.pessoas-filtros .filters{width:100%}
+.pessoas-filtros input[type=search]{flex:1;min-width:200px}
+.pessoa-cadastro .wide{grid-column:1/-1}
+.pessoa-cadastro .field-label{font-size:12px;font-weight:600;color:var(--ink)}
+.pessoa-cadastro .info-box{margin:8px 0}
+.pessoa-responsavel{display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:8px;align-items:center;margin-bottom:8px}
+.pessoa-documento{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.pessoa-duplicados ul{margin:8px 0 0;padding-left:18px}
+.pessoa-cabecalho h2{margin:0 0 4px}
+@media (max-width:760px){.pessoa-responsavel{grid-template-columns:1fr}}
+.pessoa-cadastro .field > .btn{justify-self:start;align-self:flex-start;width:auto}
+
+/* Turmas e matrículas ligadas à API (T-53) */
+.turma-dias{border:0;padding:0;margin:0}
+.turma-dias legend{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.turma-dias__lista{display:flex;flex-wrap:wrap;gap:6px 16px}
+.turma-dia{margin:0}
+.turma-resumo h2{margin:0 0 4px}
+.turma-cadastro .info-box{margin:0 0 12px}
+/* Registro em campo e fila local (T-57): componentes do protótipo; só o que falta aqui */
+.agenda-semana{align-items:center;gap:10px;flex-wrap:nowrap}
+.agenda-periodo{font-size:13px;white-space:nowrap}
+.so-celular{display:none}
+.attendance-escolha{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.attendance-motivo{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--color-surface);padding:9px;font-size:13px;color:var(--ink);min-width:200px}
+.fila-erro{display:block;margin-top:6px;color:var(--status-rejected);overflow-wrap:anywhere}
+.fila-erro-dica{display:block;margin-top:2px;font-size:11px;color:var(--color-neutral-600)}
+.phone-record .actions{gap:8px}
+.phone-record .actions .btn{flex:1;min-height:44px}
+@media(max-width:580px){.so-computador{display:none}.so-celular{display:block}.agenda-semana{justify-content:space-between}.attendance{flex-wrap:wrap}.attendance-escolha{align-items:stretch;width:100%}.attendance-motivo{min-width:0;width:100%;min-height:46px;font-size:15px}}

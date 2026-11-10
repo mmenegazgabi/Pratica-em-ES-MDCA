@@ -43,10 +43,18 @@ class Conflito(ErroDeCadastro):
     status = 409
 
 
+# Padrão do protótipo: alerta a partir de 3 faltas consecutivas.
+LIMITE_FALTAS_PADRAO = 3
+
+
 @dataclass(frozen=True)
 class Programa:
     id: str
     nome: str
+    # Opcionais: programas antigos (e os criados pelo Financeiro) só têm nome.
+    identificador: Optional[str] = None
+    vigencia_inicio: Optional[date] = None
+    vigencia_fim: Optional[date] = None
 
 
 @dataclass(frozen=True)
@@ -60,6 +68,8 @@ class ProgramaDetalhado:
     vigencia_fim: Optional[date]
     descricao: Optional[str]
     status: str
+    # Faltas consecutivas que geram alerta de infrequência (US-06).
+    limite_faltas: int = LIMITE_FALTAS_PADRAO
 
 
 @dataclass(frozen=True)
@@ -101,9 +111,14 @@ def _eh_duplicidade(erro: IntegrityError) -> bool:
 
 def listar_programas(conexao: Connection) -> List[Programa]:
     linhas = conexao.execute(
-        sa.text("SELECT id, nome FROM projetos ORDER BY lower(nome), id")
+        sa.text(
+            """
+            SELECT id, nome, identificador, vigencia_inicio, vigencia_fim
+            FROM projetos ORDER BY lower(nome), id
+            """
+        )
     )
-    return [Programa(id=linha.id, nome=linha.nome) for linha in linhas]
+    return [Programa(**linha._mapping) for linha in linhas]
 
 
 def buscar_programa(conexao: Connection, programa_id: str) -> ProgramaDetalhado:
@@ -111,7 +126,7 @@ def buscar_programa(conexao: Connection, programa_id: str) -> ProgramaDetalhado:
         sa.text(
             """
             SELECT id, nome, identificador, publico, responsavel,
-                   vigencia_inicio, vigencia_fim, descricao, status
+                   vigencia_inicio, vigencia_fim, descricao, status, limite_faltas
             FROM projetos WHERE id = :id
             """
         ),
@@ -132,9 +147,48 @@ def cadastrar_programa(
     vigencia_inicio: Optional[date],
     vigencia_fim: Optional[date],
     descricao: Optional[str] = None,
+    limite_faltas: Optional[int] = None,
 ) -> ProgramaDetalhado:
     nome, identificador = texto(nome), texto(identificador)
     publico, responsavel = texto(publico), texto(responsavel)
+    _validar_programa(nome, identificador, publico, responsavel, vigencia_inicio, vigencia_fim)
+    limite_faltas = LIMITE_FALTAS_PADRAO if limite_faltas is None else limite_faltas
+    _validar_limite(limite_faltas)
+
+    programa_id = str(uuid.uuid4())
+    try:
+        # Savepoint: se o identificador já existir, só esta inclusão é desfeita.
+        with conexao.begin_nested():
+            conexao.execute(
+                sa.text(
+                    """
+                    INSERT INTO projetos (id, nome, identificador, publico, responsavel,
+                                          vigencia_inicio, vigencia_fim, descricao, limite_faltas)
+                    VALUES (:id, :nome, :identificador, :publico, :responsavel,
+                            :inicio, :fim, :descricao, :limite_faltas)
+                    """
+                ),
+                {
+                    "id": programa_id,
+                    "nome": nome,
+                    "identificador": identificador,
+                    "publico": publico,
+                    "responsavel": responsavel,
+                    "inicio": vigencia_inicio,
+                    "fim": vigencia_fim,
+                    "descricao": texto(descricao),
+                    "limite_faltas": limite_faltas,
+                },
+            )
+    except IntegrityError as erro:
+        if _eh_duplicidade(erro):
+            raise Conflito("Já existe um programa com esse identificador.") from erro
+        raise
+    return buscar_programa(conexao, programa_id)
+
+
+def _validar_programa(nome, identificador, publico, responsavel, vigencia_inicio, vigencia_fim) -> None:
+    """Regras do cadastro e da edição: tudo o que falta de uma vez, e vigência coerente."""
     ausentes = [
         rotulo
         for rotulo, valor in (
@@ -151,29 +205,56 @@ def cadastrar_programa(
     if vigencia_fim < vigencia_inicio:
         raise DadosInvalidos("O fim da vigência não pode ser anterior ao início.")
 
-    programa_id = str(uuid.uuid4())
+
+def _validar_limite(limite_faltas: Optional[int]) -> None:
+    if limite_faltas is None or limite_faltas < 1:
+        raise DadosInvalidos("O limite de faltas precisa ser de pelo menos 1.")
+
+
+CAMPOS_EDITAVEIS = (
+    "limite_faltas",
+    "nome",
+    "identificador",
+    "publico",
+    "responsavel",
+    "vigencia_inicio",
+    "vigencia_fim",
+    "descricao",
+)
+
+
+def editar_programa(conexao: Connection, programa_id: str, alteracoes: dict) -> ProgramaDetalhado:
+    """Altera só os campos enviados; o resultado precisa valer as mesmas regras do cadastro.
+
+    Um programa antigo, só com nome, precisa ganhar os campos obrigatórios na edição.
+    """
+    atual = buscar_programa(conexao, programa_id)
+    dados = {campo: getattr(atual, campo) for campo in CAMPOS_EDITAVEIS}
+    dados.update({campo: valor for campo, valor in alteracoes.items() if campo in CAMPOS_EDITAVEIS})
+    for campo in ("nome", "identificador", "publico", "responsavel", "descricao"):
+        dados[campo] = texto(dados[campo])
+    _validar_programa(
+        dados["nome"],
+        dados["identificador"],
+        dados["publico"],
+        dados["responsavel"],
+        dados["vigencia_inicio"],
+        dados["vigencia_fim"],
+    )
+    _validar_limite(dados["limite_faltas"])
     try:
-        # Savepoint: se o identificador já existir, só esta inclusão é desfeita.
         with conexao.begin_nested():
             conexao.execute(
                 sa.text(
                     """
-                    INSERT INTO projetos (id, nome, identificador, publico, responsavel,
-                                          vigencia_inicio, vigencia_fim, descricao)
-                    VALUES (:id, :nome, :identificador, :publico, :responsavel,
-                            :inicio, :fim, :descricao)
+                    UPDATE projetos SET nome = :nome, identificador = :identificador,
+                        publico = :publico, responsavel = :responsavel,
+                        vigencia_inicio = :vigencia_inicio, vigencia_fim = :vigencia_fim,
+                        descricao = :descricao, limite_faltas = :limite_faltas
+                    WHERE id = :id
                     """
                 ),
-                {
-                    "id": programa_id,
-                    "nome": nome,
-                    "identificador": identificador,
-                    "publico": publico,
-                    "responsavel": responsavel,
-                    "inicio": vigencia_inicio,
-                    "fim": vigencia_fim,
-                    "descricao": texto(descricao),
-                },
+                {**dados, "id": programa_id},
             )
     except IntegrityError as erro:
         if _eh_duplicidade(erro):

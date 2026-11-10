@@ -12,7 +12,7 @@ from Acesso.senhas import conferir, gerar_hash, validar
 from Acesso.tests.conftest import TEST_DATABASE_URL, criar_usuario
 
 AGORA = datetime(2026, 11, 5, 12, 0, tzinfo=timezone.utc)
-REV_ANTERIOR = "5c2e8d41a7b3"
+REV_ANTERIOR = "6bd565cae094"
 
 
 def test_hash_confere_e_nao_guarda_texto():
@@ -23,6 +23,19 @@ def test_hash_confere_e_nao_guarda_texto():
     assert not conferir("outra", h)
     assert not conferir("x", None)
     assert not conferir("x", "lixo")
+
+
+def test_confere_hash_da_primeira_versao_do_login():
+    # Formato do PR #96: base64 urlsafe sem "=" (senhas já definidas pelo script dela).
+    import base64
+    import hashlib
+
+    sal = bytes(range(16))
+    derivado = hashlib.scrypt(b"segredo123", salt=sal, n=2**14, r=8, p=1, dklen=32)
+    b64 = lambda b: base64.urlsafe_b64encode(b).rstrip(b"=").decode()
+    antigo = f"scrypt$16384$8$1${b64(sal)}${b64(derivado)}"
+    assert conferir("segredo123", antigo)
+    assert not conferir("outra", antigo)
 
 
 def test_validar_senha():
@@ -109,7 +122,8 @@ def test_migration_cria_e_remove(motor_de_teste):
         command.downgrade(config, REV_ANTERIOR)
         inspetor = sa.inspect(motor_de_teste)
         assert not {"sessoes", "codigos_acesso"} & set(inspetor.get_table_names())
-        assert "senha_hash" not in {c["name"] for c in inspetor.get_columns("usuarios")}
+        # senha_hash é da 62959ecab341, anterior a esta: continua lá.
+        assert "senha_hash" in {c["name"] for c in inspetor.get_columns("usuarios")}
 
         command.upgrade(config, "head")
         inspetor = sa.inspect(motor_de_teste)

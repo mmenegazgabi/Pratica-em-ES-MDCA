@@ -1,7 +1,7 @@
-"""create login tables (senha, sessoes e codigos_acesso)
+"""create login tables (sessoes e codigos_acesso)
 
 Revision ID: b7d4e2a9c1f0
-Revises: 5c2e8d41a7b3
+Revises: 6bd565cae094
 Create Date: 2026-11-05 20:00:00.000000
 
 """
@@ -13,15 +13,14 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'b7d4e2a9c1f0'
-down_revision: Union[str, Sequence[str], None] = '5c2e8d41a7b3'
+down_revision: Union[str, Sequence[str], None] = '6bd565cae094'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-# T-35: login único. Só guardamos hashes: da senha (scrypt), do token de sessão e do
-# código de acesso (SHA-256).
+# T-35: login único. A coluna usuarios.senha_hash vem da 62959ecab341; aqui ficam as
+# sessões e os códigos de primeiro acesso, guardados só como hash (SHA-256).
 def upgrade() -> None:
-    op.add_column("usuarios", sa.Column("senha_hash", sa.Text(), nullable=True))
 
     op.create_table(
         "sessoes",
@@ -54,4 +53,3 @@ def downgrade() -> None:
     op.drop_table("codigos_acesso")
     op.drop_index("ix_sessoes_usuario_id", table_name="sessoes")
     op.drop_table("sessoes")
-    op.drop_column("usuarios", "senha_hash")

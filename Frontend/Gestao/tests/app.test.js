@@ -20,10 +20,14 @@ Object.assign(globalThis, {
 
 const chamadas = [];
 const RESPOSTAS = [
+  [/\/atividades\/a-1$/, { id: "a-1", turma: "Oficina de arte", data: "2026-11-05", educador: "Jéssica", conteudo: "Pintura.", observacao: null, presentes: 0, ausentes: 1, chamada: [{ pessoa_id: "pe-lara", pessoa: "Lara Oliveira", presente: false, justificativa: null }], evidencias: [] }],
   [/\/equipe(\?|$)/, [{ id: "v-1", usuario_id: "ana", nome: "Ana Martins", papel_id: "coordenacao", papel: "Coordenação", data_entrada: "2025-01-10", data_saida: null, ativo: true }]],
   [/\/espacos$/, []],
   [/\/gestao\/usuarios$/, [{ id: "ana", nome: "Ana Martins", email: null, ativo: true, papeis: [], vinculos: [] }]],
   [/\/gestao\/programas$/, [{ id: "p-1", nome: "Semear" }]],
+  [/\/gestao\/programas\/p-1\/turmas$/, [{ id: "t-9", programa_id: "p-1", nome: "Oficina de arte", espaco: "Ateliê", responsavel: "Jéssica", capacidade: 2, ativas: 2, em_espera: 1, vagas_livres: 0, dias_semana: [1, 3], hora_inicio: "14:00:00", hora_fim: "16:00:00" }]],
+  [/\/gestao\/alertas(\?situacao=aberto)?$/, [{ id: "al-9", descricao: "4 faltas seguidas na turma Oficina de arte.", titulo: "Lara Oliveira precisa de um contato", programa_id: "p-1", pessoa_id: "pe-lara", pessoa: "Lara Oliveira", turma: "Oficina de arte", responsavel: "Patrícia Souza", situacao: "aberto", faltas_consecutivas: 3, limite: 3, primeira_falta: "2026-11-03", ultima_falta: "2026-11-05", criado_em: "2026-11-05T18:00:00Z" }]],
+  [/\/gestao\/pessoas$/, [{ id: "pe-lara", nome: "Lara Oliveira", data_nascimento: "2013-05-12", programa_id: "p-1", programa: "Semear", nucleo_familiar: { id: "f-1", nome: "Oliveira" }, responsaveis: [], situacao: "ativo", autorizacao_imagem: "vigente" }]],
 ];
 globalThis.fetch = async (url, opcoes = {}) => {
   chamadas.push({ url, ...opcoes });
@@ -50,7 +54,26 @@ test("abre na Visão geral com o menu lateral do protótipo e o aviso de demonst
     ["Programas e público", "Execução e atendimento", "Resultados", "Auditoria e implantação"],
   );
   assert.ok($(".demo-banner"));
-  assert.equal(chamadas.length, 0);
+  // A única chamada da Visão geral é a dos alertas abertos, para os avisos da equipe (T-90).
+  assert.deepEqual(chamadas.map((c) => c.url.replace(/^https?:\/\/[^/]+/, "")), ["/gestao/alertas?situacao=aberto"]);
+});
+
+test("notificações e Visão geral mostram os alertas reais da API, sem os de infrequência fictícios (T-90)", async () => {
+  await irPara("#/inicio");
+  await esperar();
+
+  assert.match($(".notification-button").textContent, /Notificações · \d+/);
+  const destinos = [...document.querySelectorAll("#main .priority-item a")].map((a) => a.getAttribute("href"));
+  assert.equal(destinos[0], "#/alertas/al-9");
+  assert.match(document.querySelector("#main .priority-item").textContent, /Lara Oliveira precisa de um contato.*4 faltas seguidas/);
+  // Os alertas fictícios de infrequência do protótipo saíram (o "al1" era de infrequência).
+  assert.ok(!destinos.includes("#/alertas/al1"));
+
+  $('[data-action="notifications"]').click();
+  await esperar();
+  const doDialogo = [...document.querySelectorAll("#dialog .priority-item a")].map((a) => a.getAttribute("href"));
+  assert.equal(doDialogo[0], "#/alertas/al-9");
+  document.getElementById("dialog").close?.();
 });
 
 test("Programas carrega pela API, sem o aviso de demonstração", async () => {
@@ -80,11 +103,96 @@ test("o menu do usuário mostra o usuário usado na API", () => {
   assert.match($(".api-user").textContent, /Usuário na API: ana/);
 });
 
-test("detalhe de programa continua na demonstração", async () => {
+test("detalhe de programa fictício do protótipo continua na demonstração", async () => {
   await irPara("#/programas/p1");
 
   assert.ok($(".demo-banner"));
   assert.equal($("#tela-api"), null);
+});
+
+test("Pessoas e famílias carrega pela API; pessoas fictícias do protótipo seguem na demonstração", async () => {
+  chamadas.length = 0;
+  await irPara("#/pessoas");
+
+  assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/pessoas")));
+  assert.equal($("#tela-api tbody a").textContent, "Lara Oliveira");
+  assert.equal($(".demo-banner"), null);
+
+  await irPara("#/pessoas/u1");
+  assert.ok($(".demo-banner"));
+  assert.equal($("#tela-api"), null);
+});
+
+test("Visão integrada carrega pela API, sem o aviso de demonstração", async () => {
+  await irPara("#/integracao");
+
+  assert.equal($(".demo-banner"), null);
+  assert.ok($("#tela-api"));
+  assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/programas")));
+});
+
+test("programa do cadastro real abre pela API, com as abas Resumo, Plano e metas, Equipe e Turmas", async () => {
+  await irPara("#/programas/p-1/plano");
+
+  assert.equal($(".demo-banner"), null);
+  assert.ok($("#tela-api"));
+  assert.equal($("#main h1").textContent, "Plano e metas");
+  assert.deepEqual(
+    [...document.querySelectorAll("#main .tabs a")].map((a) => a.getAttribute("href")),
+    ["#/programas/p-1", "#/programas/p-1/plano", "#/programas/p-1/equipe", "#/turmas/p-1"],
+  );
+});
+
+test("Novo programa abre o formulário ligado à API, sem o aviso de demonstração", async () => {
+  await irPara("#/programas/novo");
+
+  assert.equal($(".demo-banner"), null);
+  assert.ok($('#tela-api form [name="identificador"]'));
+});
+
+test("Turmas carrega pela API por programa; turmas fictícias do protótipo seguem na demonstração", async () => {
+  chamadas.length = 0;
+  await irPara("#/turmas");
+  await esperar();
+
+  assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/programas/p-1/turmas")));
+  assert.equal($("#tela-api tbody a").textContent, "Oficina de arte");
+  assert.match($("#tela-api tbody").textContent, /2 de 2.*Turma lotada.*1 na espera/);
+  assert.equal($(".demo-banner"), null);
+
+  await irPara("#/turmas/t1");
+  assert.ok($(".demo-banner"));
+  assert.equal($("#tela-api"), null);
+});
+
+test("Alertas e busca ativa carrega pela API; alertas fictícios do protótipo seguem na demonstração", async () => {
+  chamadas.length = 0;
+  await irPara("#/alertas");
+  await esperar();
+
+  assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/alertas")));
+  assert.equal($("#tela-api tbody a").textContent, "Lara Oliveira precisa de um contato");
+  assert.match($("#tela-api tbody").textContent, /Semear.*3 faltas seguidas \(limite 3\)/);
+  assert.equal($(".demo-banner"), null);
+
+  chamadas.length = 0;
+  await irPara("#/alertas/al-9");
+  await esperar();
+  assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/alertas/al-9")));
+
+  await irPara("#/alertas/al1");
+  assert.ok($(".demo-banner"));
+  assert.equal($("#tela-api"), null);
+});
+
+test("encontro registrado abre pela API, com a chamada (T-89)", async () => {
+  chamadas.length = 0;
+  await irPara("#/atividades/p-1/encontro/a-1");
+  await esperar();
+
+  assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/programas/p-1/atividades/a-1")));
+  assert.equal($("#main h1").textContent, "Encontro registrado");
+  assert.equal($(".demo-banner"), null);
 });
 
 test("seletor de módulo leva ao Financeiro e o logo ao menu inicial", () => {

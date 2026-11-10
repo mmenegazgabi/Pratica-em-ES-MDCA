@@ -25,6 +25,10 @@ class ProgramaSaida(BaseModel):
 
     id: str
     nome: str
+    # Vazios nos programas antigos, criados só com nome.
+    identificador: Optional[str] = None
+    vigencia_inicio: Optional[date] = None
+    vigencia_fim: Optional[date] = None
 
 
 class ProgramaEntrada(BaseModel):
@@ -36,6 +40,8 @@ class ProgramaEntrada(BaseModel):
     vigencia_inicio: Optional[date] = None
     vigencia_fim: Optional[date] = None
     descricao: Optional[str] = Field(default=None, max_length=2000)
+    # Faltas consecutivas que geram alerta de infrequência (US-06); padrão 3.
+    limite_faltas: Optional[int] = None
 
 
 class ProgramaDetalhadoSaida(BaseModel):
@@ -51,6 +57,7 @@ class ProgramaDetalhadoSaida(BaseModel):
     vigencia_fim: Optional[date]
     descricao: Optional[str]
     status: str
+    limite_faltas: int
 
 
 class ConvenioEntrada(BaseModel):
@@ -106,6 +113,22 @@ def cadastrar(
 ) -> programas.ProgramaDetalhado:
     try:
         programa = programas.cadastrar_programa(conexao, **dados.model_dump())
+    except ErroDeCadastro as erro:
+        raise _http(erro) from erro
+    conexao.commit()
+    return programa
+
+
+@router.patch("/programas/{programa_id}", response_model=ProgramaDetalhadoSaida)
+def editar(
+    programa_id: str,
+    dados: ProgramaEntrada,
+    _auth: str = Depends(exigir_autenticacao),
+    conexao: Connection = Depends(obter_conexao),
+) -> programas.ProgramaDetalhado:
+    """Altera só os campos enviados; o programa resultante segue as regras do cadastro."""
+    try:
+        programa = programas.editar_programa(conexao, programa_id, dados.model_dump(exclude_unset=True))
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
     conexao.commit()

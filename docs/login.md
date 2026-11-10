@@ -58,6 +58,10 @@ e-mail), promova-a pelo id em vez de criar outra; o e-mail informado passa a ser
 .venv/bin/python -m Acesso.criar_admin --id maria-silva --email maria@mdca.org.br
 ```
 
+Para o time técnico dar senha direto a uma conta que já tem e-mail (por exemplo, as
+da demonstração), sem código: `.venv/bin/python scripts/definir-senha.py ana@mdca.org.br`
+na raiz do repositório (pede a senha no terminal e encerra as sessões abertas).
+
 ## Pessoas sem e-mail
 
 Quem foi cadastrado antes do login pode não ter e-mail e, sem ele, não entra. Em
@@ -85,8 +89,9 @@ o papel de trabalho vai em `X-Papel-Usuario` e precisa ser um dos papéis dela.
 
 O `FINANCEIRO_API_TOKEN` continua valendo como token de serviço: com ele, papel e
 usuário vêm de `X-Papel-Usuario` e `X-Usuario-Id`, como antes. Serve para testes e
-scripts. O front da **Gestão ainda não migrou**: continua pedindo o código de acesso
-(token de serviço) e se identificando por `X-Usuario-Id`. Sem `DATABASE_URL` no
+scripts. O front da Gestão usa a sessão da tela inicial quando ela existe (lê
+`mdca.sessao` e manda o token); sem sessão, volta ao código de acesso e ao
+`X-Usuario-Id`. Sem `DATABASE_URL` no
 servidor não existem sessões: só o token de serviço é aceito e qualquer outro Bearer
 recebe 401 (503 se nem `FINANCEIRO_API_TOKEN` estiver configurado).
 
@@ -122,12 +127,14 @@ antes do merge.
    `Backend/`, com a `DATABASE_URL` de produção (a de `Backend/.env`, que o Alembic lê
    quando a variável não está no ambiente, ou exportada no terminal):
    ```
-   .venv/bin/alembic -c Shared/alembic.ini current   # antes: 5c2e8d41a7b3 ou anterior
+   .venv/bin/alembic -c Shared/alembic.ini current   # antes: 6bd565cae094 ou anterior
    .venv/bin/alembic -c Shared/alembic.ini upgrade head
    .venv/bin/alembic -c Shared/alembic.ini current   # depois: b7d4e2a9c1f0 (head)
    ```
-   A migration só acrescenta: a coluna `usuarios.senha_hash` e as tabelas `sessoes` e
-   `codigos_acesso`. Se o banco permitir, faça um backup ou branch antes.
+   As migrations do login só acrescentam: a coluna `usuarios.senha_hash`
+   (`62959ecab341`, da primeira versão do login, PR #96, que talvez já esteja aplicada)
+   e as tabelas `sessoes` e `codigos_acesso` (`b7d4e2a9c1f0`). Senhas definidas pela
+   primeira versão (`scripts/definir-senha.py`) continuam valendo. Se o banco permitir, faça um backup ou branch antes.
 2. **Backend com as rotas `/auth` e `/admin`.** Publique a branch com o deploy manual
    (`bash scripts/deploy-backend.sh`, veja `docs/deploy-backend.md`). Confira
    `/health` e que `GET /auth/eu` com um token qualquer (`Authorization: Bearer x`)

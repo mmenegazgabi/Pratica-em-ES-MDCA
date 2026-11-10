@@ -15,11 +15,22 @@ desativado não acessa nada. Toda negação vai para ``log_auditoria`` antes do 
 
 A lista de usuários da plataforma (T-40) é consultada pela administração e por quem
 coordena algum programa (para escolher quem vincular à equipe).
+
+Cadastros de pessoas atendidas (US-03) são dados de crianças e famílias: consulta só
+quem tem vínculo ativo no programa da pessoa e a administração (a direção não vê
+cadastros individuais); cadastram e alteram a coordenação e a assistência social
+vinculadas ao programa, e a administração.
+
+Atividades, chamadas e evidências (US-05): registram a coordenação e os educadores
+vinculados ao programa, e a administração.
+
+Alertas de infrequência e busca ativa (US-06): consultam e acompanham a coordenação e a
+assistência social vinculadas ao programa, e a administração (como no protótipo).
 """
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 import sqlalchemy as sa
 from fastapi import Depends, HTTPException, Request
@@ -37,6 +48,18 @@ PROGRAMA_NAO_ENCONTRADO = "Programa não encontrado."
 SEM_ACESSO = "Seu perfil não tem acesso a este programa."
 SEM_PERMISSAO_PARA_GERENCIAR = "Seu perfil não pode alterar a equipe nem os espaços deste programa."
 SEM_ACESSO_AOS_USUARIOS = "Seu perfil não tem acesso à lista de usuários."
+
+PAPEIS_COM_TODAS_AS_PESSOAS = {"administracao"}
+PAPEIS_QUE_CADASTRAM_PESSOAS = {"coordenacao", "assistente_social"}
+PESSOA_NAO_ENCONTRADA = "Pessoa não encontrada."
+SEM_ACESSO_A_PESSOAS = "Seu perfil não tem acesso aos cadastros de pessoas deste programa."
+SEM_PERMISSAO_PARA_CADASTRAR = "Seu perfil não pode cadastrar nem alterar pessoas deste programa."
+
+PAPEIS_QUE_REGISTRAM_ATIVIDADES = {"coordenacao", "educador"}
+SEM_PERMISSAO_PARA_REGISTRAR = "Seu perfil não pode registrar atividades neste programa."
+
+PAPEIS_QUE_ACOMPANHAM_ALERTAS = {"coordenacao", "assistente_social"}
+SEM_ACESSO_A_ALERTAS = "Seu perfil não acompanha os alertas deste programa."
 
 
 @dataclass(frozen=True)
@@ -80,6 +103,24 @@ def papeis_do_usuario(
         ).scalars()
     )
     return globais, no_programa
+
+
+# Visão integrada (T-78): quem vê os valores financeiros do programa. Provisório até a
+# matriz de permissões do Financeiro (T-37) e o RBAC (T-33).
+PAPEIS_QUE_VEEM_FINANCEIRO_DE_TODOS = {"direcao", "administracao"}
+PAPEIS_QUE_VEEM_FINANCEIRO_DO_PROGRAMA = {"coordenacao"}
+
+
+def ve_valores_financeiros(
+    conexao: Connection, usuario_id: str, programa_id: str, hoje: Optional[date] = None
+) -> bool:
+    papeis = papeis_do_usuario(conexao, usuario_id, programa_id, hoje or date.today())
+    if papeis is None:
+        return False
+    globais, no_programa = papeis
+    return bool(globais & PAPEIS_QUE_VEEM_FINANCEIRO_DE_TODOS) or bool(
+        no_programa & PAPEIS_QUE_VEEM_FINANCEIRO_DO_PROGRAMA
+    )
 
 
 def verificar_acesso(
@@ -210,6 +251,230 @@ def exigir_gestao_do_programa(
     conexao: Connection = Depends(obter_conexao),
 ) -> Acesso:
     return verificar_acesso(conexao, usuario_id, programa_id, gerenciar=True, requisicao=requisicao)
+
+
+@dataclass(frozen=True)
+class AcessoAPessoas:
+    usuario_id: str
+    programa_id: str
+    pode_cadastrar: bool
+
+
+def verificar_acesso_a_pessoas(
+    conexao: Connection,
+    usuario_id: str,
+    programa_id: str,
+    *,
+    cadastrar: bool,
+    alvo_tipo: str = "programa",
+    alvo_id: Optional[str] = None,
+    requisicao: Optional[Request] = None,
+    hoje: Optional[date] = None,
+) -> AcessoAPessoas:
+    """Regra dos cadastros de pessoas (US-03) sobre o programa da pessoa."""
+    if not programa_existe(conexao, programa_id):
+        raise HTTPException(status_code=404, detail=PROGRAMA_NAO_ENCONTRADO)
+
+    papeis = papeis_do_usuario(conexao, usuario_id, programa_id, hoje or date.today())
+    if papeis is None:
+        consulta = cadastro = False
+    else:
+        globais, no_programa = papeis
+        todas = bool(globais & PAPEIS_COM_TODAS_AS_PESSOAS)
+        cadastro = todas or bool(no_programa & PAPEIS_QUE_CADASTRAM_PESSOAS)
+        consulta = cadastro or todas or bool(no_programa)
+
+    if not (cadastro if cadastrar else consulta):
+        operacao = "cadastrar" if cadastrar else "consultar"
+        _registrar_negacao(
+            conexao,
+            usuario_id,
+            alvo_tipo=alvo_tipo,
+            alvo_id=alvo_id or programa_id,
+            operacao=operacao,
+            descricao=f"Tentativa de {operacao} cadastro de pessoa sem permissão",
+            requisicao=requisicao,
+        )
+        detalhe = SEM_PERMISSAO_PARA_CADASTRAR if cadastrar and consulta else SEM_ACESSO_A_PESSOAS
+        raise HTTPException(status_code=403, detail=detalhe)
+    return AcessoAPessoas(usuario_id=usuario_id, programa_id=programa_id, pode_cadastrar=cadastro)
+
+
+def programas_com_pessoas_visiveis(
+    conexao: Connection, usuario_id: str, hoje: Optional[date] = None
+) -> Optional[List[str]]:
+    """Programas cujas pessoas o usuário pode listar; ``None`` quando são todos."""
+    ativo = conexao.execute(
+        sa.text("SELECT ativo FROM usuarios WHERE id = :id"), {"id": usuario_id}
+    ).scalar_one_or_none()
+    if not ativo:
+        return []
+    globais = set(
+        conexao.execute(
+            sa.text("SELECT papel_id FROM usuarios_papeis WHERE usuario_id = :id"), {"id": usuario_id}
+        ).scalars()
+    )
+    if globais & PAPEIS_COM_TODAS_AS_PESSOAS:
+        return None
+    return list(
+        conexao.execute(
+            sa.text(
+                """
+                SELECT DISTINCT programa_id FROM vinculos_equipe
+                WHERE usuario_id = :id AND (data_saida IS NULL OR data_saida > :hoje)
+                ORDER BY programa_id
+                """
+            ),
+            {"id": usuario_id, "hoje": hoje or date.today()},
+        ).scalars()
+    )
+
+
+def _acesso_a_pessoa(conexao, usuario_id, pessoa_id, requisicao, *, cadastrar) -> AcessoAPessoas:
+    programa_id = conexao.execute(
+        sa.text("SELECT programa_id FROM pessoas WHERE id = :id"), {"id": pessoa_id}
+    ).scalar_one_or_none()
+    if programa_id is None:
+        raise HTTPException(status_code=404, detail=PESSOA_NAO_ENCONTRADA)
+    return verificar_acesso_a_pessoas(
+        conexao,
+        usuario_id,
+        programa_id,
+        cadastrar=cadastrar,
+        alvo_tipo="pessoa",
+        alvo_id=pessoa_id,
+        requisicao=requisicao,
+    )
+
+
+def exigir_consulta_a_pessoa(
+    pessoa_id: str,
+    requisicao: Request,
+    usuario_id: str = Depends(exigir_usuario),
+    conexao: Connection = Depends(obter_conexao),
+) -> AcessoAPessoas:
+    return _acesso_a_pessoa(conexao, usuario_id, pessoa_id, requisicao, cadastrar=False)
+
+
+def exigir_cadastro_na_pessoa(
+    pessoa_id: str,
+    requisicao: Request,
+    usuario_id: str = Depends(exigir_usuario),
+    conexao: Connection = Depends(obter_conexao),
+) -> AcessoAPessoas:
+    return _acesso_a_pessoa(conexao, usuario_id, pessoa_id, requisicao, cadastrar=True)
+
+
+def verificar_registro_de_atividade(
+    conexao: Connection,
+    usuario_id: str,
+    programa_id: str,
+    *,
+    requisicao: Optional[Request] = None,
+    hoje: Optional[date] = None,
+) -> Acesso:
+    """Quem pode registrar encontros, chamadas e evidências no programa (US-05)."""
+    if not programa_existe(conexao, programa_id):
+        raise HTTPException(status_code=404, detail=PROGRAMA_NAO_ENCONTRADO)
+
+    papeis = papeis_do_usuario(conexao, usuario_id, programa_id, hoje or date.today())
+    if papeis is None:
+        consulta = registra = False
+    else:
+        globais, no_programa = papeis
+        registra = bool(globais & PAPEIS_QUE_GERENCIAM_TODOS) or bool(
+            no_programa & PAPEIS_QUE_REGISTRAM_ATIVIDADES
+        )
+        consulta = registra or bool(globais & PAPEIS_QUE_CONSULTAM_TODOS) or bool(no_programa)
+
+    if not registra:
+        _registrar_negacao(
+            conexao,
+            usuario_id,
+            alvo_tipo="programa",
+            alvo_id=programa_id,
+            operacao="registrar_atividade",
+            descricao="Tentativa de registrar atividade sem permissão",
+            requisicao=requisicao,
+        )
+        raise HTTPException(status_code=403, detail=SEM_PERMISSAO_PARA_REGISTRAR if consulta else SEM_ACESSO)
+    gerencia = bool(globais & PAPEIS_QUE_GERENCIAM_TODOS) or bool(no_programa & PAPEIS_QUE_GERENCIAM_O_PROGRAMA)
+    return Acesso(usuario_id=usuario_id, programa_id=programa_id, pode_gerenciar=gerencia)
+
+
+def exigir_registro_de_atividade(
+    programa_id: str,
+    requisicao: Request,
+    usuario_id: str = Depends(exigir_usuario),
+    conexao: Connection = Depends(obter_conexao),
+) -> Acesso:
+    return verificar_registro_de_atividade(conexao, usuario_id, programa_id, requisicao=requisicao)
+
+
+def acompanha_alertas(conexao: Connection, usuario_id: str, programa_id: str, *, hoje: Optional[date] = None) -> bool:
+    """Se o usuário acompanha os alertas do programa, sem registrar nada (só para decidir o que mostrar)."""
+    papeis = papeis_do_usuario(conexao, usuario_id, programa_id, hoje or date.today())
+    if papeis is None:
+        return False
+    globais, no_programa = papeis
+    return bool(globais & PAPEIS_QUE_GERENCIAM_TODOS) or bool(no_programa & PAPEIS_QUE_ACOMPANHAM_ALERTAS)
+
+
+def verificar_acompanhamento_de_alertas(
+    conexao: Connection,
+    usuario_id: str,
+    programa_id: str,
+    *,
+    alvo_id: Optional[str] = None,
+    requisicao: Optional[Request] = None,
+    hoje: Optional[date] = None,
+) -> Acesso:
+    """Quem consulta e acompanha os alertas de infrequência do programa (US-06)."""
+    if not programa_existe(conexao, programa_id):
+        raise HTTPException(status_code=404, detail=PROGRAMA_NAO_ENCONTRADO)
+    papeis = papeis_do_usuario(conexao, usuario_id, programa_id, hoje or date.today())
+    globais, no_programa = papeis or (set(), set())
+    if not acompanha_alertas(conexao, usuario_id, programa_id, hoje=hoje):
+        _registrar_negacao(
+            conexao,
+            usuario_id,
+            alvo_tipo="alerta" if alvo_id else "programa",
+            alvo_id=alvo_id or programa_id,
+            operacao="acompanhar_alertas",
+            descricao="Tentativa de acessar alertas de infrequência sem permissão",
+            requisicao=requisicao,
+        )
+        raise HTTPException(status_code=403, detail=SEM_ACESSO_A_ALERTAS)
+    gerencia = bool(globais & PAPEIS_QUE_GERENCIAM_TODOS) or bool(no_programa & PAPEIS_QUE_GERENCIAM_O_PROGRAMA)
+    return Acesso(usuario_id=usuario_id, programa_id=programa_id, pode_gerenciar=gerencia)
+
+
+def programas_com_alertas_visiveis(conexao: Connection, usuario_id: str, hoje: Optional[date] = None) -> Optional[List[str]]:
+    """Programas cujos alertas o usuário acompanha; ``None`` quando são todos."""
+    ativo = conexao.execute(
+        sa.text("SELECT ativo FROM usuarios WHERE id = :id"), {"id": usuario_id}
+    ).scalar_one_or_none()
+    if not ativo:
+        return []
+    globais = set(
+        conexao.execute(
+            sa.text("SELECT papel_id FROM usuarios_papeis WHERE usuario_id = :id"), {"id": usuario_id}
+        ).scalars()
+    )
+    if globais & PAPEIS_QUE_GERENCIAM_TODOS:
+        return None
+    return list(
+        conexao.execute(
+            sa.text(
+                """
+                SELECT DISTINCT programa_id FROM vinculos_equipe
+                WHERE usuario_id = :id AND papel_id IN :papeis AND (data_saida IS NULL OR data_saida > :hoje)
+                ORDER BY programa_id
+                """
+            ).bindparams(sa.bindparam("papeis", expanding=True)),
+            {"id": usuario_id, "papeis": sorted(PAPEIS_QUE_ACOMPANHAM_ALERTAS), "hoje": hoje or date.today()},
+        ).scalars()
+    )
 
 
 def exigir_acesso_aos_usuarios(

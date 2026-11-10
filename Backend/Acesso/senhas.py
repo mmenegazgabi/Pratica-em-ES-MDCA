@@ -1,7 +1,9 @@
 """Senhas do login único (T-35): hash com scrypt da biblioteca padrão.
 
 Formato guardado: ``scrypt$n$r$p$<sal b64>$<hash b64>``. Os parâmetros ficam no próprio
-texto, então dá para endurecê-los depois sem invalidar senhas já gravadas.
+texto, então dá para endurecê-los depois sem invalidar senhas já gravadas. A conferência
+também aceita o base64 "urlsafe" sem "=" da primeira versão do login (PR #96), para as
+senhas definidas com ela continuarem valendo.
 """
 
 import base64
@@ -35,6 +37,12 @@ def gerar_hash(senha: str) -> str:
     )
 
 
+def _de_b64(texto: str) -> bytes:
+    if "-" in texto or "_" in texto or len(texto) % 4:
+        return base64.urlsafe_b64decode(texto + "=" * (-len(texto) % 4))
+    return base64.b64decode(texto, validate=True)
+
+
 def conferir(senha: str, hash_: Optional[str]) -> bool:
     """Confere a senha; ``None`` ou formato inválido nunca conferem."""
     if not hash_:
@@ -44,8 +52,8 @@ def conferir(senha: str, hash_: Optional[str]) -> bool:
         return False
     try:
         n, r, p = int(partes[1]), int(partes[2]), int(partes[3])
-        sal = base64.b64decode(partes[4], validate=True)
-        esperado = base64.b64decode(partes[5], validate=True)
+        sal = _de_b64(partes[4])
+        esperado = _de_b64(partes[5])
         derivado = _scrypt(senha, sal, n, r, p)
     except (ValueError, binascii.Error, MemoryError):
         return False

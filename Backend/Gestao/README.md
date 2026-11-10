@@ -83,9 +83,9 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 
 - O backend aceita a sessão do login único (`docs/login.md`): com o token da sessão,
   quem chama é o dono dela. Também aceita o token de serviço com o cabeçalho
-  `X-Usuario-Id`, como no Financeiro (sem ele, 400). O **front da Gestão ainda não
-  migrou**: continua pedindo o código de acesso (token de serviço) e enviando
-  `X-Usuario-Id`.
+  `X-Usuario-Id`, como no Financeiro (sem ele, 400). O front da Gestão usa a sessão
+  quando a pessoa entrou pela tela inicial (`mdca.sessao`); sem sessão, cai no código de
+  acesso e no `X-Usuario-Id`, como antes.
 - Os papéis vêm do banco, não de cabeçalho: os da plataforma em `usuarios_papeis`
   (direção e administração) e os do programa em `vinculos_equipe`.
 - **Vínculo ativo** é o que não tem data de saída ou tem a saída no futuro. A partir

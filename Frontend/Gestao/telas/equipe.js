@@ -52,7 +52,8 @@ function cartao(titulo, subtitulo, corpo, acao = null) {
 const vazio = (titulo, texto) => el("div", { class: "empty" }, el("h2", {}, titulo), el("p", {}, texto));
 
 function situacao(v) {
-  if (!v.ativo) return badge("Desligado", "gray");
+  // Sem data de saída, o vínculo só está inativo porque a conta foi desativada.
+  if (!v.ativo) return badge(v.data_saida ? "Desligado" : "Conta desativada", "gray");
   if (v.data_saida) return badge(`Ativo até ${dataBr(v.data_saida)}`, "amber");
   return badge("Ativo", "green");
 }
@@ -159,7 +160,8 @@ export function mostrarEquipe(container, programaId, { podeGerenciar = false, av
 
   function linhaDaEquipe(v) {
     const acao =
-      podeGerenciar && v.ativo && !v.data_saida
+      // Conta desativada ainda pode ter a saída registrada.
+      podeGerenciar && !v.data_saida
         ? el("button", { type: "button", class: "btn small", onclick: () => abrirDesligamento(v) }, "Desligar")
         : "—";
     return el(

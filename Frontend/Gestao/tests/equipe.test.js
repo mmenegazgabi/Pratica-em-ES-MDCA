@@ -133,6 +133,15 @@ test("quem gerencia pode desligar só quem está ativo e sem saída registrada",
   assert.ok(botao("+ Adicionar espaço", container));
 });
 
+test("conta desativada sem saída aparece como tal e ainda pode ser desligada", async () => {
+  const desativada = { id: "v-carla", usuario_id: "carla", nome: "Carla Dias", papel_id: "educador", papel: "Educador(a) social", data_entrada: "2025-02-01", data_saida: null, ativo: false };
+  await gerente({ ...api({ listarEquipe: async () => [...EQUIPE, desativada] }) });
+
+  const linha = [...container.querySelectorAll("tbody tr")].find((tr) => tr.cells[0].querySelector("strong").textContent === "Carla Dias");
+  assert.equal(celula(linha.cells[4]), "Conta desativada");
+  assert.ok(botao("Desligar", linha));
+});
+
 test("perfil sem permissão (403) vê a tela de acesso restrito", async () => {
   await abrir({ ...api({ listarEquipe: async () => Promise.reject(new ErroApi(ERROS.SEM_PERMISSAO, 403, "Seu perfil não tem acesso a este programa.")) }) });
 

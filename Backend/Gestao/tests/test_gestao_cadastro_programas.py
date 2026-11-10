@@ -27,6 +27,8 @@ def test_cadastra_programa_completo_e_consulta_pelo_id(cliente, cabecalhos, banc
         "id": programa["id"],
         **PROGRAMA,
         "status": "ativo",
+        # Padrão do protótipo para o alerta de infrequência (US-06).
+        "limite_faltas": 3,
     }
     consulta = cliente.get(f"/gestao/programas/{programa['id']}", headers=cabecalhos)
     assert consulta.status_code == 200
@@ -43,7 +45,16 @@ def test_programa_cadastrado_entra_no_cadastro_canonico_do_financeiro(cliente, c
             sa.text("SELECT nome FROM projetos WHERE id = :id"), {"id": programa_id}
         ).scalar_one()
 
-    assert lista == [{"id": programa_id, "nome": PROGRAMA["nome"]}]
+    # A lista já mostra o identificador compartilhado (critério da T-45).
+    assert lista == [
+        {
+            "id": programa_id,
+            "nome": PROGRAMA["nome"],
+            "identificador": PROGRAMA["identificador"],
+            "vigencia_inicio": PROGRAMA["vigencia_inicio"],
+            "vigencia_fim": PROGRAMA["vigencia_fim"],
+        }
+    ]
     assert nome == PROGRAMA["nome"]
 
 
@@ -202,3 +213,97 @@ def test_vagas_invalidas_ou_repetidas(cliente, cabecalhos, banco, corpo, status,
 
 def test_cadastro_sem_autenticacao_401(cliente):
     assert cliente.post("/gestao/programas", json=PROGRAMA).status_code == 401
+
+
+# --- Edição dos dados do programa (T-45) -------------------------------------
+
+
+def editar(cliente, cabecalhos, programa_id, **campos):
+    return cliente.patch(f"/gestao/programas/{programa_id}", json=campos, headers=cabecalhos)
+
+
+def test_edita_so_os_campos_enviados(cliente, cabecalhos, banco):
+    programa = cadastrar(cliente, cabecalhos).json()
+
+    resposta = editar(cliente, cabecalhos, programa["id"], responsavel="Patrícia Souza", vigencia_fim="2027-06-30")
+
+    assert resposta.status_code == 200
+    assert resposta.json() == {**programa, "responsavel": "Patrícia Souza", "vigencia_fim": "2027-06-30"}
+    assert cliente.get(f"/gestao/programas/{programa['id']}", headers=cabecalhos).json() == resposta.json()
+
+
+@pytest.mark.parametrize(
+    "campos, mensagem",
+    [
+        ({"publico": "  "}, "Programa sem público."),
+        ({"vigencia_inicio": None}, "Programa sem vigência (início e fim)."),
+        ({"vigencia_fim": "2026-01-01"}, "O fim da vigência não pode ser anterior ao início."),
+    ],
+)
+def test_edicao_segue_as_regras_do_cadastro(cliente, cabecalhos, banco, campos, mensagem):
+    programa = cadastrar(cliente, cabecalhos).json()
+
+    resposta = editar(cliente, cabecalhos, programa["id"], **campos)
+
+    assert resposta.status_code == 400
+    assert resposta.json()["detail"] == mensagem
+    assert cliente.get(f"/gestao/programas/{programa['id']}", headers=cabecalhos).json() == programa
+
+
+def test_edicao_com_identificador_de_outro_programa_409(cliente, cabecalhos, banco):
+    cadastrar(cliente, cabecalhos, identificador="OUTRO")
+    programa = cadastrar(cliente, cabecalhos).json()
+
+    resposta = editar(cliente, cabecalhos, programa["id"], identificador="outro")
+
+    assert resposta.status_code == 409
+
+
+def test_manter_o_proprio_identificador_nao_e_conflito(cliente, cabecalhos, banco):
+    programa = cadastrar(cliente, cabecalhos).json()
+
+    assert editar(cliente, cabecalhos, programa["id"], identificador="SCFV").status_code == 200
+
+
+def test_programa_antigo_precisa_ganhar_os_campos_obrigatorios(cliente, cabecalhos, banco):
+    with banco.begin() as conexao:
+        conexao.execute(sa.text("INSERT INTO projetos (id, nome) VALUES ('antigo', 'Projeto antigo')"))
+
+    so_nome = editar(cliente, cabecalhos, "antigo", nome="Projeto renomeado")
+    completo = editar(cliente, cabecalhos, "antigo", **{k: v for k, v in PROGRAMA.items() if k != "nome"})
+
+    assert so_nome.status_code == 400
+    assert completo.status_code == 200
+    assert completo.json()["identificador"] == "SCFV"
+
+
+def test_edicao_de_programa_inexistente_404(cliente, cabecalhos, banco):
+    assert editar(cliente, cabecalhos, "nao-existe", nome="X").status_code == 404
+
+
+def test_edicao_sem_autenticacao_401(cliente):
+    assert cliente.patch("/gestao/programas/qualquer", json={"nome": "X"}).status_code == 401
+
+
+# --- Limite de faltas (US-06) ---------------------------------------------------------
+
+
+def test_limite_de_faltas_no_cadastro_e_na_edicao(cliente, cabecalhos, banco):
+    programa = cadastrar(cliente, cabecalhos, limite_faltas=2).json()
+    assert programa["limite_faltas"] == 2
+
+    editado = cliente.patch(f"/gestao/programas/{programa['id']}", json={"limite_faltas": 5}, headers=cabecalhos)
+
+    assert editado.status_code == 200
+    assert editado.json()["limite_faltas"] == 5
+    assert editado.json()["nome"] == programa["nome"]
+
+
+@pytest.mark.parametrize("limite", [0, -1, None], ids=["zero", "negativo", "vazio"])
+def test_limite_de_faltas_precisa_ser_positivo(cliente, cabecalhos, banco, limite):
+    programa = cadastrar(cliente, cabecalhos).json()
+
+    resposta = cliente.patch(f"/gestao/programas/{programa['id']}", json={"limite_faltas": limite}, headers=cabecalhos)
+
+    assert resposta.status_code == 400
+    assert resposta.json()["detail"] == "O limite de faltas precisa ser de pelo menos 1."

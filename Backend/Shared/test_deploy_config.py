@@ -28,6 +28,7 @@ def test_omitted_optional_settings_do_not_override_application_defaults(tmp_path
     assert config["R2_BUCKET_NAME"] == "bucket"
 
 
+
 def test_configured_optional_settings_are_preserved(tmp_path):
     config = export_config(tmp_path, "APP_NAME=MDCA\nR2_PUBLIC_URL=https://files.example\n")
     assert config["APP_NAME"] == "MDCA"
