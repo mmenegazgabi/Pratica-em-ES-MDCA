@@ -592,7 +592,16 @@ export function linhaDoTempo(eventos) {
   return el(
     "div",
     { class: "timeline" },
-    eventos.map((e) => el("div", { class: `timeline-item timeline-item--${e.tipo}` }, el("small", {}, dataBr(e.data)), el("h3", {}, e.titulo), el("p", {}, e.descricao))),
+    eventos.map((e) =>
+      el(
+        "div",
+        { class: `timeline-item timeline-item--${e.tipo}` },
+        el("small", {}, dataBr(e.data)),
+        // Faltas (T-89) levam ao encontro, com a chamada completa.
+        el("h3", {}, e.atividade_id && e.programa_id ? el("a", { href: `#/atividades/${encodeURIComponent(e.programa_id)}/encontro/${encodeURIComponent(e.atividade_id)}` }, e.titulo) : e.titulo),
+        el("p", {}, e.descricao),
+      ),
+    ),
   );
 }
 

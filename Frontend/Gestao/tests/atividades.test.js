@@ -12,6 +12,7 @@ const {
   inicioDaSemana,
   matriculadosNaData,
   mostrarAgenda,
+  mostrarEncontro,
   mostrarRegistro,
   mostrarSincronizacao,
   presencasParaApi,
@@ -218,13 +219,15 @@ test("agenda da semana em tabela, com a situação de cada encontro", async () =
   assert.deepEqual(
     linhas().map((l) => [l[0], l[1], l[4], l[5]]),
     [
-      ["seg 05/10/2026 14:00–16:00", "Oficina de arte", "Concluída", "—"],
+      ["seg 05/10/2026 14:00–16:00", "Oficina de arte", "Concluída", "Ver chamada"],
       ["ter 06/10/2026 14:00–16:00", "Oficina de arte Fora da agenda da turma", "Aguardando sincronização", "—"],
       ["qua 07/10/2026 14:00–16:00", "Oficina de arte", "Chamada pendente", "Fazer chamada"],
       ["sex 09/10/2026 14:00–16:00", "Oficina de arte", "Agendada", "—"],
     ],
   );
   assert.equal(botao("Fazer chamada").getAttribute("href"), "#/atividades/p-1/registro/t-1?data=2026-10-07");
+  // O encontro já registrado abre a chamada (T-89).
+  assert.equal(botao("Ver chamada").getAttribute("href"), "#/atividades/p-1/encontro/a-1");
 });
 
 test("no celular, os mesmos encontros em cartões do protótipo; o pendente abre a chamada", async () => {
@@ -232,8 +235,9 @@ test("no celular, os mesmos encontros em cartões do protótipo; o pendente abre
 
   assert.equal(texto(container.querySelector(".so-celular .phone-record-count")), "2 encontro(s)");
   const [feito, pendente] = cartoes();
-  assert.equal(feito.tagName, "DIV");
-  assert.match(texto(feito), /Oficina de arte Concluída/);
+  assert.equal(feito.tagName, "A");
+  assert.equal(feito.getAttribute("href"), "#/atividades/p-1/encontro/a-1");
+  assert.match(texto(feito), /Oficina de arte Concluída.*Ver chamada →/);
   assert.equal(pendente.tagName, "A");
   assert.equal(pendente.getAttribute("href"), "#/atividades/p-1/registro/t-1?data=2026-10-07");
   assert.match(texto(pendente), /Chamada pendente.*qua 07\/10\/2026 · 14:00–16:00 Fazer chamada →/);
@@ -491,4 +495,83 @@ test("evidência espera a chamada e o nome do arquivo entra como texto", async (
 
   assert.match(texto(), /Aguardando o envio da chamada/);
   assert.equal(container.querySelector("img"), null);
+});
+
+
+// --- Encontro registrado (T-89) --------------------------------------------------------
+
+const ATIVIDADE = {
+  id: "a-1",
+  registro_id: "r-1",
+  programa_id: "p-1",
+  turma_id: "t-1",
+  turma: "Oficina de arte",
+  data: "2026-10-05",
+  educador_id: "jessica",
+  educador: "Jéssica Almeida",
+  conteudo: "Pintura com tinta guache.",
+  observacao: "Faltou material de pintura.",
+  presentes: 1,
+  ausentes: 2,
+  chamada: [
+    { pessoa_id: "pe-davi", pessoa: "Davi Oliveira", presente: true, justificativa: null },
+    { pessoa_id: "pe-lara", pessoa: "Lara Oliveira", presente: false, justificativa: null },
+    { pessoa_id: "pe-nina", pessoa: "Nina Souza", presente: false, justificativa: "Consulta médica" },
+  ],
+  evidencias: [
+    { id: "ev-1", registro_id: "re-1", atividade_id: "a-1", programa_id: "p-1", autor_id: "jessica", autor: "Jéssica Almeida", data: "2026-10-05", descricao: "Mural da turma", nome_arquivo: "mural.jpg", content_type: "image/jpeg", tamanho: 204800 },
+  ],
+};
+
+function apiDoEncontro(extra = {}) {
+  return {
+    obterAtividade: async (...args) => (registro.push(["obterAtividade", ...args]), ATIVIDADE),
+    baixarEvidencia: async (...args) => (registro.push(["baixarEvidencia", ...args]), new window.Blob(["jpg"], { type: "image/jpeg" })),
+    ...extra,
+  };
+}
+
+test("o encontro registrado mostra o conteúdo, a chamada com faltas e motivos, e as evidências", async () => {
+  await mostrarEncontro(container, "p-1", "a-1", apiDoEncontro());
+  await esperar();
+
+  assert.deepEqual(registro, [["obterAtividade", "p-1", "a-1"]]);
+  assert.match(texto(), /Turma Oficina de arte Data seg 05\/10\/2026 Educador Jéssica Almeida Presença 1 presente\(s\), 2 ausência\(s\), 1 justificada\(s\)/);
+  assert.match(texto(), /Conteúdo trabalhado Pintura com tinta guache\. Observação Faltou material de pintura\./);
+  const chamada = [...container.querySelectorAll("tbody tr")].map((tr) => [...tr.cells].map((td) => texto(td)));
+  assert.deepEqual(chamada, [
+    ["Davi Oliveira", "Presente", "—"],
+    ["Lara Oliveira", "Ausente", "—"],
+    ["Nina Souza", "Falta justificada", "Consulta médica"],
+  ]);
+  assert.equal(container.querySelector("tbody a").getAttribute("href"), "#/pessoas/pe-davi");
+  assert.match(texto(), /mural\.jpg Jéssica Almeida · 05\/10\/2026 · 200 KB · Mural da turma/);
+});
+
+test("Baixar busca a evidência pela API", async () => {
+  const criados = [];
+  globalThis.URL.createObjectURL = (blob) => (criados.push(blob), "blob:teste");
+  globalThis.URL.revokeObjectURL = () => {};
+  await mostrarEncontro(container, "p-1", "a-1", apiDoEncontro());
+  await esperar();
+
+  botao("Baixar").click();
+  await esperar();
+
+  assert.deepEqual(registro.at(-1), ["baixarEvidencia", "p-1", "ev-1"]);
+  assert.equal(criados.length, 1);
+});
+
+test("encontro sem evidências avisa, e a direção vê acesso restrito", async () => {
+  await mostrarEncontro(container, "p-1", "a-1", apiDoEncontro({ obterAtividade: async () => ({ ...ATIVIDADE, evidencias: [] }) }));
+  await esperar();
+  assert.match(texto(), /Sem evidências/);
+
+  const negar = async () => {
+    throw new ErroApi(ERROS.SEM_PERMISSAO, 403, "Seu perfil não consulta cadastros de pessoas atendidas.");
+  };
+  await mostrarEncontro(container, "p-1", "a-1", apiDoEncontro({ obterAtividade: negar }));
+  await esperar();
+  assert.match(texto(), /Acesso restrito/);
+  assert.equal(container.querySelector("tbody"), null);
 });

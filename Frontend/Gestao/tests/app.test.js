@@ -20,6 +20,7 @@ Object.assign(globalThis, {
 
 const chamadas = [];
 const RESPOSTAS = [
+  [/\/atividades\/a-1$/, { id: "a-1", turma: "Oficina de arte", data: "2026-11-05", educador: "Jéssica", conteudo: "Pintura.", observacao: null, presentes: 0, ausentes: 1, chamada: [{ pessoa_id: "pe-lara", pessoa: "Lara Oliveira", presente: false, justificativa: null }], evidencias: [] }],
   [/\/equipe(\?|$)/, [{ id: "v-1", usuario_id: "ana", nome: "Ana Martins", papel_id: "coordenacao", papel: "Coordenação", data_entrada: "2025-01-10", data_saida: null, ativo: true }]],
   [/\/espacos$/, []],
   [/\/gestao\/usuarios$/, [{ id: "ana", nome: "Ana Martins", email: null, ativo: true, papeis: [], vinculos: [] }]],
@@ -163,6 +164,16 @@ test("Alertas e busca ativa carrega pela API; alertas fictícios do protótipo s
   await irPara("#/alertas/al1");
   assert.ok($(".demo-banner"));
   assert.equal($("#tela-api"), null);
+});
+
+test("encontro registrado abre pela API, com a chamada (T-89)", async () => {
+  chamadas.length = 0;
+  await irPara("#/atividades/p-1/encontro/a-1");
+  await esperar();
+
+  assert.ok(chamadas.some((c) => c.url.endsWith("/gestao/programas/p-1/atividades/a-1")));
+  assert.equal($("#main h1").textContent, "Encontro registrado");
+  assert.equal($(".demo-banner"), null);
 });
 
 test("seletor de módulo leva ao Financeiro e o logo ao menu inicial", () => {

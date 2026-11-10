@@ -8,12 +8,14 @@ Por enquanto a linha do tempo junta o que o cadastro já guarda:
 - autorizações registradas, revogadas e vencidas (o vencimento entra na data em que a
   autorização deixou de valer, sem nada gravado para isso);
 - turmas (US-04): inscrição na lista de espera, matrícula e desligamento com o motivo;
+- frequência (US-05, T-89): cada falta e falta justificada (com o motivo), ligada ao
+  encontro; as presenças não entram, para a linha do tempo não virar a lista de chamadas;
 - alertas de infrequência (US-06): o alerta, cada ação de busca ativa e o encerramento.
   O resultado das ações e a justificativa do encerramento só aparecem para quem
   acompanha os alertas do programa (coordenação, assistência social e administração);
   para o resto da equipe fica só o registro de que houve o contato, como no protótipo.
 
-Frequência (US-05), atendimentos (US-07) e rede de proteção (US-08) entram aqui quando
+Atendimentos (US-07) e rede de proteção (US-08) entram aqui quando
 cada uma existir, com o sigilo de cada registro.
 """
 
@@ -31,6 +33,7 @@ RESPONSAVEL = "responsavel"
 DOCUMENTO = "documento"
 AUTORIZACAO = "autorizacao"
 MATRICULA = "matricula"
+FREQUENCIA = "frequencia"
 ALERTA = "alerta"
 BUSCA_ATIVA = "busca_ativa"
 
@@ -46,6 +49,9 @@ class Evento:
     tipo: str
     titulo: str
     descricao: str
+    # Frequência: o encontro, para a tela abrir a chamada.
+    programa_id: Optional[str] = None
+    atividade_id: Optional[str] = None
 
 
 def _data_br(dia: date) -> str:
@@ -188,6 +194,30 @@ def trajetoria(
                     descricao=m.motivo_saida,
                 )
             )
+
+    for f in conexao.execute(
+        sa.text(
+            """
+            SELECT a.id, a.programa_id, a.data, t.nome AS turma, c.justificativa
+            FROM chamadas c
+            JOIN atividades a ON a.id = c.atividade_id
+            JOIN turmas t ON t.id = a.turma_id
+            WHERE c.pessoa_id = :id AND NOT c.presente
+            """
+        ),
+        {"id": pessoa_id},
+    ):
+        justificada = bool(f.justificativa)
+        eventos.append(
+            Evento(
+                data=_meia_noite(f.data, fuso),
+                tipo=FREQUENCIA,
+                titulo=f"{'Falta justificada' if justificada else 'Falta'} na turma {f.turma}",
+                descricao=f"Motivo: {f.justificativa}" if justificada else "Ausente no encontro.",
+                programa_id=f.programa_id,
+                atividade_id=f.id,
+            )
+        )
 
     eventos.extend(_eventos_de_alertas(conexao, pessoa_id, fuso, ve_acompanhamento))
     return sorted(eventos, key=lambda e: e.data, reverse=True)

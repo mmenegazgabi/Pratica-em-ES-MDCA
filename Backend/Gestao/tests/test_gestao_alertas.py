@@ -467,3 +467,37 @@ def test_quem_nao_acompanha_os_alertas_ve_so_que_houve_o_contato(cliente, cabeca
     assert "Visita" not in str(eventos_da_educadora)
     # Quem acompanha (coordenação) vê o conteúdo.
     assert "Visita à família" in str(trajetoria(cliente, cabecalhos, usuario="ana"))
+
+
+# --- Encontros das faltas (T-89) --------------------------------------------------------
+
+
+def test_o_detalhe_do_alerta_lista_os_encontros_da_sequencia(cliente, cabecalhos, programa):
+    encontro(cliente, cabecalhos, 1, faltas=["pe-lara"])
+    encontro(cliente, cabecalhos, 2, justificadas=["pe-lara"])  # interrompe: não entra
+    ids = [encontro(cliente, cabecalhos, n, faltas=["pe-lara"]).json()["id"] for n in (3, 4, 5)]
+    alerta_id = alertas(cliente, cabecalhos)[0]["id"]
+
+    detalhe = cliente.get(f"{ALERTAS}/{alerta_id}", headers=como(cabecalhos)).json()
+
+    assert detalhe["faltas"] == [{"atividade_id": i, "data": dia(n).isoformat()} for i, n in zip(ids, (3, 4, 5))]
+    # Uma falta a mais entra no mesmo alerta.
+    novo = encontro(cliente, cabecalhos, 6, faltas=["pe-lara"]).json()["id"]
+    assert cliente.get(f"{ALERTAS}/{alerta_id}", headers=como(cabecalhos)).json()["faltas"][-1]["atividade_id"] == novo
+
+
+def test_faltas_entram_na_trajetoria_ligadas_ao_encontro_e_presencas_nao(cliente, cabecalhos, programa):
+    falta = encontro(cliente, cabecalhos, 1, faltas=["pe-lara"]).json()["id"]
+    justificada = encontro(cliente, cabecalhos, 2, justificadas=["pe-lara"]).json()["id"]
+    encontro(cliente, cabecalhos, 3)  # presente
+
+    resposta = cliente.get("/gestao/pessoas/pe-lara/trajetoria", headers=como(cabecalhos, "jessica"))
+
+    assert resposta.status_code == 200
+    faltas = [e for e in resposta.json() if e["tipo"] == "frequencia"]
+    assert [(e["titulo"], e["descricao"], e["data"][:10], e["programa_id"], e["atividade_id"]) for e in faltas] == [
+        ("Falta justificada na turma Oficina de arte", "Motivo: Consulta médica", dia(2).isoformat(), "p-1", justificada),
+        ("Falta na turma Oficina de arte", "Ausente no encontro.", dia(1).isoformat(), "p-1", falta),
+    ]
+    # Os demais eventos seguem sem encontro ligado.
+    assert all(e["atividade_id"] is None for e in resposta.json() if e["tipo"] != "frequencia")
