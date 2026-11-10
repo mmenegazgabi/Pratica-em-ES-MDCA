@@ -138,3 +138,33 @@ def test_migration_cria_e_remove(motor_de_teste):
         assert any(i["column_names"] == ["usuario_id"] for i in inspetor.get_indexes("codigos_acesso"))
     finally:
         command.upgrade(config, "head")
+
+
+@pytest.mark.skipif(not TEST_DATABASE_URL, reason="TEST_DATABASE_URL não definido")
+def test_migration_aceita_tabelas_ja_criadas(motor_de_teste):
+    # Produção ganhou as tabelas à mão (10/11/2026) sem passar por esta migration:
+    # quando ela rodar lá, não pode falhar nem recriar nada.
+    import importlib.util
+    from pathlib import Path
+
+    from alembic.operations import Operations
+    from alembic.runtime.migration import MigrationContext
+
+    from Gestao.tests.conftest import SHARED_DIR, _alembic_config
+
+    caminho = SHARED_DIR / "migrations" / "versions" / "b7d4e2a9c1f0_create_login_tables.py"
+    spec = importlib.util.spec_from_file_location("migration_login", Path(caminho))
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    config = _alembic_config()
+    try:
+        command.downgrade(config, REV_ANTERIOR)
+        with motor_de_teste.begin() as conexao:
+            with Operations.context(MigrationContext.configure(conexao)):
+                migration.upgrade()
+        command.upgrade(config, "head")
+        tabelas = set(sa.inspect(motor_de_teste).get_table_names())
+        assert {"sessoes", "codigos_acesso"} <= tabelas
+    finally:
+        command.upgrade(config, "head")
