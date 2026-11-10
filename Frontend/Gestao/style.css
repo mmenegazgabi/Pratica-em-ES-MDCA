@@ -489,3 +489,14 @@ h1[tabindex="-1"]:focus{outline:none}
 .turma-dia{margin:0}
 .turma-resumo h2{margin:0 0 4px}
 .turma-cadastro .info-box{margin:0 0 12px}
+/* Registro em campo e fila local (T-57): componentes do protótipo; só o que falta aqui */
+.agenda-semana{align-items:center;gap:10px;flex-wrap:nowrap}
+.agenda-periodo{font-size:13px;white-space:nowrap}
+.so-celular{display:none}
+.attendance-escolha{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.attendance-motivo{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--color-surface);padding:9px;font-size:13px;color:var(--ink);min-width:200px}
+.fila-erro{display:block;margin-top:6px;color:var(--status-rejected);overflow-wrap:anywhere}
+.fila-erro-dica{display:block;margin-top:2px;font-size:11px;color:var(--color-neutral-600)}
+.phone-record .actions{gap:8px}
+.phone-record .actions .btn{flex:1;min-height:44px}
+@media(max-width:580px){.so-computador{display:none}.so-celular{display:block}.agenda-semana{justify-content:space-between}.attendance{flex-wrap:wrap}.attendance-escolha{align-items:stretch;width:100%}.attendance-motivo{min-width:0;width:100%;min-height:46px;font-size:15px}}

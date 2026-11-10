@@ -167,7 +167,7 @@ export function salvarUsuario(usuario) {
  * Chama a API e devolve o corpo JSON (ou `null` sem corpo).
  * Qualquer falha vira `ErroApi`: sem conexão, tempo esgotado ou status de erro.
  */
-export async function requisitar(caminho, { metodo = "GET", dados, tempoLimite = TEMPO_LIMITE_MS } = {}) {
+export async function requisitar(caminho, { metodo = "GET", dados, formulario, tempoLimite = TEMPO_LIMITE_MS } = {}) {
   const cabecalhos = { Accept: "application/json" };
   const sessao = sessaoAtiva();
   if (sessao) {
@@ -180,7 +180,10 @@ export async function requisitar(caminho, { metodo = "GET", dados, tempoLimite =
     if (usuario) cabecalhos["X-Usuario-Id"] = usuario;
   }
   const opcoes = { method: metodo, headers: cabecalhos };
-  if (dados !== undefined) {
+  if (formulario !== undefined) {
+    // Multipart (envio de arquivo): o navegador monta o Content-Type com o separador.
+    opcoes.body = formulario;
+  } else if (dados !== undefined) {
     cabecalhos["Content-Type"] = "application/json";
     opcoes.body = JSON.stringify(dados);
   }
@@ -354,3 +357,38 @@ export const chamarListaDeEspera = (programaId, turmaId) =>
 /** dados: { data_saida, motivo } — os dois obrigatórios. */
 export const desligarMatricula = (programaId, turmaId, matriculaId, dados) =>
   requisitar(`${turma(programaId, turmaId)}/matriculas/${encodeURIComponent(matriculaId)}/desligamento`, { metodo: "PATCH", dados });
+
+// Agenda, encontros com chamada e evidências (T-56 · US-05; telas da T-57).
+// O envio passa pela fila do aparelho (base/fila.js): o `registro_id` gerado no aparelho
+// faz o reenvio responder 200 com o que já estava gravado, sem duplicar.
+
+/** periodo: { inicio, fim } em AAAA-MM-DD. */
+export function obterAgenda(programaId, { inicio = "", fim = "" } = {}) {
+  const busca = new URLSearchParams();
+  if (inicio) busca.set("inicio", inicio);
+  if (fim) busca.set("fim", fim);
+  const consulta = busca.toString();
+  return requisitar(`${programa(programaId)}/agenda${consulta ? `?${consulta}` : ""}`);
+}
+
+/** dados: { registro_id, data, conteudo, presencas: [{ pessoa_id, presente, justificativa? }], observacao? } */
+export const registrarAtividade = (programaId, turmaId, dados) =>
+  requisitar(`${turma(programaId, turmaId)}/atividades`, { metodo: "POST", dados });
+
+export const obterAtividade = (programaId, atividadeId) =>
+  requisitar(`${programa(programaId)}/atividades/${encodeURIComponent(atividadeId)}`);
+
+/** evidencia: { registro_id, arquivo (Blob), nome, data?, descricao? } */
+export function enviarEvidencia(programaId, atividadeId, { registro_id, arquivo, nome, data = "", descricao = "" }) {
+  const formulario = new FormData();
+  formulario.append("registro_id", registro_id);
+  if (data) formulario.append("data", data);
+  if (descricao) formulario.append("descricao", descricao);
+  formulario.append("arquivo", arquivo, nome || "evidencia");
+  return requisitar(`${programa(programaId)}/atividades/${encodeURIComponent(atividadeId)}/evidencias`, {
+    metodo: "POST",
+    formulario,
+    // Fotos no 3G levam mais que uma consulta.
+    tempoLimite: 60000,
+  });
+}
