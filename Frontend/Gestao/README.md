@@ -44,6 +44,7 @@ Gestao/
 | Registrar o encontro, em 4 passos (`#/atividades/{programa}/registro/{turma}?data=`) | `…/turmas/{turma}` (lista), `…/turmas/{turma}/atividades`, `…/atividades/{id}/evidencias` (pela fila) | ligada (T-57) |
 | Registros no dispositivo · fila local (`#/sincronizacao`) | a fila do aparelho | ligada (T-57) |
 | Alertas e busca ativa (`#/alertas`, `#/alertas/{id}`) | `GET /gestao/alertas`, `GET /gestao/alertas/{id}`, `…/acoes`, `…/encerramento` | ligada (T-60) |
+| Avisos da equipe: botão Notificações e, na Visão geral, Pontos de atenção e Precisam do seu olhar (`base/avisos.js`) | `GET /gestao/alertas?situacao=aberto`, só para quem acompanha alertas; os avisos fictícios de infrequência saem, os de rede de proteção e aprendizagem seguem na demonstração | ligada (T-90) |
 | Demais telas | — | demonstração, até a US de cada uma |
 
 - **Equipe e espaços:** aberta pelo link de cada programa na lista. Mostra a equipe com
