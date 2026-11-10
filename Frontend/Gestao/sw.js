@@ -16,6 +16,7 @@ const ARQUIVOS = [
   "style.css",
   "app.js",
   "base/api.js",
+  "base/avisos.js",
   "base/copia-local.js",
   "base/dom.js",
   "base/estados.js",

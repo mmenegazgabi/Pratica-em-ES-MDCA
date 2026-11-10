@@ -25,7 +25,7 @@ const RESPOSTAS = [
   [/\/gestao\/usuarios$/, [{ id: "ana", nome: "Ana Martins", email: null, ativo: true, papeis: [], vinculos: [] }]],
   [/\/gestao\/programas$/, [{ id: "p-1", nome: "Semear" }]],
   [/\/gestao\/programas\/p-1\/turmas$/, [{ id: "t-9", programa_id: "p-1", nome: "Oficina de arte", espaco: "Ateliê", responsavel: "Jéssica", capacidade: 2, ativas: 2, em_espera: 1, vagas_livres: 0, dias_semana: [1, 3], hora_inicio: "14:00:00", hora_fim: "16:00:00" }]],
-  [/\/gestao\/alertas$/, [{ id: "al-9", titulo: "Lara Oliveira precisa de um contato", programa_id: "p-1", pessoa_id: "pe-lara", pessoa: "Lara Oliveira", turma: "Oficina de arte", responsavel: "Patrícia Souza", situacao: "aberto", faltas_consecutivas: 3, limite: 3, primeira_falta: "2026-11-03", ultima_falta: "2026-11-05", criado_em: "2026-11-05T18:00:00Z" }]],
+  [/\/gestao\/alertas(\?situacao=aberto)?$/, [{ id: "al-9", descricao: "4 faltas seguidas na turma Oficina de arte.", titulo: "Lara Oliveira precisa de um contato", programa_id: "p-1", pessoa_id: "pe-lara", pessoa: "Lara Oliveira", turma: "Oficina de arte", responsavel: "Patrícia Souza", situacao: "aberto", faltas_consecutivas: 3, limite: 3, primeira_falta: "2026-11-03", ultima_falta: "2026-11-05", criado_em: "2026-11-05T18:00:00Z" }]],
   [/\/gestao\/pessoas$/, [{ id: "pe-lara", nome: "Lara Oliveira", data_nascimento: "2013-05-12", programa_id: "p-1", programa: "Semear", nucleo_familiar: { id: "f-1", nome: "Oliveira" }, responsaveis: [], situacao: "ativo", autorizacao_imagem: "vigente" }]],
 ];
 globalThis.fetch = async (url, opcoes = {}) => {
@@ -53,7 +53,26 @@ test("abre na Visão geral com o menu lateral do protótipo e o aviso de demonst
     ["Programas e público", "Execução e atendimento", "Resultados", "Auditoria e implantação"],
   );
   assert.ok($(".demo-banner"));
-  assert.equal(chamadas.length, 0);
+  // A única chamada da Visão geral é a dos alertas abertos, para os avisos da equipe (T-90).
+  assert.deepEqual(chamadas.map((c) => c.url.replace(/^https?:\/\/[^/]+/, "")), ["/gestao/alertas?situacao=aberto"]);
+});
+
+test("notificações e Visão geral mostram os alertas reais da API, sem os de infrequência fictícios (T-90)", async () => {
+  await irPara("#/inicio");
+  await esperar();
+
+  assert.match($(".notification-button").textContent, /Notificações · \d+/);
+  const destinos = [...document.querySelectorAll("#main .priority-item a")].map((a) => a.getAttribute("href"));
+  assert.equal(destinos[0], "#/alertas/al-9");
+  assert.match(document.querySelector("#main .priority-item").textContent, /Lara Oliveira precisa de um contato.*4 faltas seguidas/);
+  // Os alertas fictícios de infrequência do protótipo saíram (o "al1" era de infrequência).
+  assert.ok(!destinos.includes("#/alertas/al1"));
+
+  $('[data-action="notifications"]').click();
+  await esperar();
+  const doDialogo = [...document.querySelectorAll("#dialog .priority-item a")].map((a) => a.getAttribute("href"));
+  assert.equal(doDialogo[0], "#/alertas/al-9");
+  document.getElementById("dialog").close?.();
 });
 
 test("Programas carrega pela API, sem o aviso de demonstração", async () => {
