@@ -13,7 +13,7 @@ As funções não fazem commit: a rota decide quando a operação termina.
 import unicodedata
 import uuid
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Dict, Iterable, List, Optional, Sequence
 
 import sqlalchemy as sa
@@ -23,6 +23,8 @@ from Gestao.autorizacoes import Autorizacao, autorizacoes_por_pessoa, listar_aut
 from Gestao.erros import Conflito, DadosInvalidos, ErroDeCadastro, NaoEncontrado  # noqa: F401
 
 MAIORIDADE = 18
+# Pasta dos documentos da pessoa no bucket privado (o mesmo dos comprovantes do Financeiro).
+PREFIXO_DOCUMENTOS = "gestao/documentos"
 
 
 # --- Normalização e idade ------------------------------------------------------
@@ -66,6 +68,15 @@ class Documento:
     nome_arquivo: str
     tamanho: Optional[int]
     criado_em: object
+    # O arquivo foi enviado ao armazenamento (T-88); registros antigos guardam só os dados.
+    tem_arquivo: bool = False
+
+
+@dataclass(frozen=True)
+class ArquivoDeDocumento:
+    id: str
+    nome_arquivo: str
+    chave_arquivo: str
 
 
 @dataclass(frozen=True)
@@ -375,6 +386,18 @@ def incluir_responsavel(
     return obter(conexao, pessoa_id, hoje=hoje)
 
 
+def gerar_chave_documento(extensao: str, agora: Optional[datetime] = None) -> str:
+    """Chave do arquivo no bucket, na pasta da Gestão: ``gestao/documentos/AAAA/MM/<uuid>.<ext>``."""
+    agora = agora or datetime.now(timezone.utc)
+    return f"{PREFIXO_DOCUMENTOS}/{agora:%Y/%m}/{uuid.uuid4().hex}.{extensao}"
+
+
+def validar_tipo_de_documento(tipo: Optional[str]) -> str:
+    if not _texto(tipo):
+        raise DadosInvalidos("Informe o tipo do documento.")
+    return tipo.strip()
+
+
 def registrar_documento(
     conexao: Connection,
     pessoa_id: str,
@@ -383,16 +406,18 @@ def registrar_documento(
     nome_arquivo: str,
     tamanho: Optional[int],
     usuario_id: str,
+    chave_arquivo: Optional[str] = None,
 ) -> Documento:
+    """Grava o documento; com ``chave_arquivo``, o arquivo já está no armazenamento."""
     if not _texto(tipo) or not _texto(nome_arquivo):
         raise DadosInvalidos("Informe o tipo e o nome do arquivo.")
     documento_id = str(uuid.uuid4())
     linha = conexao.execute(
         sa.text(
             """
-            INSERT INTO documentos_pessoa (id, pessoa_id, tipo, nome_arquivo, tamanho, criado_por)
-            VALUES (:id, :pessoa, :tipo, :nome, :tamanho, :usuario)
-            RETURNING id, tipo, nome_arquivo, tamanho, criado_em
+            INSERT INTO documentos_pessoa (id, pessoa_id, tipo, nome_arquivo, tamanho, chave_arquivo, criado_por)
+            VALUES (:id, :pessoa, :tipo, :nome, :tamanho, :chave, :usuario)
+            RETURNING id, tipo, nome_arquivo, tamanho, criado_em, chave_arquivo IS NOT NULL AS tem_arquivo
             """
         ),
         {
@@ -401,10 +426,24 @@ def registrar_documento(
             "tipo": tipo.strip(),
             "nome": nome_arquivo.strip(),
             "tamanho": tamanho,
+            "chave": chave_arquivo,
             "usuario": usuario_id,
         },
     ).one()
     return Documento(**linha._mapping)
+
+
+def arquivo_do_documento(conexao: Connection, pessoa_id: str, documento_id: str) -> ArquivoDeDocumento:
+    """Chave do arquivo de um documento da pessoa; 404 se o documento não é dela ou não tem arquivo."""
+    linha = conexao.execute(
+        sa.text("SELECT id, nome_arquivo, chave_arquivo FROM documentos_pessoa WHERE id = :id AND pessoa_id = :pessoa"),
+        {"id": documento_id, "pessoa": pessoa_id},
+    ).first()
+    if linha is None:
+        raise NaoEncontrado("Documento não encontrado.")
+    if linha.chave_arquivo is None:
+        raise NaoEncontrado("Este documento foi registrado sem o arquivo.")
+    return ArquivoDeDocumento(**linha._mapping)
 
 
 # --- Consulta ------------------------------------------------------------------
@@ -445,8 +484,8 @@ def obter(conexao: Connection, pessoa_id: str, *, hoje: Optional[date] = None) -
         Documento(**d._mapping)
         for d in conexao.execute(
             sa.text(
-                "SELECT id, tipo, nome_arquivo, tamanho, criado_em FROM documentos_pessoa "
-                "WHERE pessoa_id = :id ORDER BY criado_em, id"
+                "SELECT id, tipo, nome_arquivo, tamanho, criado_em, chave_arquivo IS NOT NULL AS tem_arquivo "
+                "FROM documentos_pessoa WHERE pessoa_id = :id ORDER BY criado_em, id"
             ),
             {"id": pessoa_id},
         )

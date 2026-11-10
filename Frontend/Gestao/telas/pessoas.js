@@ -11,13 +11,16 @@
 //   a confirmação explícita de que é outra pessoa;
 // - **responsável legal:** menor de 18 anos sem responsável legal não é concluído.
 //
-// Documentos: por enquanto o arquivo não é enviado; o cadastro guarda tipo, nome e tamanho.
+// Documentos (T-88): o arquivo vai para o armazenamento privado (R2) e pode ser baixado por
+// quem vê o cadastro; cada download fica na trilha de auditoria. Registros antigos, de
+// antes do envio do arquivo, aparecem sem "Baixar".
 
 import * as api from "../base/api.js";
 import { ErroApi } from "../base/api.js";
 import { carregando, carregarNaTela } from "../base/estados.js";
 import { el } from "../base/dom.js";
 import { abrirFormulario, campo, hojeIso, selecao } from "../base/formulario.js";
+import { validarArquivo } from "./atividades.js";
 
 const API_PADRAO = {
   listarPessoas: api.listarPessoas,
@@ -28,6 +31,7 @@ const API_PADRAO = {
   cadastrarPessoa: api.cadastrarPessoa,
   incluirResponsavel: api.incluirResponsavel,
   registrarDocumento: api.registrarDocumento,
+  baixarDocumento: api.baixarDocumento,
   registrarAutorizacao: api.registrarAutorizacao,
   revogarAutorizacao: api.revogarAutorizacao,
   buscarNucleos: api.buscarNucleos,
@@ -163,6 +167,9 @@ export function mostrarPessoas(container, substitutos = {}) {
 }
 
 // --- Cadastro em etapas --------------------------------------------------------------
+
+// Mesmos tipos e limite das evidências (T-56) e dos comprovantes do Financeiro.
+const ACEITOS = "image/*,.pdf";
 
 const ETAPAS = ["Dados pessoais", "Família", "Documentos e autorizações", "Revisão"];
 
@@ -357,7 +364,7 @@ export function mostrarCadastroDePessoa(container, { programaInicial = "", aoCon
     }
     desenharLista();
     const tipo = selecao("documento_tipo", TIPOS_DE_DOCUMENTO.map((t) => [t, t]), { vazio: "Tipo do documento" });
-    const arquivo = el("input", { type: "file", name: "documento_arquivo", "aria-label": "Arquivo do documento" });
+    const arquivo = el("input", { type: "file", name: "documento_arquivo", accept: ACEITOS, "aria-label": "Arquivo do documento" });
     const incluir = el(
       "button",
       {
@@ -366,8 +373,10 @@ export function mostrarCadastroDePessoa(container, { programaInicial = "", aoCon
         onclick: () => {
           const escolhido = arquivo.files?.[0];
           if (!tipo.value || !escolhido) return mostrarErro("Escolha o tipo e o arquivo do documento.");
+          const problema = validarArquivo(escolhido);
+          if (problema) return mostrarErro(problema);
           mostrarErro("");
-          r.documentos.push({ tipo: tipo.value, nome_arquivo: escolhido.name, tamanho: escolhido.size });
+          r.documentos.push({ tipo: tipo.value, nome_arquivo: escolhido.name, tamanho: escolhido.size, arquivo: escolhido });
           arquivo.value = "";
           tipo.value = "";
           desenharLista();
@@ -395,7 +404,7 @@ export function mostrarCadastroDePessoa(container, { programaInicial = "", aoCon
           "div",
           { class: "field wide" },
           el("span", { class: "field-label" }, "Documentos"),
-          aviso("Por enquanto o arquivo não é enviado: o cadastro guarda o tipo, o nome e o tamanho do documento."),
+          aviso("Foto (JPG, PNG, WEBP, HEIC) ou PDF, até 5 MB. O arquivo fica guardado com acesso restrito à equipe do programa."),
           lista,
           el("div", { class: "pessoa-documento" }, tipo, arquivo, incluir),
         ),
@@ -503,7 +512,7 @@ export function mostrarCadastroDePessoa(container, { programaInicial = "", aoCon
     const pendencias = [];
     for (const documento of r.documentos) {
       try {
-        await chamadas.registrarDocumento(pessoa.id, documento);
+        await chamadas.registrarDocumento(pessoa.id, { tipo: documento.tipo, arquivo: documento.arquivo });
       } catch (e) {
         pendencias.push(`documento ${documento.tipo} (${motivoDoErro(e)})`);
       }
@@ -639,15 +648,44 @@ export function mostrarPessoa(container, pessoaId, { aba = "trajetoria", podeCad
     });
   }
 
+  /** Baixa o arquivo com o token (um link simples não levaria a identificação). */
+  async function baixar(d, botao) {
+    botao.disabled = true;
+    try {
+      const arquivo = await chamadas.baixarDocumento(pessoaId, d.id);
+      const endereco = URL.createObjectURL(arquivo);
+      const link = el("a", { href: endereco, download: d.nome_arquivo, hidden: true });
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(endereco), 60000);
+    } catch (e) {
+      avisar(motivoDoErro(e));
+    } finally {
+      botao.disabled = false;
+    }
+  }
+
+  function linhaDoDocumento(d) {
+    return el(
+      "div",
+      { class: "file-item" },
+      el("span", {}, `${d.tipo} · ${d.nome_arquivo}`, el("small", { style: "display:block" }, `Registrado em ${dataBr(d.criado_em)}`)),
+      d.tem_arquivo
+        ? el("button", { type: "button", class: "btn small", onclick: (ev) => baixar(d, ev.currentTarget) }, "Baixar")
+        : el("small", {}, "Sem arquivo (registro antigo)"),
+    );
+  }
+
   function registrarDocumento() {
     const tipo = selecao("tipo", TIPOS_DE_DOCUMENTO.map((t) => [t, t]));
-    const arquivo = el("input", { type: "file", name: "arquivo" });
+    const arquivo = el("input", { type: "file", name: "arquivo", accept: ACEITOS });
     abrirFormulario({
       titulo: "Registrar documento",
-      aviso: aviso("Por enquanto o arquivo não é enviado: fica registrado o tipo, o nome e o tamanho."),
+      aviso: aviso("Foto (JPG, PNG, WEBP, HEIC) ou PDF, até 5 MB. O arquivo fica guardado com acesso restrito à equipe do programa."),
       campos: [campo("doc-tipo", "Tipo", tipo), campo("doc-arquivo", "Arquivo", arquivo)],
-      validar: () => (!tipo.value ? "Escolha o tipo do documento." : !arquivo.files?.[0] ? "Escolha o arquivo." : ""),
-      enviar: () => chamadas.registrarDocumento(pessoaId, { tipo: tipo.value, nome_arquivo: arquivo.files[0].name, tamanho: arquivo.files[0].size }),
+      validar: () => (!tipo.value ? "Escolha o tipo do documento." : !arquivo.files?.[0] ? "Escolha o arquivo." : validarArquivo(arquivo.files[0])),
+      enviar: () => chamadas.registrarDocumento(pessoaId, { tipo: tipo.value, arquivo: arquivo.files[0] }),
       aoConcluir: () => concluir("Documento registrado."),
     });
   }
@@ -727,9 +765,9 @@ export function mostrarPessoa(container, pessoaId, { aba = "trajetoria", podeCad
         ),
         cartao(
           "Documentos",
-          "Registro do tipo, nome e tamanho do arquivo",
+          "Arquivos com acesso restrito; cada download fica registrado",
           p.documentos.length
-            ? el("div", {}, p.documentos.map((d) => el("div", { class: "file-item" }, el("span", {}, `${d.tipo} · ${d.nome_arquivo}`), el("small", {}, `Registrado em ${dataBr(d.criado_em)}`))))
+            ? el("div", {}, p.documentos.map((d) => linhaDoDocumento(d)))
             : vazio("Nenhum documento registrado", "Os documentos do cadastro aparecem aqui."),
           botao("Registrar documento", registrarDocumento),
         ),

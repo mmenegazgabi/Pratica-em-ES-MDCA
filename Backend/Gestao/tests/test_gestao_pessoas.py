@@ -346,17 +346,25 @@ def test_inclui_responsavel_e_recusa_repetido(cliente, cabecalhos, cadastro):
     assert repetido.status_code == 409
 
 
-def test_documento_registra_metadados(cliente, cabecalhos, cadastro):
-    resposta = cliente.post(
-        f"{PESSOAS}/pe-lara/documentos",
-        json={"tipo": "autorizacao_imagem", "nome_arquivo": "termo.pdf", "tamanho": 2048},
-        headers=como(cabecalhos, "ana"),
+PDF = b"%PDF-1.4\n" + b"0" * 2039
+
+
+def enviar_documento(cliente, cabecalhos, pessoa="pe-lara", usuario="ana", tipo="autorizacao_imagem", nome="termo.pdf", conteudo=PDF):
+    return cliente.post(
+        f"{PESSOAS}/{pessoa}/documentos",
+        data={"tipo": tipo},
+        files={"arquivo": (nome, conteudo, "application/pdf")},
+        headers=como(cabecalhos, usuario),
     )
+
+
+def test_documento_registra_metadados(cliente, cabecalhos, cadastro, armazenamento):
+    resposta = enviar_documento(cliente, cabecalhos)
 
     assert resposta.status_code == 201
     pessoa = cliente.get(f"{PESSOAS}/pe-lara", headers=como(cabecalhos, "ana")).json()
-    assert [(d["tipo"], d["nome_arquivo"], d["tamanho"]) for d in pessoa["documentos"]] == [
-        ("autorizacao_imagem", "termo.pdf", 2048)
+    assert [(d["tipo"], d["nome_arquivo"], d["tamanho"], d["tem_arquivo"]) for d in pessoa["documentos"]] == [
+        ("autorizacao_imagem", "termo.pdf", 2048, True)
     ]
 
 
@@ -419,11 +427,8 @@ def test_autorizacao_invalida(cliente, cabecalhos, cadastro, dados, status):
     assert autorizar(cliente, cabecalhos, **dados).status_code == status
 
 
-def test_autorizacao_aponta_documento_da_propria_pessoa(cliente, cabecalhos, cadastro):
-    doc = cliente.post(
-        f"{PESSOAS}/pe-lara/documentos", json={"tipo": "autorizacao_imagem", "nome_arquivo": "termo.pdf"},
-        headers=como(cabecalhos, "ana"),
-    ).json()["id"]
+def test_autorizacao_aponta_documento_da_propria_pessoa(cliente, cabecalhos, cadastro, armazenamento):
+    doc = enviar_documento(cliente, cabecalhos).json()["id"]
 
     assert autorizar(cliente, cabecalhos, documento_id=doc).json()["documento_id"] == doc
     assert autorizar(cliente, cabecalhos, pessoa="pe-miguel", usuario="admin", documento_id=doc).status_code == 400
@@ -489,3 +494,105 @@ def test_uso_interno_nao_depende_de_autorizacao(cliente, cabecalhos, cadastro):
 def test_uso_de_imagem_de_pessoa_inexistente_404_e_de_outro_programa_403(cliente, cabecalhos, cadastro):
     assert usar_imagem(cliente, cabecalhos, ["pe-x"]).status_code == 404
     assert usar_imagem(cliente, cabecalhos, ["pe-miguel"]).status_code == 403
+
+
+# --- Arquivo dos documentos no R2 (T-88) -----------------------------------------------
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 64
+
+
+def baixar_documento(cliente, cabecalhos, documento_id, pessoa="pe-lara", usuario="ana"):
+    return cliente.get(f"{PESSOAS}/{pessoa}/documentos/{documento_id}/arquivo", headers=como(cabecalhos, usuario))
+
+
+def contar_auditoria(banco, acao, usuario=None):
+    with banco.connect() as c:
+        return c.execute(
+            sa.text("SELECT count(*) FROM log_auditoria WHERE acao = :a AND (CAST(:u AS text) IS NULL OR usuario_id = :u)"),
+            {"a": acao, "u": usuario},
+        ).scalar_one()
+
+
+def test_documento_enviado_fica_no_armazenamento_e_o_banco_guarda_so_a_chave(cliente, cabecalhos, cadastro, armazenamento):
+    resposta = enviar_documento(cliente, cabecalhos, tipo="Certidão de nascimento", nome="certidão lara.pdf")
+
+    assert resposta.status_code == 201
+    documento = resposta.json()
+    assert (documento["tipo"], documento["tamanho"], documento["tem_arquivo"]) == ("Certidão de nascimento", len(PDF), True)
+    [chave] = armazenamento.objetos
+    assert chave.startswith("gestao/documentos/") and chave.endswith(".pdf")
+    assert armazenamento.objetos[chave].conteudo == PDF
+    with cadastro.connect() as c:
+        guardado = c.execute(sa.text("SELECT chave_arquivo FROM documentos_pessoa WHERE id = :id"), {"id": documento["id"]}).scalar_one()
+    assert guardado == chave
+
+
+def test_download_autorizado_devolve_o_arquivo_e_fica_na_auditoria(cliente, cabecalhos, cadastro, armazenamento):
+    documento_id = enviar_documento(cliente, cabecalhos, tipo="Foto 3x4", nome="foto.png", conteudo=PNG).json()["id"]
+
+    resposta = baixar_documento(cliente, cabecalhos, documento_id, usuario="jessica")
+
+    assert resposta.status_code == 200
+    assert resposta.content == PNG
+    assert resposta.headers["content-type"] == "image/png"
+    assert resposta.headers["cache-control"] == "private, no-store"
+    with cadastro.connect() as c:
+        registro = c.execute(
+            sa.text("SELECT usuario_id, alvo_tipo, alvo_id, detalhes->>'pessoa_id' FROM log_auditoria WHERE acao = 'download_documento'")
+        ).one()
+    assert tuple(registro) == ("jessica", "documento_pessoa", documento_id, "pe-lara")
+
+
+@pytest.mark.parametrize("usuario", ["dora", "bruno", "rafael"], ids=["direcao", "outro-programa", "desligado"])
+def test_sem_acesso_as_pessoas_do_programa_nao_baixa_e_a_tentativa_e_registrada(cliente, cabecalhos, cadastro, armazenamento, usuario):
+    documento_id = enviar_documento(cliente, cabecalhos).json()["id"]
+
+    assert baixar_documento(cliente, cabecalhos, documento_id, usuario=usuario).status_code == 403
+    assert contar_auditoria(cadastro, "acesso_negado", usuario) == 1
+    assert contar_auditoria(cadastro, "download_documento") == 0
+
+
+@pytest.mark.parametrize(
+    "conteudo, nome",
+    [(b"MZ\x90\x00 executavel", "programa.exe"), (b"%PDF-1.4\n" + b"0" * (5 * 1024 * 1024), "grande.pdf"), (b"", "vazio.pdf")],
+    ids=["tipo-nao-permitido", "acima-de-5mb", "vazio"],
+)
+def test_arquivo_de_tipo_nao_permitido_ou_acima_do_limite_400(cliente, cabecalhos, cadastro, armazenamento, conteudo, nome):
+    resposta = enviar_documento(cliente, cabecalhos, nome=nome, conteudo=conteudo)
+
+    assert resposta.status_code == 400
+    assert armazenamento.objetos == {}
+    assert cliente.get(f"{PESSOAS}/pe-lara", headers=como(cabecalhos, "ana")).json()["documentos"] == []
+
+
+def test_documento_sem_tipo_400_sem_enviar_o_arquivo(cliente, cabecalhos, cadastro, armazenamento):
+    resposta = enviar_documento(cliente, cabecalhos, tipo="  ")
+
+    assert resposta.status_code == 400
+    assert resposta.json()["detail"] == "Informe o tipo do documento."
+    assert armazenamento.objetos == {}
+
+
+def test_quem_so_consulta_nao_envia_documento(cliente, cabecalhos, cadastro, armazenamento):
+    assert enviar_documento(cliente, cabecalhos, usuario="dora").status_code == 403
+    assert armazenamento.objetos == {}
+
+
+def test_documento_antigo_sem_arquivo_ou_de_outra_pessoa_404(cliente, cabecalhos, cadastro, armazenamento):
+    with cadastro.begin() as c:
+        c.execute(sa.text("INSERT INTO documentos_pessoa (id, pessoa_id, tipo, nome_arquivo) VALUES ('d-antigo', 'pe-lara', 'RG', 'rg.pdf')"))
+    documento_id = enviar_documento(cliente, cabecalhos).json()["id"]
+
+    antigo = baixar_documento(cliente, cabecalhos, "d-antigo")
+    assert antigo.status_code == 404
+    assert antigo.json()["detail"] == "Este documento foi registrado sem o arquivo."
+    assert [d["tem_arquivo"] for d in cliente.get(f"{PESSOAS}/pe-lara", headers=como(cabecalhos, "ana")).json()["documentos"]] == [False, True]
+    # O id de um documento da Lara não abre pelo cadastro do Miguel.
+    assert baixar_documento(cliente, cabecalhos, documento_id, pessoa="pe-miguel", usuario="admin").status_code == 404
+
+
+def test_sem_r2_configurado_503(cliente, cabecalhos, cadastro, monkeypatch):
+    for nome in ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME"):
+        monkeypatch.delenv(nome, raising=False)
+
+    assert enviar_documento(cliente, cabecalhos).status_code == 503

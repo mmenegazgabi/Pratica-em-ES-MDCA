@@ -59,11 +59,12 @@ def test_logo_depois_do_cadastro_a_trajetoria_mostra_a_entrada_no_programa(clien
     ]
 
 
-def test_responsavel_documento_e_autorizacao_entram_do_mais_recente_para_o_mais_antigo(cliente, cabecalhos, programa):
+def test_responsavel_documento_e_autorizacao_entram_do_mais_recente_para_o_mais_antigo(cliente, cabecalhos, programa, armazenamento):
     pessoa_id = cadastrar_lara(cliente, cabecalhos)
     base = f"/gestao/pessoas/{pessoa_id}"
     assert cliente.post(f"{base}/responsaveis", json={"nome": "José Oliveira", "parentesco": "Avô"}, headers=como(cabecalhos)).status_code == 201
-    assert cliente.post(f"{base}/documentos", json={"tipo": "Certidão de nascimento", "nome_arquivo": "certidao.pdf"}, headers=como(cabecalhos)).status_code == 201
+    documento = {"tipo": "Certidão de nascimento"}, {"arquivo": ("certidao.pdf", b"%PDF-1.4\n" + b"0" * 100, "application/pdf")}
+    assert cliente.post(f"{base}/documentos", data=documento[0], files=documento[1], headers=como(cabecalhos)).status_code == 201
     autorizacao = cliente.post(
         f"{base}/autorizacoes",
         json={"tipo": "uso_de_imagem", "valida_de": HOJE.isoformat(), "valida_ate": (HOJE + timedelta(days=365)).isoformat()},

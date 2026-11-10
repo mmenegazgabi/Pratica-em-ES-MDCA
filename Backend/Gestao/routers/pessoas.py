@@ -3,12 +3,20 @@
 from datetime import date, datetime
 from typing import List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Connection
 
 from Financeiro.autenticacao import exigir_usuario
+from Financeiro.comprovantes import (
+    TAMANHO_MAXIMO_BYTES,
+    ArmazenamentoComprovantes,
+    ComprovanteInvalido,
+    limpar_nome_original,
+    validar_comprovante,
+)
+from Financeiro.routers.comprovantes import obter_armazenamento
 from Gestao import auditoria, autorizacoes, pessoas, trajetoria
 from Gestao.acesso import (
     AcessoAPessoas,
@@ -21,6 +29,8 @@ from Gestao.banco import obter_conexao
 from Gestao.erros import ErroDeCadastro
 
 router = APIRouter(prefix="/gestao", tags=["gestao"])
+
+DOWNLOAD_DE_DOCUMENTO = "download_documento"
 
 NOME = Field(min_length=1, max_length=200)
 TEXTO_CURTO = Field(default=None, max_length=200)
@@ -56,12 +66,6 @@ class PessoaEntrada(DuplicidadeEntrada):
     observacao: Optional[str] = Field(default=None, max_length=2000)
     # Depois do alerta de possível duplicidade, quem cadastra confirma que é outra pessoa.
     confirmar_duplicidade: bool = False
-
-
-class DocumentoEntrada(BaseModel):
-    tipo: str = Field(min_length=1, max_length=60)
-    nome_arquivo: str = Field(min_length=1, max_length=255)
-    tamanho: Optional[int] = Field(default=None, ge=0)
 
 
 class AutorizacaoEntrada(BaseModel):
@@ -103,6 +107,8 @@ class DocumentoSaida(_Saida):
     nome_arquivo: str
     tamanho: Optional[int]
     criado_em: datetime
+    # Falso nos documentos registrados antes do envio do arquivo (T-88): não há o que baixar.
+    tem_arquivo: bool
 
 
 class AutorizacaoSaida(_Saida):
@@ -302,21 +308,92 @@ def incluir_responsavel(
 
 
 @router.post("/pessoas/{pessoa_id}/documentos", response_model=DocumentoSaida, status_code=201)
-def registrar_documento(
+async def registrar_documento(
     pessoa_id: str,
-    dados: DocumentoEntrada,
+    tipo: Optional[str] = Form(None, max_length=60),
+    arquivo: UploadFile = File(...),
     acesso: AcessoAPessoas = Depends(exigir_cadastro_na_pessoa),
     conexao: Connection = Depends(obter_conexao),
+    armazenamento: ArmazenamentoComprovantes = Depends(obter_armazenamento),
 ):
-    """Registra os dados do documento; o envio do arquivo chega com as telas (T-49)."""
+    """Envia o arquivo do documento para o R2 e grava o documento com a chave (T-88).
+
+    Mesmas regras das evidências e dos comprovantes: PDF, JPEG ou PNG reconhecidos pelo
+    conteúdo, até 5 MB. Tipo não permitido ou acima do limite: 400.
+    """
+    try:
+        tipo = pessoas.validar_tipo_de_documento(tipo)
+    except ErroDeCadastro as erro:
+        raise _http(erro) from erro
+    # Lê no máximo 1 byte além do limite, para recusar arquivos grandes sem carregar tudo.
+    conteudo = await arquivo.read(TAMANHO_MAXIMO_BYTES + 1)
+    try:
+        tipo_do_arquivo = validar_comprovante(conteudo)
+    except ComprovanteInvalido as erro:
+        raise HTTPException(status_code=400, detail=str(erro)) from erro
+
+    chave = pessoas.gerar_chave_documento(tipo_do_arquivo.extensao)
+    nome_arquivo = limpar_nome_original(arquivo.filename)
+    try:
+        armazenamento.salvar(chave, conteudo, tipo_do_arquivo.content_type, nome_arquivo)
+    except Exception as erro:
+        raise HTTPException(status_code=503, detail="Falha ao salvar o documento.") from erro
     try:
         documento = pessoas.registrar_documento(
-            conexao, pessoa_id, usuario_id=acesso.usuario_id, **dados.model_dump()
+            conexao,
+            pessoa_id,
+            tipo=tipo,
+            nome_arquivo=nome_arquivo,
+            tamanho=len(conteudo),
+            usuario_id=acesso.usuario_id,
+            chave_arquivo=chave,
         )
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
     conexao.commit()
     return documento
+
+
+@router.get("/pessoas/{pessoa_id}/documentos/{documento_id}/arquivo")
+def baixar_documento(
+    pessoa_id: str,
+    documento_id: str,
+    acesso: AcessoAPessoas = Depends(exigir_consulta_a_pessoa),
+    conexao: Connection = Depends(obter_conexao),
+    armazenamento: ArmazenamentoComprovantes = Depends(obter_armazenamento),
+) -> Response:
+    """Arquivo do documento, para quem vê o cadastro da pessoa. Todo download vai para a auditoria
+    (são documentos de crianças e adolescentes); a negação já foi registrada pelo acesso."""
+    try:
+        documento = pessoas.arquivo_do_documento(conexao, pessoa_id, documento_id)
+    except ErroDeCadastro as erro:
+        raise _http(erro) from erro
+    try:
+        armazenado = armazenamento.ler(documento.chave_arquivo)
+    except Exception as erro:
+        raise HTTPException(status_code=503, detail="Falha ao ler o documento.") from erro
+    if armazenado is None:
+        raise HTTPException(status_code=404, detail="Arquivo do documento não encontrado.")
+
+    auditoria.registrar(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=DOWNLOAD_DE_DOCUMENTO,
+        alvo_tipo="documento_pessoa",
+        alvo_id=documento_id,
+        descricao="Download de documento da pessoa atendida",
+        detalhes={"programa_id": acesso.programa_id, "pessoa_id": pessoa_id},
+    )
+    conexao.commit()
+    return Response(
+        content=armazenado.conteudo,
+        media_type=armazenado.content_type,
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": f'inline; filename="{documento.nome_arquivo}"',
+        },
+    )
 
 
 @router.post("/pessoas/{pessoa_id}/autorizacoes", response_model=AutorizacaoSaida, status_code=201)

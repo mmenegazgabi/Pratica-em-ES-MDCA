@@ -98,7 +98,8 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 | `GET /gestao/pessoas/{pessoa_id}` | Detalhe com idade, núcleo, responsáveis, documentos e autorizações |
 | `GET /gestao/pessoas/{pessoa_id}/trajetoria` | Linha do tempo, do mais recente ao mais antigo: cadastro, responsáveis incluídos depois, documentos e autorizações (registro, revogação e vencimento). Frequência, atendimentos e matrículas entram com as US delas (T-49) |
 | `POST /gestao/pessoas/{pessoa_id}/responsaveis` | Inclui um responsável |
-| `POST /gestao/pessoas/{pessoa_id}/documentos` | Registra os dados do documento (`tipo`, `nome_arquivo`, `tamanho`); o envio do arquivo ainda não existe: as telas da T-49 registram só esses dados |
+| `POST /gestao/pessoas/{pessoa_id}/documentos` | Multipart com `tipo` e `arquivo` (T-88): o arquivo vai para o bucket privado do R2 em `gestao/documentos/AAAA/MM/<uuid>.<ext>` e o banco guarda a `chave_arquivo`. Mesmas regras das evidências: foto (JPG, PNG, WEBP, HEIC) ou PDF reconhecidos pelo conteúdo, até 5 MB; fora disso, 400. Sem R2 configurado, 503 |
+| `GET /gestao/pessoas/{pessoa_id}/documentos/{documento_id}/arquivo` | Arquivo do documento, para quem vê o cadastro (direção e outros programas: 403, registrado). Cada download vai para `log_auditoria` (`download_documento`). Documento antigo, registrado sem arquivo (`tem_arquivo: false`): 404 |
 | `POST /gestao/pessoas/{pessoa_id}/autorizacoes` | Registra autorização (`tipo: uso_de_imagem`, `valida_ate`, `valida_de` opcional = hoje, `documento_id` opcional) |
 | `POST /gestao/pessoas/{pessoa_id}/autorizacoes/{autorizacao_id}/revogacao` | Revoga; fica na auditoria (`autorizacao_revogada`) |
 | `POST /gestao/pessoas/uso-de-imagem` | `{pessoa_ids, uso}`: uso externo só com autorização de imagem vigente de todos |

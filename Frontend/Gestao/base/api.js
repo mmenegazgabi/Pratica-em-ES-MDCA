@@ -167,7 +167,7 @@ export function salvarUsuario(usuario) {
  * Chama a API e devolve o corpo JSON (ou `null` sem corpo).
  * Qualquer falha vira `ErroApi`: sem conexão, tempo esgotado ou status de erro.
  */
-export async function requisitar(caminho, { metodo = "GET", dados, formulario, tempoLimite = TEMPO_LIMITE_MS } = {}) {
+export async function requisitar(caminho, { metodo = "GET", dados, formulario, arquivo = false, tempoLimite = TEMPO_LIMITE_MS } = {}) {
   const cabecalhos = { Accept: "application/json" };
   const sessao = sessaoAtiva();
   if (sessao) {
@@ -194,6 +194,8 @@ export async function requisitar(caminho, { metodo = "GET", dados, formulario, t
   let corpo = null;
   try {
     resposta = await fetch(urlDaApi() + caminho, { ...opcoes, signal: controle.signal });
+    // Download de arquivo (`arquivo: true`): devolve o Blob; erros continuam em JSON.
+    if (arquivo && resposta.ok) return await resposta.blob();
     const texto = await resposta.text();
     if (texto) {
       try {
@@ -324,7 +326,17 @@ export const cadastrarPessoa = (dados) => requisitar("/gestao/pessoas", { metodo
 export const incluirResponsavel = (id, dados) => requisitar(`${pessoa(id)}/responsaveis`, { metodo: "POST", dados });
 
 /** dados: { tipo, nome_arquivo, tamanho? } — só os dados do arquivo, que ainda não é enviado. */
-export const registrarDocumento = (id, dados) => requisitar(`${pessoa(id)}/documentos`, { metodo: "POST", dados });
+/** documento: { tipo, arquivo (File) }. O arquivo vai para o R2; a API guarda a chave (T-88). */
+export function registrarDocumento(id, { tipo, arquivo }) {
+  const formulario = new FormData();
+  formulario.append("tipo", tipo);
+  formulario.append("arquivo", arquivo, arquivo.name || "documento");
+  return requisitar(`${pessoa(id)}/documentos`, { metodo: "POST", formulario, tempoLimite: 60000 });
+}
+
+/** Arquivo do documento (Blob); o download fica na trilha de auditoria. */
+export const baixarDocumento = (id, documentoId) =>
+  requisitar(`${pessoa(id)}/documentos/${encodeURIComponent(documentoId)}/arquivo`, { arquivo: true, tempoLimite: 60000 });
 
 /** dados: { tipo: "uso_de_imagem", valida_de?, valida_ate, documento_id? } */
 export const registrarAutorizacao = (id, dados) => requisitar(`${pessoa(id)}/autorizacoes`, { metodo: "POST", dados });

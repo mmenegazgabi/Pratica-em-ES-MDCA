@@ -100,3 +100,15 @@ def banco(motor_de_teste, monkeypatch):
     _limpar(motor_de_teste)
     yield motor_de_teste
     _limpar(motor_de_teste)
+
+
+@pytest.fixture
+def armazenamento(app):
+    """Armazenamento em memória no lugar do R2 (evidências e documentos da pessoa)."""
+    from Financeiro.comprovantes import ArmazenamentoEmMemoria
+    from Financeiro.routers.comprovantes import obter_armazenamento
+
+    memoria = ArmazenamentoEmMemoria()
+    app.dependency_overrides[obter_armazenamento] = lambda: memoria
+    yield memoria
+    app.dependency_overrides.pop(obter_armazenamento, None)

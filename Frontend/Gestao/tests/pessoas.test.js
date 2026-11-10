@@ -27,7 +27,10 @@ const LARA = {
   observacao: null,
   situacao: "ativo",
   responsaveis: [{ id: "r-marina", nome: "Marina Oliveira", telefone: null, parentesco: "Mãe", responsavel_legal: true }],
-  documentos: [{ id: "d-1", tipo: "Certidão de nascimento", nome_arquivo: "certidao.pdf", tamanho: 1200, criado_em: "2026-03-02T10:00:00Z" }],
+  documentos: [
+    { id: "d-1", tipo: "Certidão de nascimento", nome_arquivo: "certidao.pdf", tamanho: 1200, criado_em: "2026-03-02T10:00:00Z", tem_arquivo: true },
+    { id: "d-0", tipo: "RG", nome_arquivo: "rg.pdf", tamanho: null, criado_em: "2026-01-02T10:00:00Z", tem_arquivo: false },
+  ],
   autorizacoes: [{ id: "au-1", tipo: "uso_de_imagem", valida_de: "2026-01-01", valida_ate: "2026-12-31", documento_id: null, revogada_em: null, situacao: "vigente" }],
   autorizacao_imagem: "vigente",
 };
@@ -58,7 +61,11 @@ const enviar = async (form = container.querySelector("form.pessoa-cadastro")) =>
   form.dispatchEvent(new window.Event("submit", { cancelable: true, bubbles: true }));
   await esperar();
 };
-const escolherArquivo = (entrada, nome, tamanho) => Object.defineProperty(entrada, "files", { value: [{ name: nome, size: tamanho }], configurable: true });
+const escolherArquivo = (entrada, nome, tamanho, type = "application/pdf") => {
+  const arquivo = { name: nome, size: tamanho, type };
+  Object.defineProperty(entrada, "files", { value: [arquivo], configurable: true });
+  return arquivo;
+};
 const erroNaTela = () => container.querySelector(".error-message:not([hidden])")?.textContent || "";
 
 function api(extra = {}) {
@@ -73,6 +80,7 @@ function api(extra = {}) {
     verificarDuplicidade: anotar("verificarDuplicidade", []),
     cadastrarPessoa: anotar("cadastrarPessoa", (dados) => ({ ...LARA, id: "pe-nova", nome: dados.nome })),
     registrarDocumento: anotar("registrarDocumento", {}),
+    baixarDocumento: anotar("baixarDocumento", new dom.window.Blob(["%PDF-1.4"], { type: "application/pdf" })),
     registrarAutorizacao: anotar("registrarAutorizacao", {}),
     obterPessoa: anotar("obterPessoa", LARA),
     obterTrajetoria: anotar("obterTrajetoria", TRAJETORIA),
@@ -182,7 +190,7 @@ test("cadastro de adulto em quatro etapas grava a pessoa, os documentos e a auto
   assert.match(texto(container.querySelector(".step.active")), /Documentos/);
 
   preencher({ documento_tipo: "CPF" });
-  escolherArquivo(campo("documento_arquivo"), "cpf.pdf", 2048);
+  const cpf = escolherArquivo(campo("documento_arquivo"), "cpf.pdf", 2048);
   botao("Adicionar documento").click();
   preencher({ autorizacao_registrar: true, autorizacao_de: "2026-11-09", autorizacao_ate: "2027-11-08" });
   await enviar();
@@ -209,7 +217,8 @@ test("cadastro de adulto em quatro etapas grava a pessoa, os documentos e a auto
       },
     ],
   ]);
-  assert.deepEqual(chamadas("registrarDocumento"), [["pe-nova", { tipo: "CPF", nome_arquivo: "cpf.pdf", tamanho: 2048 }]]);
+  // O arquivo escolhido vai junto, para o armazenamento (T-88).
+  assert.deepEqual(chamadas("registrarDocumento"), [["pe-nova", { tipo: "CPF", arquivo: cpf }]]);
   assert.deepEqual(chamadas("registrarAutorizacao"), [["pe-nova", { tipo: "uso_de_imagem", valida_de: "2026-11-09", valida_ate: "2027-11-08" }]]);
   assert.equal(concluidos[0][0].id, "pe-nova");
   assert.deepEqual(concluidos[0][1], []);
@@ -351,6 +360,42 @@ test("aba Documentos mostra autorizações e documentos, e revoga a vigente", as
 
   assert.deepEqual(chamadas("revogarAutorizacao"), [["pe-lara", "au-1"]]);
   assert.deepEqual(avisos, ["Autorização revogada."]);
+});
+
+test("documento com arquivo tem Baixar, que busca o arquivo pela API; o antigo, sem arquivo, não", async () => {
+  const criados = [];
+  globalThis.URL.createObjectURL = (blob) => (criados.push(blob), "blob:teste");
+  globalThis.URL.revokeObjectURL = () => {};
+  await mostrarPessoa(container, "pe-lara", { aba: "documentos", podeCadastrar: true, ...api() });
+
+  assert.match(texto(), /RG · rg\.pdf.*Sem arquivo \(registro antigo\)/);
+  assert.equal([...container.querySelectorAll("button")].filter((b) => texto(b) === "Baixar").length, 1);
+
+  botao("Baixar").click();
+  await esperar();
+
+  assert.deepEqual(chamadas("baixarDocumento"), [["pe-lara", "d-1"]]);
+  assert.equal(criados.length, 1);
+});
+
+test("registrar documento envia o arquivo e recusa tipo ou tamanho fora do permitido", async () => {
+  await mostrarPessoa(container, "pe-lara", { aba: "documentos", podeCadastrar: true, ...api() });
+  botao("Registrar documento").click();
+  const form = dialogo().querySelector("form");
+  form.querySelector('[name="tipo"]').value = "CPF";
+
+  escolherArquivo(form.querySelector('[name="arquivo"]'), "programa.exe", 100, "application/x-msdownload");
+  await enviar(form);
+  assert.match(texto(dialogo()), /programa\.exe: envie foto \(JPG, PNG, WEBP, HEIC\) ou PDF\./);
+
+  escolherArquivo(form.querySelector('[name="arquivo"]'), "grande.pdf", 6 * 1024 * 1024);
+  await enviar(form);
+  assert.match(texto(dialogo()), /grande\.pdf: maior que 5 MB\./);
+  assert.deepEqual(chamadas("registrarDocumento"), []);
+
+  const cpf = escolherArquivo(form.querySelector('[name="arquivo"]'), "cpf.pdf", 2048);
+  await enviar(form);
+  assert.deepEqual(chamadas("registrarDocumento"), [["pe-lara", { tipo: "CPF", arquivo: cpf }]]);
 });
 
 test("sem autorização vigente, o uso externo aparece bloqueado", async () => {
