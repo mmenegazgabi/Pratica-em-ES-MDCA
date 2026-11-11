@@ -109,8 +109,14 @@ Nenhum outro arquivo deve chamar `fetch`: o teste `estrutura.test.js` falha se i
 - **Servidor (avançado):** na tela de erro, troca o endereço da API para testar com o
   backend local. Fica em `mdca.api`, a mesma chave da página inicial; em branco, volta
   para a API publicada.
-- **Perfil:** escolhido no menu do usuário e salvo em `mdca.gestao.papel`. Ele só define
-  o que aparece no menu; quem protege os dados é a API.
+- **Perfil:** vem dos papéis da pessoa logada (`usuarios_papeis`), em `base/papeis.js`
+  (`perfisDaSessao`): Administração → admin, Coordenação → coord, Direção → director,
+  Assistente social → social, Psicólogo → psych, Educador → educator. A pessoa entra com
+  o mais amplo; se tiver mais de um, escolhe entre os dela em "Entrar como" no menu do
+  usuário (a escolha fica em `mdca.gestao.papel`). Quem não tem papel na Gestão (ex.:
+  voluntário financeiro) vê uma página que leva ao Financeiro. Os perfis fictícios do
+  protótipo (Ana, Jéssica…) só aparecem nas prévias sem login. O perfil só define o que
+  aparece no menu; quem protege os dados é a API.
 
 ## Rodar localmente
 
