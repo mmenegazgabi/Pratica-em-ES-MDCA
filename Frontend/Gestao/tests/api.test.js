@@ -1,4 +1,4 @@
-// Cliente de API: endereço, código de acesso, corpo e tradução dos erros.
+// Cliente de API: sessão do login único, endereço, corpo e tradução dos erros.
 import { beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -7,7 +7,6 @@ import {
   ErroApi,
   criarEspaco,
   encerrarSessao,
-  esquecerAcesso,
   listarEquipe,
   listarEspacos,
   listarPapeis,
@@ -15,9 +14,7 @@ import {
   listarUsuarios,
   registrarDesligamento,
   requisitar,
-  salvarAcesso,
   salvarServidor,
-  salvarUsuario,
   sessaoAtiva,
   urlDaApi,
   usuarioSalvo,
@@ -25,6 +22,13 @@ import {
 } from "../base/api.js";
 
 let chamadas;
+const daquiAUmaHora = () => new Date(Date.now() + 3600_000).toISOString();
+const SESSAO = () => ({
+  token: "mdca1.carga.assinatura",
+  expira_em: daquiAUmaHora(),
+  usuario: { id: "ana", nome: "Ana Martins", email: "ana@mdca.org.br", papeis: ["coordenacao"] },
+});
+
 let dados;
 let dadosDaAba;
 
@@ -59,35 +63,49 @@ beforeEach(() => {
     removeItem: (k) => dadosDaAba.delete(k),
   };
   chamadas = [];
-  esquecerAcesso();
-  salvarUsuario("");
+  // Login único (T-35): a página inicial da plataforma grava a sessão em "mdca.sessao".
+  dados.set("mdca.sessao", JSON.stringify(SESSAO()));
   responder(200, [{ id: "p-1", nome: "Semear" }]);
 });
 
-test("envia o usuário salvo em X-Usuario-Id, numa chave própria de Gestão", async () => {
-  salvarUsuario("  jessica ");
+test("manda o token da sessão para o servidor publicado, sem X-Usuario-Id", async () => {
+  const corpo = await listarProgramas();
 
-  await requisitar("/gestao/programas");
-
-  assert.equal(chamadas[0].headers["X-Usuario-Id"], "jessica");
-  assert.equal(dados.get("mdca.gestao.usuario"), "jessica");
-  assert.equal(usuarioSalvo(), "jessica");
-});
-
-test("sem usuário salvo não envia X-Usuario-Id", async () => {
-  await requisitar("/gestao/programas");
-
+  assert.deepEqual(corpo, [{ id: "p-1", nome: "Semear" }]);
+  assert.equal(chamadas[0].url, `${API_PADRAO}/gestao/programas`);
+  assert.equal(chamadas[0].headers.Authorization, "Bearer mdca1.carga.assinatura");
+  assert.equal(chamadas[0].headers.Accept, "application/json");
   assert.equal("X-Usuario-Id" in chamadas[0].headers, false);
+  assert.equal(usuarioSalvo(), "ana");
 });
 
-test("400 por falta de identificação vira o erro sem_usuario; outro 400 continua falha", async () => {
-  responder(400, { detail: "Identificação do usuário obrigatória." });
-  assert.equal((await falhaDe(requisitar("/gestao/usuarios"))).tipo, ERROS.SEM_USUARIO);
+test("sem sessão (nunca entrou, expirada ou malformada), nem chama a API e pede para entrar", async () => {
+  for (const guardada of [null, JSON.stringify({ ...SESSAO(), expira_em: "2020-01-01T00:00:00Z" }), "{não é json"]) {
+    if (guardada === null) dados.delete("mdca.sessao");
+    else dados.set("mdca.sessao", guardada);
+    assert.equal(sessaoAtiva(), null);
 
-  responder(400, { detail: "Papel inválido." });
-  const erro = await falhaDe(requisitar("/gestao/programas/p-1/equipe", { metodo: "POST" }));
-  assert.equal(erro.tipo, ERROS.FALHA);
-  assert.equal(erro.detalhe, "Papel inválido.");
+    const erro = await falhaDe(listarProgramas());
+
+    assert.equal(erro.tipo, ERROS.SESSAO_EXPIRADA);
+    assert.equal(erro.detalhe, "Entre na plataforma para continuar.");
+  }
+  assert.equal(chamadas.length, 0);
+  assert.equal(usuarioSalvo(), "");
+});
+
+test("o servidor fica na chave da plataforma; a antiga do Financeiro ainda é lida", () => {
+  dados.set("mdca.financeiro.api", "http://antigo:8000");
+  assert.equal(urlDaApi(), "http://antigo:8000");
+
+  salvarServidor("http://localhost:8000/");
+  assert.equal(dados.get("mdca.api"), "http://localhost:8000");
+  assert.equal(dados.has("mdca.financeiro.api"), false);
+  assert.equal(urlDaApi(), "http://localhost:8000");
+
+  salvarServidor("  ");
+  assert.equal(dados.has("mdca.api"), false);
+  assert.equal(urlDaApi(), API_PADRAO);
 });
 
 test("rotas de equipe, espaços, usuários e papéis", async () => {
@@ -113,49 +131,6 @@ test("rotas de equipe, espaços, usuários e papéis", async () => {
   ]);
 });
 
-test("usa o servidor publicado e envia o código de acesso salvo", async () => {
-  salvarAcesso("  token-de-teste  ");
-
-  const corpo = await listarProgramas();
-
-  assert.deepEqual(corpo, [{ id: "p-1", nome: "Semear" }]);
-  assert.equal(chamadas[0].url, `${API_PADRAO}/gestao/programas`);
-  assert.equal(chamadas[0].method, "GET");
-  assert.equal(chamadas[0].headers.Authorization, "Bearer token-de-teste");
-  assert.equal(chamadas[0].headers.Accept, "application/json");
-});
-
-test("sem código de acesso não envia Authorization", async () => {
-  await requisitar("/gestao/programas");
-
-  assert.equal("Authorization" in chamadas[0].headers, false);
-});
-
-test("o código e o servidor ficam nas mesmas chaves do Financeiro", () => {
-  salvarAcesso("token-de-teste", "http://localhost:8000/");
-
-  assert.equal(dados.get("mdca.financeiro.token"), "token-de-teste");
-  assert.equal(dados.get("mdca.financeiro.api"), "http://localhost:8000");
-  assert.equal(urlDaApi(), "http://localhost:8000");
-});
-
-test("voltar ao servidor publicado apaga o endereço salvo", () => {
-  salvarAcesso("token-de-teste", "http://localhost:8000");
-  salvarAcesso("token-de-teste", API_PADRAO);
-
-  assert.equal(dados.has("mdca.financeiro.api"), false);
-  assert.equal(urlDaApi(), API_PADRAO);
-});
-
-test("trocar só o servidor não mexe no código salvo; em branco volta ao publicado", () => {
-  salvarAcesso("token-de-teste", "http://localhost:8000");
-  salvarServidor("  ");
-
-  assert.equal(dados.has("mdca.financeiro.api"), false);
-  assert.equal(dados.get("mdca.financeiro.token"), "token-de-teste");
-  assert.equal(urlDaApi(), API_PADRAO);
-});
-
 test("envia dados como JSON", async () => {
   await requisitar("/gestao/algo", { metodo: "POST", dados: { nome: "Semear" } });
 
@@ -171,7 +146,6 @@ test("resposta sem corpo devolve null", async () => {
 });
 
 for (const [status, tipo] of [
-  [401, ERROS.NAO_AUTENTICADO],
   [403, ERROS.SEM_PERMISSAO],
   [404, ERROS.NAO_ENCONTRADO],
   [503, ERROS.INDISPONIVEL],
@@ -226,45 +200,12 @@ test("servidor que não responde no tempo limite vira erro de rede", async () =>
   assert.equal(erro.tipo, ERROS.REDE);
 });
 
-// --- Login único (T-35) ------------------------------------------------------
-
-const daquiAUmaHora = () => new Date(Date.now() + 3600_000).toISOString();
-const SESSAO = () => ({
-  token: "mdca1.carga.assinatura",
-  expira_em: daquiAUmaHora(),
-  usuario: { id: "ana", nome: "Ana Martins", email: "ana@mdca.org.br", papeis: ["coordenacao"] },
-});
-
-test("com sessão, manda o token da sessão e não manda o código nem X-Usuario-Id", async () => {
-  salvarAcesso("codigo-antigo");
-  salvarUsuario("jessica");
-  dados.set("mdca.sessao", JSON.stringify(SESSAO()));
-
-  await listarProgramas();
-
-  assert.equal(chamadas[0].headers.Authorization, "Bearer mdca1.carga.assinatura");
-  assert.equal("X-Usuario-Id" in chamadas[0].headers, false);
-  assert.equal(usuarioSalvo(), "ana");
-});
-
 test("sessão guardada só nesta aba (sem 'Manter conectado') também vale", async () => {
   dadosDaAba.set("mdca.sessao", JSON.stringify(SESSAO()));
 
   await listarProgramas();
 
   assert.equal(chamadas[0].headers.Authorization, "Bearer mdca1.carga.assinatura");
-});
-
-test("sessão expirada ou malformada é ignorada e volta o código de acesso", async () => {
-  salvarAcesso("codigo");
-  dados.set("mdca.sessao", JSON.stringify({ ...SESSAO(), expira_em: "2020-01-01T00:00:00Z" }));
-  assert.equal(sessaoAtiva(), null);
-  dados.set("mdca.sessao", "{não é json");
-  assert.equal(sessaoAtiva(), null);
-
-  await listarProgramas();
-
-  assert.equal(chamadas[0].headers.Authorization, "Bearer codigo");
 });
 
 test("401 com sessão apaga a sessão e pede para entrar de novo", async () => {

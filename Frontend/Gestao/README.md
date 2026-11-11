@@ -96,23 +96,22 @@ Nenhum outro arquivo deve chamar `fetch`: o teste `estrutura.test.js` falha se i
   do próprio site; a API não passa por ele. Ao mudar a lista de arquivos do app, atualize
   `ARQUIVOS` no `sw.js` (o teste `pwa.test.js` confere) e troque a `VERSAO`.
 
-## Acesso e perfis (provisórios)
+## Acesso e perfis
 
-- **Login único (T-35):** quem entra pela tela inicial da plataforma tem a sessão em
-  `mdca.sessao`, e a Gestão manda o token dela (veja `docs/login.md`).
-- **Código de acesso:** sem sessão, a API exige o token de serviço do
-  Financeiro. A tela pede o código quando a API responde 401, e ele fica salvo só neste
-  aparelho, nas mesmas chaves do Financeiro (um código vale para os dois módulos).
-  O campo "Servidor (avançado)" troca o endereço da API, para testar com o backend local.
-  Ele aparece também na tela de erro (aberto quando o endereço não é o padrão); em
-  branco, volta para a API publicada.
-- **Seu usuário:** as rotas de programa e de usuários exigem saber quem chama
-  (`X-Usuario-Id`, o `id` da tabela `usuarios`, ex.: `jessica`). A tela de acesso pede o
-  usuário junto com o código, e ele pode ser trocado em "Usuário na API" no menu do
-  usuário. Fica salvo só neste aparelho, em `mdca.gestao.usuario`. Até o login, qualquer
-  pessoa com o código pode se identificar como outro usuário.
-- **Perfil:** escolhido na entrada ou no menu do usuário e salvo em `mdca.gestao.papel`.
-  Ele só define o que aparece no menu; quem protege os dados é a API (RBAC, T-33).
+- **Login único (T-35):** a pessoa entra pela página inicial da plataforma
+  (`Frontend/index.html`, e-mail e senha), que grava a sessão em `mdca.sessao`. A Gestão
+  manda o token dessa sessão em toda chamada, e a API lê quem é a pessoa e os papéis
+  dela no banco (veja `docs/login.md`).
+- **Sem sessão** (nunca entrou ou expirou), a Gestão manda para a página inicial, como o
+  Financeiro. Se a sessão vencer com uma tela aberta, a tela mostra "Sessão encerrada"
+  com o botão "Entrar de novo". Não há mais código de acesso nem usuário digitado na tela.
+  Exceções: as prévias do mapa de telas (`?mini=1`), que só usam dados fictícios, e o
+  aparelho sem conexão, que abre do cache para o registro em campo.
+- **Servidor (avançado):** na tela de erro, troca o endereço da API para testar com o
+  backend local. Fica em `mdca.api`, a mesma chave da página inicial; em branco, volta
+  para a API publicada.
+- **Perfil:** escolhido no menu do usuário e salvo em `mdca.gestao.papel`. Ele só define
+  o que aparece no menu; quem protege os dados é a API.
 
 ## Rodar localmente
 
@@ -122,7 +121,8 @@ python3 -m http.server 8080 --directory Frontend
 ```
 
 Para usar o backend local, suba a API em outra porta (ex.: 8000; o CORS já aceita
-`http://localhost:8080`) e informe `http://localhost:8000` em "Servidor (avançado)".
+`http://localhost:8080`), entre pela página inicial (`http://localhost:8080/`) e informe
+`http://localhost:8000` no servidor da página inicial ou em "Servidor (avançado)".
 
 ## Testes
 

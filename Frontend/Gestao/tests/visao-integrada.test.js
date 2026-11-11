@@ -72,6 +72,7 @@ beforeEach(() => {
 });
 
 test("o cliente da API manda o período só quando informado", async () => {
+  localStorage.setItem("mdca.sessao", JSON.stringify({ token: "sessao-de-teste", expira_em: "2999-01-01T00:00:00Z", usuario: { id: "ana", nome: "Ana Martins", papeis: [] } }));
   const chamadas = [];
   globalThis.fetch = async (url) => {
     chamadas.push(url);
