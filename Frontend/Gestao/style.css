@@ -416,13 +416,18 @@ h1[tabindex="-1"]:focus{outline:none}
 /* Visão integrada (T-79): filtros, resumo do programa e as duas execuções lado a lado. */
 .integrada-filtros .filter-control{min-height:38px}
 .integrada-resumo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 16px}
-.integrada-grid{align-items:start}
-.integrada-stats{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:16px}
+.integrada-grid{align-items:start;grid-template-columns:repeat(2,minmax(0,1fr))}
+.integrada-stats{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:16px}
+/* Os valores em reais não podem quebrar nem invadir o vizinho: em cartão estreito,
+   orçado, realizado e saldo ficam um embaixo do outro. */
+.integrada-stats .stat-value{white-space:nowrap}
+.integrada-grid>.card{container-type:inline-size}
+@container (max-width:560px){.integrada-grid .integrada-stats{grid-template-columns:1fr}.integrada-grid .integrada-stats .stat{padding-left:0}.integrada-grid .integrada-stats .stat+.stat{border-left:0;border-top:1px solid var(--line)}}
 .integrada-vinculo{margin-top:16px;font-size:12px}
 .integrada-grid .meta-percentual{min-width:110px}
 .integrada-grid .meta-percentual .progress{margin-top:6px}
 .integrada-grid td small{display:block;color:var(--color-neutral-700)}
-@media (max-width:760px){.integrada-grid{grid-template-columns:1fr}}
+@media (max-width:1180px){.integrada-grid{grid-template-columns:1fr}}
 
 /* Pessoas e famílias ligadas à API (T-49) */
 .stack{display:grid;gap:18px}
@@ -782,3 +787,6 @@ h5, h6 { font-size: 11px; font-weight: 600; }
 /* Foco visível ao navegar pelo teclado, como no app do educador do Financeiro. */
 :focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
 .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline-offset: -1px; }
+
+/* Login sem papel na Gestão: página sem menu lateral. */
+.main.no-profile{max-width:860px;margin:0 auto}

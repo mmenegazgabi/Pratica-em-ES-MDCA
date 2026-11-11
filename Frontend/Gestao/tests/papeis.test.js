@@ -1,7 +1,7 @@
 // Menu por perfil: cada perfil vê só os itens do protótipo que pode acessar.
 import { beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { PAPEIS, PAPEL_PADRAO, lerPapel, menuDoPapel, rotaPermitida, salvarPapel } from "../base/papeis.js";
+import { PAPEIS, PAPEL_PADRAO, lerPapel, menuDoPapel, perfilDaSessao, perfisDaSessao, rotaPermitida, salvarPapel } from "../base/papeis.js";
 
 const rotulos = (papel) => menuDoPapel(papel).flatMap((g) => g.itens.map((i) => i.rotulo));
 const grupos = (papel) => menuDoPapel(papel).map((g) => g.grupo);
@@ -72,4 +72,28 @@ test("perfil salvo neste aparelho; sem perfil ou inválido, vale a coordenação
 
   localStorage.setItem("mdca.gestao.papel", "hacker");
   assert.equal(lerPapel(), PAPEL_PADRAO);
+});
+
+// Login (T-35): perfil a partir dos papéis da sessão.
+const sessao = (...papeis) => ({ usuario: { papeis: papeis.map((id) => ({ id, nome: id })) } });
+
+test("os papéis da plataforma viram perfis da Gestão, do mais amplo ao mais restrito", () => {
+  assert.deepEqual(perfisDaSessao(sessao("educador", "direcao", "coordenacao")), ["coord", "director", "educator"]);
+  assert.deepEqual(perfisDaSessao(sessao("administracao")), ["admin"]);
+  assert.deepEqual(perfisDaSessao(sessao("assistente_social", "psicologo")), ["social", "psych"]);
+  // Papéis em texto (formato antigo da sessão) também valem.
+  assert.deepEqual(perfisDaSessao({ usuario: { papeis: ["coordenacao"] } }), ["coord"]);
+});
+
+test("voluntário financeiro e sessão sem papéis não têm perfil na Gestão", () => {
+  assert.deepEqual(perfisDaSessao(sessao("voluntario_financeiro")), []);
+  assert.equal(perfilDaSessao(sessao("voluntario_financeiro")), null);
+  assert.equal(perfilDaSessao({ usuario: {} }), null);
+  assert.equal(perfilDaSessao(null), null);
+});
+
+test("com login, vale o perfil salvo só se for da pessoa; senão, o mais amplo", () => {
+  assert.equal(perfilDaSessao(sessao("coordenacao", "direcao"), "director"), "director");
+  assert.equal(perfilDaSessao(sessao("coordenacao", "direcao"), "admin"), "coord");
+  assert.equal(perfilDaSessao(sessao("educador"), null), "educator");
 });
