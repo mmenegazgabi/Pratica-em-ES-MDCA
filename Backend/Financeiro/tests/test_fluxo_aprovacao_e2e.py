@@ -24,6 +24,10 @@ JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
 
 client = TestClient(app)
 
+# As rotas de orçamento passaram a exigir login (T-33): a tela manda o código de
+# acesso e o papel em toda chamada.
+LEITURA_ORCAMENTO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
+
 
 def como(papel, usuario=None):
     headers = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": papel}
@@ -62,9 +66,7 @@ def criar_orcamento(valor_total=1000):
             "data_inicio": "2026-01-01",
             "data_fim": "2026-12-31",
             "categorias_despesa": ["materiais", "alimentacao"],
-        },
-        headers=COORDENACAO,
-    )
+        },headers=LEITURA_ORCAMENTO)
     assert resposta.status_code == 201
     return resposta.json()["id"]
 
@@ -104,7 +106,7 @@ def rejeitar(lancamento_id, corpo):
 
 
 def saldo(orcamento_id):
-    return client.get(f"/orcamentos/{orcamento_id}", headers=COORDENACAO).json()["saldo"]
+    return client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()["saldo"]
 
 
 def notificacoes(usuario="educadora-ana"):
@@ -136,7 +138,7 @@ def test_fluxo_de_aprovacao_completo():
     assert resposta.json()["saldo_orcamento"] == 700
 
     # Saldo debitado e indicador de consumo atualizado
-    orcamento = client.get(f"/orcamentos/{orcamento_id}", headers=COORDENACAO).json()
+    orcamento = client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()
     assert orcamento["saldo"] == 700
     assert orcamento["realizado"] == 300
     assert orcamento["percentual_consumido"] == 30
@@ -242,19 +244,18 @@ def test_aprovado_nao_pode_ser_rejeitado_depois():
     assert [n["tipo"] for n in notificacoes()] == ["lancamento_aprovado"]
 
 
-def test_rota_antiga_de_aprovacao_tambem_bloqueia_dupla_aprovacao():
-    # POST /orcamentos/{id}/lancamentos/{id}/aprovar (T-07) ainda existe;
-    # aprovar por ela depois do PATCH não pode debitar de novo.
+def test_rota_antiga_de_aprovacao_sem_login_foi_removida():
+    # POST /orcamentos/{id}/lancamentos/{id}/aprovar (T-07) não pedia login e saiu;
+    # chamá-la não aprova nem debita nada.
     orcamento_id = criar_orcamento(1000)
     lancamento_id = lancar(orcamento_id, 300)
-    aprovar(lancamento_id)
 
     resposta = client.post(
-        f"/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/aprovar",
-        headers=COORDENACAO,
-    )
+        f"/orcamentos/{orcamento_id}/lancamentos/{lancamento_id}/aprovar", headers=LEITURA_ORCAMENTO)
 
-    assert resposta.status_code == 409
+    assert resposta.status_code in (404, 405)
+    assert saldo(orcamento_id) == 1000
+    assert aprovar(lancamento_id).status_code == 200
     assert saldo(orcamento_id) == 700
 
 
@@ -275,7 +276,7 @@ def test_fila_com_varios_autores_e_decisoes():
     aprovar(da_ana_2)
 
     # Só os aprovados contam: 1000 - 400 - 450
-    orcamento = client.get(f"/orcamentos/{orcamento_id}", headers=COORDENACAO).json()
+    orcamento = client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()
     assert orcamento["saldo"] == 150
     assert orcamento["nivel_alerta"] == "atencao"  # 85% consumido
     assert fila_de_pendentes() == []

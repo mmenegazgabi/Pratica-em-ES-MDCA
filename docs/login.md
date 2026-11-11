@@ -83,7 +83,10 @@ outra pessoa dá 409) e use "Gerar código" para o primeiro acesso.
 
 Nas rotas do Financeiro, `Authorization: Bearer <token da sessão>` identifica a pessoa;
 o papel de trabalho vai em `X-Papel-Usuario` e precisa ser um dos papéis dela.
-`X-Usuario-Id` é ignorado nesse modo. Desativar a pessoa derruba as sessões.
+`X-Usuario-Id` é ignorado nesse modo. Desativar a pessoa derruba as sessões. No
+Financeiro, os papéis dos vínculos ativos (`vinculos_equipe`) também valem, e quem só é
+educador vê apenas os programas do vínculo: veja
+[permissoes-financeiro.md](permissoes-financeiro.md).
 
 ## Modo serviço
 
@@ -156,18 +159,13 @@ o token de serviço.
 ### Estado da produção (10/11/2026)
 
 O banco de produção recebeu a migration `c2d8e4f6a1b3` (persistência do Financeiro) da
-branch `feature/E3-integracao-financeiro-banco` antes de ela entrar na main. Por isso o
-`alembic upgrade head` da main não roda lá ("Can't locate revision c2d8e4f6a1b3"), e as
-tabelas `sessoes` e `codigos_acesso` foram criadas à mão, com o mesmo código da
-`b7d4e2a9c1f0` (o `alembic_version` continua em `c2d8e4f6a1b3`).
+branch da E3 antes de ela entrar na main, e as tabelas `sessoes` e `codigos_acesso`
+foram criadas à mão, com o mesmo código da `b7d4e2a9c1f0`.
 
-Para alinhar, quando a E3 for juntada com a main:
+A E3 traz a migration de junção `d9f1a7c3b5e2` (sem operações), que junta as duas
+linhas que saem da `6bd565cae094`: a do login (`b7d4e2a9c1f0`) e a da persistência
+(`c2d8e4f6a1b3`). Depois de conferir que as tabelas do login estavam iguais às da
+migration, a produção foi marcada nela (`alembic stamp d9f1a7c3b5e2`). `alembic current`
+lá mostra `d9f1a7c3b5e2 (head) (mergepoint)`.
 
-1. As duas linhas de migrations saem da `6bd565cae094`: a do login (`b7d4e2a9c1f0`) e a
-   da persistência (`c2d8e4f6a1b3`). Junte-as com uma migration de junção, sem
-   operações: `.venv/bin/alembic -c Shared/alembic.ini merge -m "junta login e
-   persistência do Financeiro" b7d4e2a9c1f0 c2d8e4f6a1b3`.
-2. Em produção, `.venv/bin/alembic -c Shared/alembic.ini upgrade head`: a
-   `b7d4e2a9c1f0` vê as tabelas e não recria nada, e a de junção só atualiza o
-   `alembic_version`.
-3. Daqui para frente, migrations só vão para produção a partir da main.
+Daqui para frente, migrations só vão para produção a partir da main.

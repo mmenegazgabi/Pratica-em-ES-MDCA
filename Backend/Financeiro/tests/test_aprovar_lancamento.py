@@ -14,6 +14,10 @@ TOKEN = "token-de-teste-123"
 
 client = TestClient(app)
 
+# As rotas de orçamento passaram a exigir login (T-33): a tela manda o código de
+# acesso e o papel em toda chamada.
+LEITURA_ORCAMENTO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
+
 
 def cabecalhos(papel="coordenacao", token=TOKEN):
     headers = {}
@@ -84,7 +88,7 @@ def test_aprovacao_reflete_no_saldo_do_get_orcamento():
 
     aprovar(lancamento.id)
 
-    detalhe = client.get("/orcamentos/orcamento-1", headers=cabecalhos()).json()
+    detalhe = client.get("/orcamentos/orcamento-1", headers=LEITURA_ORCAMENTO).json()
     assert detalhe["saldo"] == 750
     assert detalhe["realizado"] == 250
 
