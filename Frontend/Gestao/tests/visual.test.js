@@ -29,3 +29,14 @@ test("as variáveis da Gestão apontam para as do Financeiro", () => {
   assert.ok(cores.length > 30);
   assert.deepEqual(cores.filter(([, , valor]) => !/^var\(--[\w-]+\)$/.test(valor.trim())).map(([, nome]) => nome), []);
 });
+
+test("nenhum style fixo nas telas: só larguras e alturas que vêm do dado (T-00l)", () => {
+  const ler = (f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+  const app = ler("app.js");
+  const fixosNoApp = [...app.matchAll(/style="([^"]*)"/g)].map((m) => m[1]).filter((v) => !v.includes("'+"));
+  assert.deepEqual(fixosNoApp, []);
+  const telas = ["alertas", "atividades", "equipe", "pessoas", "plano", "programas", "turmas", "usuarios", "visao-integrada"].map((t) => ler(`telas/${t}.js`)).join("\n");
+  // Só valores de CSS (propriedade: valor); `style: "currency"` é opção do Intl.NumberFormat.
+  const fixosNasTelas = [...telas.matchAll(/style:\s*"([^"]*)"/g)].map((m) => m[1]).filter((v) => v.includes(":"));
+  assert.deepEqual(fixosNasTelas, []);
+});

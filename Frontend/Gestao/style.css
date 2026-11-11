@@ -608,7 +608,7 @@ h5, h6 { font-size: 11px; font-weight: 600; }
    ===================================================================================== */
 
 /* A Gestão tem mais itens e rótulos mais longos que o Financeiro: barra um pouco mais larga. */
-.gestao .lateral { width: 214px; z-index: 30; }
+.gestao .lateral { width: 224px; z-index: 30; }
 .gestao .lateral__marca { text-decoration: none; }
 .lateral__modulos { display: flex; gap: 6px; margin: 0 6px 14px; }
 .lateral__modulos .filtro { flex: 1; justify-content: center; text-decoration: none; }
@@ -674,3 +674,90 @@ h5, h6 { font-size: 11px; font-weight: 600; }
   .mobile-toggle { border: 0; background: none; padding: 6px; color: var(--texto); }
   .page-head { flex-direction: column; align-items: stretch; }
 }
+
+/* =====================================================================================
+   Telas sem excesso de caixas (T-00l)
+   Caixa (.card) só para tabelas, formulários, diálogos e painéis; o resto é seção.
+   ===================================================================================== */
+
+/* Seção: o cabeçalho das caixas do Financeiro ("Por categoria"), sem a borda em volta. */
+.secao { min-width: 0; }
+.secao__cabeca { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; padding: 0 0 8px; border-bottom: 1px solid var(--borda); }
+.secao__cabeca h2 { font-size: 12px; font-weight: 600; margin: 0; letter-spacing: 0; }
+.secao__cabeca small { display: block; font-size: 11px; color: var(--texto-suave); margin-top: 1px; }
+.secao__corpo { padding-top: 12px; font-size: 12px; }
+.secao__rodape { padding-top: 8px; font-size: 11px; color: var(--texto-suave); }
+.secao .details { margin: 0; }
+
+/* Linha de resumo (pessoa, turma): título, dados e etiquetas, sem caixa. */
+.resumo-linha { padding: 0 0 4px; }
+.resumo-linha h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; letter-spacing: -.01em; }
+.resumo-linha p { margin: 0 0 6px; font-size: 12px; color: var(--texto-suave); }
+.resumo-linha .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Indicadores numa faixa só: separadores verticais, sem uma caixa por número. */
+.stats { gap: 0; margin: 0 0 22px; border-top: 1px solid var(--borda); border-bottom: 1px solid var(--borda); }
+.stats .stat { border: 0; border-radius: 0; background: none; padding: 12px 16px; }
+.stats .stat + .stat { border-left: 1px solid var(--borda); }
+.stats .stat:first-child { padding-left: 0; }
+.stat-value { margin-top: 2px; }
+.stat-note { margin-top: 2px; }
+
+/* Lista de prioridades ("Precisam do seu olhar"): linhas com divisória, ícone fino. */
+.secao .priority-item { padding: 10px 0; border-bottom: 1px solid var(--linha); }
+.secao .priority-item:last-child { border-bottom: 0; }
+.priority-mark { width: 24px; height: 24px; border: 0; background: var(--fundo-suave); border-radius: 6px; }
+.priority-mark .icon { width: 14px; height: 14px; }
+
+/* Linha do tempo: o ponto tem a cor do tipo do evento (como as etiquetas). */
+.timeline-item--frequencia::before, .timeline-item--busca_ativa::before { background: var(--amarelo); }
+.timeline-item--alerta::before { background: var(--vermelho); }
+.timeline-item--cadastro::before, .timeline-item--responsavel::before, .timeline-item--documento::before { background: var(--texto-suave); }
+.timeline-item--autorizacao::before { background: var(--conciliado-texto); }
+.timeline-item--matricula::before { background: var(--verde); }
+
+/* Arquivos (evidências e documentos): nome e detalhe em duas linhas, ação à direita. */
+.file-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--linha); }
+.file-item:last-child { border-bottom: 0; }
+.file-item small { display: block; font-size: 11px; color: var(--texto-suave); margin-top: 1px; }
+
+/* Grades das telas: espaço da escala entre colunas e entre blocos. */
+.grid-main, .detail-grid { gap: 22px; }
+.stack { gap: 22px; }
+
+/* Espaço entre os blocos da página vem de um contêiner com gap, nunca da margem de cada
+   bloco: assim dois blocos nunca encostam (plano, seção 8). O conteúdo de toda tela fica
+   dentro de .main, que é esse contêiner. */
+.gestao .principal .main { display: flex; flex-direction: column; gap: 18px; }
+.gestao .principal .main > * { margin-top: 0; margin-bottom: 0; }
+.gestao .principal .main > .page-head { margin-bottom: -2px; }
+/* Barras de filtro sem linha embaixo, como os filtros do Financeiro. */
+.toolbar { border-bottom: 0; padding-bottom: 0; }
+
+/* Dentro de um contêiner com gap, nenhum bloco soma margem própria (abas e avisos tinham). */
+.stack > *, .secao__corpo > .stack > * { margin-top: 0; margin-bottom: 0; }
+.tabs { margin: 0; }
+.info-box, .error-message { margin: 0; }
+.secao__corpo > .info-box { margin-top: 12px; }
+
+/* Encontros com falta do alerta: linhas com divisória, sem marcador. */
+.alerta-faltas { list-style: none; margin: 0; padding: 0; }
+.alerta-faltas li { padding: 8px 0; border-bottom: 1px solid var(--linha); font-size: 12px; color: var(--texto-suave); }
+.alerta-faltas li:last-child { border-bottom: 0; }
+.alerta-faltas a { color: var(--texto); font-weight: 500; text-decoration: none; }
+.alerta-faltas a:hover { color: var(--verde); }
+
+/* Classes que substituem os style="..." fixos do protótipo (T-00l). Larguras e alturas de
+   barras continuam no style, porque vêm do dado (como no Financeiro). */
+.texto-11 { font-size: 11px; }
+.texto-12 { font-size: 12px; }
+.obrigatorio { color: var(--perigo-texto); }
+.linha-inteira { grid-column: 1 / -1; }
+.acoes-direita { justify-content: flex-end; }
+.acoes-rodape { margin-top: 22px; }
+.afastado { margin-top: 16px; }
+.afastado-pouco { margin-top: 8px; }
+.afastado-baixo { margin-bottom: 16px; }
+.pessoa-linha { display: flex; gap: 12px; align-items: center; margin: 4px 0 12px; }
+/* Painel lateral do detalhe (ex.: "Próximo passo") com a altura do próprio conteúdo. */
+.detail-grid { align-items: start; }

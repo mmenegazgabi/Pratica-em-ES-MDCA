@@ -21,3 +21,17 @@ export function el(tag, atributos = {}, ...filhos) {
   }
   return no;
 }
+
+/**
+ * Seção sem caixa (T-00l): título pequeno com uma linha embaixo, como o cabeçalho das
+ * caixas do Financeiro, mas sem a borda em volta. Para dados, texto, linha do tempo e
+ * listas curtas; tabelas e formulários continuam em caixa (.card).
+ */
+export function secao(titulo, subtitulo, corpo, acao = null, extras = {}) {
+  return el(
+    "section",
+    { ...extras, class: ["secao", extras.class].filter(Boolean).join(" ") },
+    el("div", { class: "secao__cabeca" }, el("div", {}, el("h2", {}, titulo), subtitulo ? el("small", {}, subtitulo) : null), acao),
+    el("div", { class: "secao__corpo" }, corpo),
+  );
+}

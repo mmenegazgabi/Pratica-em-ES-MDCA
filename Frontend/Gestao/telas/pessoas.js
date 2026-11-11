@@ -18,7 +18,7 @@
 import * as api from "../base/api.js";
 import { ErroApi } from "../base/api.js";
 import { carregando, carregarNaTela } from "../base/estados.js";
-import { el } from "../base/dom.js";
+import { el, secao } from "../base/dom.js";
 import { abrirFormulario, campo, hojeIso, selecao } from "../base/formulario.js";
 import { validarArquivo } from "./atividades.js";
 
@@ -617,10 +617,10 @@ export function linhaDoTempo(eventos) {
 function cabecalho(p) {
   return el(
     "section",
-    { class: "card pessoa-cabecalho" },
+    { class: "pessoa-cabecalho resumo-linha" },
     el(
       "div",
-      { class: "card-body" },
+      {},
       el("h2", {}, p.nome),
       el("p", { class: "muted" }, `${p.idade} anos · nascimento ${dataBr(p.data_nascimento)} · ${p.programa} · núcleo ${p.nucleo_familiar.nome}`),
       el("div", { class: "badges" }, badge(p.situacao === "ativo" ? "Ativa" : p.situacao, p.situacao === "ativo" ? "green" : "gray"), " ", imagem(p.autorizacao_imagem)),
@@ -679,7 +679,7 @@ export function mostrarPessoa(container, pessoaId, { aba = "trajetoria", podeCad
     return el(
       "div",
       { class: "file-item" },
-      el("span", {}, `${d.tipo} · ${d.nome_arquivo}`, el("small", { style: "display:block" }, `Registrado em ${dataBr(d.criado_em)}`)),
+      el("span", {}, `${d.tipo} · ${d.nome_arquivo}`, el("small", {}, `Registrado em ${dataBr(d.criado_em)}`)),
       d.tem_arquivo
         ? el("button", { type: "button", class: "btn small", onclick: (ev) => baixar(d, ev.currentTarget) }, "Baixar")
         : el("small", {}, "Sem arquivo (registro antigo)"),
@@ -729,7 +729,7 @@ export function mostrarPessoa(container, pessoaId, { aba = "trajetoria", podeCad
       return el(
         "div",
         { class: "stack" },
-        cartao(`Núcleo familiar ${p.nucleo_familiar.nome}`, "", detalhes([["Telefone de contato", p.telefone], ["Observação cadastral", p.observacao]])),
+        secao(`Núcleo familiar ${p.nucleo_familiar.nome}`, "", detalhes([["Telefone de contato", p.telefone], ["Observação cadastral", p.observacao]])),
         cartao(
           "Responsáveis",
           "",
@@ -772,7 +772,7 @@ export function mostrarPessoa(container, pessoaId, { aba = "trajetoria", podeCad
           ),
           botao("Nova autorização", registrarAutorizacao),
         ),
-        cartao(
+        secao(
           "Documentos",
           "Arquivos com acesso restrito; cada download fica registrado",
           p.documentos.length
@@ -782,7 +782,7 @@ export function mostrarPessoa(container, pessoaId, { aba = "trajetoria", podeCad
         ),
       );
     }
-    return cartao("Uma trajetória conectada", "Cadastro, família, documentos e autorizações. Frequência e atendimentos entram aqui quando existirem.", linhaDoTempo(eventos));
+    return secao("Uma trajetória conectada", "Cadastro, família, documentos, autorizações, turmas, faltas e acompanhamentos.", linhaDoTempo(eventos));
   }
 
   return carregarNaTela(
