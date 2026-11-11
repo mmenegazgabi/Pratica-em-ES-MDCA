@@ -1,6 +1,6 @@
 // Visão integrada (T-79 · US-12): física e financeira juntas, filtro de período, papel sem
 // valores financeiros e programa sem orçamento (jsdom).
-import { beforeEach, test } from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 
@@ -38,6 +38,12 @@ const visao = (programaId, extra = {}) => ({
 });
 
 let container;
+// Espaçamento e caixas (T-00m): depois de cada teste, o que a tela montou passa pelo
+// verificador de layout (nada de caixa dentro de caixa nem blocos sem espaço entre eles).
+const { problemasDeLayout } = await import("./ajuda-layout.js");
+afterEach(() => {
+  if (container) assert.deepEqual(problemasDeLayout(container), []);
+});
 let consultas;
 const texto = (no = container) => no.textContent.replace(/\s+/g, " ").trim();
 const esperar = () => new Promise((r) => setTimeout(r, 0));

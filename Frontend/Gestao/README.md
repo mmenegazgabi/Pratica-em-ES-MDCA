@@ -152,3 +152,20 @@ diálogo) os tamanhos e o acabamento do Financeiro. O teste `tests/visual.test.j
 confere isso. Plano completo: `plano-identidade-visual-gestao.md` (arquivo de contexto
 da Gestão), cards T-00j a T-00m.
 
+
+### Caixas e espaçamento (T-00l e T-00m)
+
+- **Caixa (`.card`) só para tabelas, formulários, diálogos e painéis.** Texto, dados, linha
+  do tempo e listas curtas vão numa **seção**: `secao(titulo, subtitulo, corpo, acao)` de
+  `base/dom.js` (no `app.js`, a função `secao` do protótipo). Nunca caixa dentro de caixa.
+- **O espaço entre blocos vem do contêiner, nunca da margem do bloco.** Blocos irmãos
+  (caixas, seções, avisos, abas, tabelas) ficam dentro de `.stack` (22 px entre blocos da
+  tela) ou `.pilha-justa` (12 px, dentro de uma caixa ou seção). A área da página (`.main`),
+  `.card-body` e `.secao__corpo` já dão esse espaço.
+- **Os testes conferem:** `tests/ajuda-layout.js` roda depois de cada teste de tela e em
+  todas as rotas do protótipo (`app.test.js`) e falha com caixa dentro de caixa ou blocos
+  sem contêiner; `tests/visual.test.js` falha com cor, fonte, tamanho de texto ou raio fora
+  do Financeiro, margem própria em caixas, avisos, abas e tabelas, ou `style="..."` fixo.
+- **Celular:** para conferir em 390 px, abra a tela dentro de um quadro (iframe) dessa
+  largura. A captura do Chrome sem janela não desce de ~500 px e corta a imagem, o que
+  parece conteúdo passando da borda sem ser.

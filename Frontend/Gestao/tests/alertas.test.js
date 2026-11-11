@@ -1,6 +1,6 @@
 // Alertas e busca ativa (T-60 · US-06): lista com pessoa, programa e faltas, linha do tempo
 // do acompanhamento, registro de ação e encerramento só com justificativa (jsdom).
-import { beforeEach, test } from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 
@@ -55,6 +55,12 @@ const ENCERRADO = {
 };
 
 let container;
+// Espaçamento e caixas (T-00m): depois de cada teste, o que a tela montou passa pelo
+// verificador de layout (nada de caixa dentro de caixa nem blocos sem espaço entre eles).
+const { problemasDeLayout } = await import("./ajuda-layout.js");
+afterEach(() => {
+  if (container) assert.deepEqual(problemasDeLayout(container), []);
+});
 let registro;
 let avisos;
 const dialogo = () => document.getElementById("dialog");

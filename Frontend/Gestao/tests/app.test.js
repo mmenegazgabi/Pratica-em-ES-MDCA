@@ -194,6 +194,22 @@ test("encontro registrado abre pela API, com a chamada (T-89)", async () => {
   assert.equal($(".demo-banner"), null);
 });
 
+test("nenhuma tela do protótipo tem caixa dentro de caixa nem blocos encostados (T-00m)", async () => {
+  const { problemasDeLayout } = await import("./ajuda-layout.js");
+  const rotas = [
+    "#/inicio", "#/programas/p1", "#/programas/p1/plano", "#/turmas", "#/turmas/t1", "#/pessoas/u1", "#/pessoas/u1/familia",
+    "#/pessoas/u1/documentos", "#/atividades/a1", "#/alertas/al2", "#/atendimentos", "#/rede", "#/aprendizagem",
+    "#/indicadores", "#/relatorios", "#/auditoria", "#/importacao", "#/sincronizacao", "#/guia", "#/mapa", "#/plataforma",
+  ];
+  const problemas = [];
+  for (const rota of rotas) {
+    await irPara(rota);
+    for (const p of problemasDeLayout($("#main") || document.body)) problemas.push(`${rota}: ${p}`);
+  }
+  assert.deepEqual(problemas, []);
+  await irPara("#/inicio");
+});
+
 test("seletor de módulo leva ao Financeiro e o logo ao menu inicial", () => {
   const financas = [...document.querySelectorAll(".lateral__modulos a")].find((a) => a.textContent === "Finanças");
 

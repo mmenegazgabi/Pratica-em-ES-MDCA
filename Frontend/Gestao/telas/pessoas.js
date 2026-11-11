@@ -416,7 +416,7 @@ export function mostrarCadastroDePessoa(container, { programaInicial = "", aoCon
 
   // --- Etapa 4
   function revisao() {
-    const corpo = el("div", { class: "wide" }, carregando("Conferindo cadastros semelhantes…"));
+    const corpo = el("div", { class: "wide pilha-justa" }, carregando("Conferindo cadastros semelhantes…"));
     const confirmar = el("input", { type: "checkbox", name: "confirmar_duplicidade" });
     confirmar.checked = r.confirmou;
 
@@ -753,7 +753,7 @@ export function mostrarPessoa(container, pessoaId, { aba = "trajetoria", podeCad
           "",
           el(
             "div",
-            {},
+            { class: "pilha-justa" },
             aviso(vigente ? "Uso externo de imagem permitido." : "Uso externo de imagem bloqueado: não há autorização vigente. O uso interno não depende dela.", vigente ? "" : "amber"),
             p.autorizacoes.length
               ? tabela(

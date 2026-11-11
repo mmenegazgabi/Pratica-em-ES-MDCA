@@ -761,3 +761,24 @@ h5, h6 { font-size: 11px; font-weight: 600; }
 .pessoa-linha { display: flex; gap: 12px; align-items: center; margin: 4px 0 12px; }
 /* Painel lateral do detalhe (ex.: "Próximo passo") com a altura do próprio conteúdo. */
 .detail-grid { align-items: start; }
+
+/* Faixa de indicadores em duas colunas (até 760 px): cada linha começa sem
+   recuo nem divisória à esquerda, e a segunda linha ganha a divisória de cima. */
+@media (max-width: 760px) {
+  .stats .stat:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .stats .stat:nth-child(n + 3) { border-top: 1px solid var(--borda); }
+}
+
+/* Dentro de caixas e seções, blocos seguidos (aviso + tabela, texto + lista) ganham o
+   espaço da escala pelo contêiner, e não por margem própria. */
+.card-body > * + *, .secao__corpo > * + * { margin-top: 12px; }
+.form-body > * + *, .dialog-body > * + * { margin-top: 12px; }
+
+/* Pilha justa: blocos seguidos dentro de uma caixa ou seção (aviso + tabela, indicadores +
+   tabela), com o espaço menor da escala. */
+.pilha-justa { display: flex; flex-direction: column; gap: 12px; }
+.pilha-justa > * { margin-top: 0; margin-bottom: 0; }
+
+/* Foco visível ao navegar pelo teclado, como no app do educador do Financeiro. */
+:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline-offset: -1px; }

@@ -1,6 +1,6 @@
 // Pessoas e famílias (T-49 · US-03): lista pela API, cadastro em etapas com revisão de
 // duplicidade e bloqueio do menor sem responsável legal, e trajetória vinda da API (jsdom).
-import { beforeEach, test } from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 
@@ -41,6 +41,12 @@ const TRAJETORIA = [
 const DUPLICADO = { id: "pe-lara", nome: "Lara Oliveira", data_nascimento: "2013-05-12", programa_id: "p-1", programa: "Semear", responsaveis: ["Marina Oliveira"], motivos: ["nascimento", "responsavel"] };
 
 let container;
+// Espaçamento e caixas (T-00m): depois de cada teste, o que a tela montou passa pelo
+// verificador de layout (nada de caixa dentro de caixa nem blocos sem espaço entre eles).
+const { problemasDeLayout } = await import("./ajuda-layout.js");
+afterEach(() => {
+  if (container) assert.deepEqual(problemasDeLayout(container), []);
+});
 let registro;
 const dialogo = () => document.getElementById("dialog");
 const texto = (no = container) => no.textContent.replace(/\s+/g, " ").trim();

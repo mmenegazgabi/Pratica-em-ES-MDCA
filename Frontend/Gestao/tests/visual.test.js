@@ -40,3 +40,51 @@ test("nenhum style fixo nas telas: só larguras e alturas que vêm do dado (T-00
   const fixosNasTelas = [...telas.matchAll(/style:\s*"([^"]*)"/g)].map((m) => m[1]).filter((v) => v.includes(":"));
   assert.deepEqual(fixosNasTelas, []);
 });
+
+// --- Espaçamento e consistência (T-00m) ------------------------------------------
+
+/** Regras de fora de @media, na ordem do arquivo: [seletores, declarações]. */
+function regras(texto) {
+  const semMedia = texto.replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, "");
+  return [...semMedia.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => [m[1].split(",").map((x) => x.trim()), m[2]]);
+}
+
+test("caixas, avisos, abas e tabelas não têm margem própria: o espaço vem do contêiner", () => {
+  const zero = (v) => v === undefined || /^0(px)?$/.test(v);
+  for (const seletor of [".card", ".info-box", ".error-message", ".tabs", ".table-wrap", ".secao"]) {
+    // Acompanha a margem de cima e a de baixo na ordem do arquivo (a forma curta muda as
+    // duas; margin-top e margin-bottom, só uma). A que vale no fim precisa ser zero.
+    let cima;
+    let baixo;
+    for (const [seletores, corpo] of regras(css)) {
+      if (!seletores.includes(seletor)) continue;
+      for (const [, propriedade, valor] of corpo.matchAll(/(?:^|;)\s*(margin(?:-top|-bottom)?)\s*:\s*([^;]+)/g)) {
+        const partes = valor.trim().split(/\s+/);
+        if (propriedade === "margin") [cima, baixo] = [partes[0], partes[2] ?? partes[0]];
+        if (propriedade === "margin-top") cima = partes[0];
+        if (propriedade === "margin-bottom") baixo = partes[0];
+      }
+    }
+    assert.ok(zero(cima) && zero(baixo), `${seletor} termina com margem ${cima} / ${baixo}`);
+  }
+});
+
+test("os contêineres de layout dão espaço entre os filhos", () => {
+  for (const seletor of [".stack", ".pilha-justa"]) {
+    assert.ok(regras(css).some(([seletores, corpo]) => seletores.includes(seletor) && /gap\s*:\s*\d+px/.test(corpo)), seletor);
+  }
+  assert.match(css, /\.gestao \.principal \.main \{[^}]*gap: \d+px/);
+});
+
+test("a parte nova do CSS só usa tamanhos de texto e raios que o Financeiro usa", () => {
+  const nova = css.slice(css.indexOf(".btn { gap: 6px;"));
+  const tamanhos = new Set([...nova.matchAll(/font(?:-size)?\s*:\s*(?:\d{3}\s+)?([\d.]+)px/g)].map((m) => m[1]));
+  const DO_FINANCEIRO = new Set(["10", "10.5", "11", "11.5", "12", "13", "14", "15", "16", "18", "19"]);
+  assert.deepEqual([...tamanhos].filter((t) => !DO_FINANCEIRO.has(t)), []);
+  const raios = new Set([...nova.matchAll(/border-radius\s*:\s*([\d.]+)px/g)].map((m) => m[1]));
+  assert.deepEqual([...raios].filter((r) => !["4", "6", "7", "8", "10"].includes(r)), []);
+});
+
+test("foco visível no verde do Financeiro ao navegar pelo teclado", () => {
+  assert.match(css, /:focus-visible \{ outline: 2px solid var\(--verde\)/);
+});
