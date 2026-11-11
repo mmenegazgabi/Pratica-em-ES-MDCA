@@ -8,6 +8,7 @@ Object.assign(globalThis, { window: dom.window, document: dom.window.document, l
 const conciliacao = await import("../telas/conciliacao.js");
 const relatorios = await import("../telas/relatorios.js");
 const auditoria = await import("../telas/auditoria.js");
+const { limpar } = await import("../base/dom.js");
 
 const resposta = (status, corpo) => ({ ok: status < 400, status, headers: { get: () => "application/json" }, json: async () => corpo, text: async () => JSON.stringify(corpo) });
 const container = () => document.getElementById("c");
@@ -159,14 +160,39 @@ test("conciliação: arquivo acima de 1 MB nem é enviado", async () => {
   assert.match(container().querySelector('[role="alert"]').textContent, /Arquivo acima de 1 MB/);
 });
 
-test("conciliação: coordenação também importa; direção não", async () => {
+test("conciliação: só o voluntário financeiro importa (a tela é dele)", async () => {
   lancamentos = [];
   extrato = [];
   simularConciliacao();
   await conciliacao.mostrar(container(), { sessao: { papel: "coordenacao", nome: "Luana" } });
-  assert.ok(botao("Importar extrato (CSV)"));
-  await conciliacao.mostrar(container(), { sessao: { papel: "direcao", nome: "Jane" } });
   assert.equal(botao("Importar extrato (CSV)"), undefined);
+  assert.equal(container().querySelector('input[type="file"]'), null);
+});
+
+test("conciliação: importação em andamento bloqueia Conciliar, e conciliação bloqueia a importação", async () => {
+  lancamentos = [{ id: "l1", orcamento_id: "o1", categoria: "Materiais", valor: 180, status: "aprovado", conciliado: false, aprovado_em: "2026-10-26T10:00:00Z" }];
+  extrato = [papelaria];
+  let terminarImportacao;
+  let terminarConciliacao;
+  simularConciliacao({
+    importar: () => new Promise((r) => { terminarImportacao = () => r(resposta(201, { importados: 0, ignorados_repetidos: 1, itens: [] })); }),
+    conciliar: () => new Promise((r) => { terminarConciliacao = () => r(resposta(200, {})); }),
+  });
+  await conciliacao.mostrar(container(), { sessao: voluntario });
+  container().querySelectorAll('[role="radiogroup"]')[0].querySelector('[role="radio"]').click();
+  container().querySelectorAll('[role="radiogroup"]')[1].querySelector('[role="radio"]').click();
+  escolherArquivo(new File(["x"], "banco.csv", { type: "text/csv" }));
+  await esperar();
+  assert.equal(botao("Conciliar").disabled, true);
+  terminarImportacao();
+  await esperar();
+  assert.equal(botao("Conciliar").disabled, false);
+  botao("Conciliar").click();
+  await esperar();
+  assert.equal(botao("Importar extrato (CSV)").disabled, true);
+  terminarConciliacao();
+  await esperar();
+  assert.equal(botao("Importar extrato (CSV)").disabled, false);
 });
 
 // ---------- Relatórios ----------
@@ -297,7 +323,11 @@ test("auditoria: lista da API com as colunas e textos legíveis", async () => {
   assert.doesNotMatch(container().textContent, /exemplo/i);
 });
 
-test("auditoria: busca espera ~300 ms e manda o texto; módulo e período vão na consulta", async () => {
+// Só o setTimeout é simulado; setImmediate deixa as promessas da API andarem.
+const andar = () => new Promise((r) => setImmediate(r));
+
+test("auditoria: busca espera ~300 ms e manda o texto; módulo e período vão na consulta", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
   simularAuditoria();
   await auditoria.mostrar(container());
   const busca = container().querySelector('input[type="search"]');
@@ -305,9 +335,11 @@ test("auditoria: busca espera ~300 ms e manda o texto; módulo e período vão n
     busca.value = parcial;
     busca.dispatchEvent(new window.Event("input"));
   }
-  await esperar(100);
+  t.mock.timers.tick(299);
+  await andar();
   assert.equal(chamadas.length, 1, "ainda não buscou");
-  await esperar(300);
+  t.mock.timers.tick(1);
+  await andar();
   assert.deepEqual(chamadas.map((c) => c.url), ["/auditoria", "/auditoria?texto=apr"]);
 
   const modulo = container().querySelector("#aud-modulo");
@@ -320,8 +352,30 @@ test("auditoria: busca espera ~300 ms e manda o texto; módulo e período vão n
   const ate = container().querySelector("#aud-ate");
   ate.value = "2026-10-31";
   ate.dispatchEvent(new window.Event("change"));
-  await esperar();
+  await andar();
   assert.equal(chamadas.at(-1).url, "/auditoria?texto=apr&modulo=financeiro&desde=2026-10-01&ate=2026-10-31");
+});
+
+test("auditoria: busca pendente não dispara depois de sair da tela", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  simularAuditoria();
+  await auditoria.mostrar(container());
+  const busca = container().querySelector('input[type="search"]');
+  busca.value = "apr";
+  busca.dispatchEvent(new window.Event("input"));
+  limpar(container());
+  t.mock.timers.tick(300);
+  await andar();
+  assert.deepEqual(chamadas.map((c) => c.url), ["/auditoria"]);
+
+  await auditoria.mostrar(container());
+  const outra = container().querySelector('input[type="search"]');
+  outra.value = "x";
+  outra.dispatchEvent(new window.Event("input"));
+  await auditoria.mostrar(container());
+  t.mock.timers.tick(300);
+  await andar();
+  assert.deepEqual(chamadas.map((c) => c.url), ["/auditoria", "/auditoria", "/auditoria"], "abrir a tela de novo cancela a busca pendente");
 });
 
 test("auditoria: resposta antiga que chega depois não sobrescreve a nova", async () => {

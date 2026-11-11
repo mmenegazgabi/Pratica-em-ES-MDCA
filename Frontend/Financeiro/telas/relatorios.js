@@ -48,7 +48,8 @@ export async function mostrar(container, { parametros = {} }) {
   const erro = el("p", { role: "alert", style: "margin:8px 0 0;color:var(--perigo-texto);font-size:12px", hidden: true });
   const erroGerar = el("p", { role: "alert", style: "margin:8px 0 0;color:var(--perigo-texto);font-size:12px", hidden: true });
   let gerando = false;
-  const gerar = el("button", { type: "button", class: "btn", style: "margin-top:16px;width:100%;justify-content:center" }, icone("baixar"), "Gerar relatório");
+  const rotuloGerar = el("span", {}, "Gerar relatório");
+  const gerar = el("button", { type: "button", class: "btn", style: "margin-top:16px;width:100%;justify-content:center" }, icone("baixar"), rotuloGerar);
   const previa = el("div", { style: "background:var(--fundo-suave);border-radius:8px;padding:16px;min-height:420px" });
 
   const atual = () => orcamentos.find((o) => o.id === projeto.value);
@@ -129,10 +130,10 @@ export async function mostrar(container, { parametros = {} }) {
     mostrarErroGerar("");
     gerando = true;
     gerar.disabled = true;
-    gerar.lastChild.textContent = "Gerando…";
+    rotuloGerar.textContent = "Gerando…";
     const r = await baixarRelatorio(pedido);
     gerando = false;
-    gerar.lastChild.textContent = "Gerar relatório";
+    rotuloGerar.textContent = "Gerar relatório";
     desenharPrevia();
     if (falhou(r) || !r.blob) return mostrarErroGerar(mensagemDeErro(r, "Não foi possível gerar o relatório. Tente de novo."));
     baixar(r.nome || nomePadraoDoRelatorio(orcamento, pedido.data_inicio, pedido.data_fim, formato), r.blob);

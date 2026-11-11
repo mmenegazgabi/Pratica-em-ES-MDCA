@@ -37,7 +37,7 @@ mais enviado. Quem só tem o papel educador é levado ao app do celular (`lancam
 | Lançamentos (`#/lancamentos`) | Filas Aguardando/Aprovados/Rejeitados/Todos, filtro por projeto, painel com Aprovar e Rejeitar (motivo obrigatório) | não aparece | Abre em Aprovados (consulta) |
 | Projetos (`#/projetos`) | Totais, uso por projeto (projeto encerrado aparece como "Encerrado"), Novo projeto/Criar orçamento | Só leitura | não aparece |
 | Detalhe do projeto (`#/projetos/<orçamento>`) | Orçado, gasto, disponível, gasto / limite por categoria, últimos lançamentos, **Editar orçamento** e **Encerrar/Reativar projeto** (com confirmação, `PATCH /projetos/{id}/status`) | Igual, sem Editar orçamento | não aparece |
-| Conciliação (`#/conciliacao`) | não aparece no menu (a tela aceita importar) | não aparece | Extrato em aberto (`GET /extrato?em_aberto=true`) e aprovados lado a lado; marca um de cada e concilia (`PATCH /lancamentos/{id}/conciliar` com o `id` do item em `referencia_extrato`); **Importar extrato (CSV)** (`POST /extrato`) |
+| Conciliação (`#/conciliacao`) | não aparece | não aparece | Extrato em aberto (`GET /extrato?em_aberto=true`) e aprovados lado a lado; marca um de cada e concilia (`PATCH /lancamentos/{id}/conciliar` com o `id` do item em `referencia_extrato`); **Importar extrato (CSV)** (`POST /extrato`). A Conciliação e a importação são do voluntário financeiro; a API também aceita a importação pela coordenação, mas o front não oferece |
 | Relatórios (`#/relatorios`) | Prestação de contas: projeto, período, prévia na tela e arquivo oficial da API em PDF ou Planilha (XLSX) (`GET /relatorios/prestacao-contas`) | Igual | não aparece |
 | Auditoria (`#/auditoria`) | Histórico de ações da plataforma (`GET /auditoria`): busca (espera 300 ms), módulo e período | Igual | não aparece |
 
@@ -66,13 +66,15 @@ Detalhes das telas ligadas à API:
 - **Conciliação**: o extrato tem saída negativa; "mesmo valor" e o aviso de valor
   diferente comparam sem o sinal. A importação mostra "N itens importados, M repetidos
   ignorados." (repetidos = linhas que já estavam guardadas) ou o erro da API, que diz
-  a linha ("Linha 3: valor inválido."). Arquivo acima de 1 MB nem é enviado. Se o
+  a linha ("Linha 3: valor inválido."). Arquivo acima de 1 MB nem é enviado. Enquanto importa, "Conciliar" fica
+  bloqueado (e vice-versa). Se o
   extrato não carregar, só a coluna dele mostra o erro. O extrato fica em memória no
   backend (como os outros dados do Financeiro até a E3): reiniciar a API apaga o que
   foi importado.
 - **Auditoria**: colunas Data/hora (horário de Brasília), Pessoa (nome, ou o id),
   Módulo, Ação (códigos conhecidos com rótulo em português) e Descrição. Só a
-  resposta do pedido mais recente aparece; período invertido avisa sem chamar a API.
+  resposta do pedido mais recente aparece; período invertido avisa sem chamar a API;
+  a busca pendente é cancelada ao sair da tela.
 - **Início da direção**: o painel "Projetos" lista ativos primeiro e os encerrados
   marcados, com uma linha de total. Se `GET /dashboard/projetos` falhar, as pendências
   continuam e o painel mostra o aviso.

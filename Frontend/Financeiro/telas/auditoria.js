@@ -7,6 +7,9 @@ import { MODULOS, filtrosDaAuditoria, formatarOcorrido, rotuloDaAcao, rotuloDoMo
 
 const ESPERA_DA_BUSCA_MS = 300;
 
+// Busca pendente da tela aberta: abrir a tela de novo cancela a anterior.
+let esperaPendente = null;
+
 function campo(rotulo, id, controle) {
   return el("div", { class: "campo", style: "margin:0" }, el("label", { for: id }, rotulo), controle);
 }
@@ -47,10 +50,11 @@ export async function mostrar(container) {
 
   // Só a resposta do pedido mais recente vale (busca rápida pode chegar fora de ordem).
   let pedido = 0;
-  let espera = null;
+  clearTimeout(esperaPendente);
 
   async function carregar() {
-    clearTimeout(espera);
+    clearTimeout(esperaPendente);
+    if (!busca.isConnected) return; // a pessoa já saiu da tela
     const { filtros, erro } = filtrosDaAuditoria({ texto: busca.value, modulo: modulo.value, desde: desde.value, ate: ate.value });
     const meu = ++pedido;
     if (erro) return limpar(corpo).append(el("p", { class: "aviso-tela", role: "alert" }, erro));
@@ -63,8 +67,8 @@ export async function mostrar(container) {
   }
 
   busca.addEventListener("input", () => {
-    clearTimeout(espera);
-    espera = setTimeout(carregar, ESPERA_DA_BUSCA_MS);
+    clearTimeout(esperaPendente);
+    esperaPendente = setTimeout(carregar, ESPERA_DA_BUSCA_MS);
   });
   for (const controle of [modulo, desde, ate]) controle.addEventListener("change", carregar);
 

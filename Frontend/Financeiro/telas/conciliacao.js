@@ -10,7 +10,8 @@ import { montarPendencias } from "./inicio-dados.js";
 import { falhou, mensagemDeErro } from "./orcamento-dialogo.js";
 import { LIMITE_ARQUIVO_EXTRATO, aprovadosEmAberto, diasEmAberto, mensagemDaImportacao, mesmoValor, valorDoExtrato, valoresDiferentes } from "./conciliacao-dados.js";
 
-const IMPORTAM_EXTRATO = ["voluntario_financeiro", "coordenacao"];
+// A API também aceita coordenação, mas a Conciliação (e a importação) é tela do voluntário financeiro.
+const IMPORTAM_EXTRATO = ["voluntario_financeiro"];
 
 const ESTILO_LINHA = "display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--linha);cursor:pointer;width:100%;box-sizing:border-box;background:none;border-left:0;border-right:0;border-top:0;font:inherit;color:inherit;text-align:left";
 const ESTILO_SELECIONADA = ";background:var(--fundo-selecionado);box-shadow:inset 3px 0 0 var(--verde)";
@@ -156,7 +157,7 @@ export async function mostrar(container, { sessao }) {
               ` · ${item.descricao} ↔ ${lancamento.categoria} · ${nomeDoProjeto(lancamento)}`,
               valoresDiferentes(item, lancamento) ? el("small", { style: "display:block;color:#b45309;margin-top:2px" }, `Atenção: o lançamento é de ${formatarMoeda(lancamento.valor)}.`) : null,
             ),
-            el("button", { type: "button", class: "btn", disabled: ocupado, onclick: () => conciliar(item, lancamento) }, ocupado ? "Conciliando…" : "Conciliar"),
+            el("button", { type: "button", class: "btn", disabled: ocupado || importando, onclick: () => conciliar(item, lancamento) }, ocupado ? "Conciliando…" : "Conciliar"),
           )
         : el("p", { style: "margin:12px 0 0;color:var(--texto-suave)" }, "Marque um item do extrato e um lançamento para conciliar.");
 
@@ -166,7 +167,7 @@ export async function mostrar(container, { sessao }) {
         "div",
         { style: "display:flex;justify-content:space-between;align-items:flex-start" },
         el("div", {}, el("h1", {}, "Conciliação"), el("p", { class: "sub" }, aprovados.length === 1 ? "1 lançamento aprovado sem vínculo com o extrato" : `${aprovados.length} lançamentos aprovados sem vínculo com o extrato`)),
-        podeImportar ? el("button", { type: "button", class: "btn btn--sec", disabled: importando, onclick: () => arquivo.click() }, icone("importar"), importando ? "Importando…" : "Importar extrato (CSV)") : null,
+        podeImportar ? el("button", { type: "button", class: "btn btn--sec", disabled: importando || ocupado, onclick: () => arquivo.click() }, icone("importar"), importando ? "Importando…" : "Importar extrato (CSV)") : null,
       ),
       podeImportar ? arquivo : null,
       mensagem ? el("p", { role: mensagem.erro ? "alert" : "status", style: `margin:0 0 12px;color:${mensagem.erro ? "var(--perigo-texto)" : "var(--ativo-texto)"}` }, mensagem.texto) : null,
