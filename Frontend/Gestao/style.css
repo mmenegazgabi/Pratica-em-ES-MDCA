@@ -460,13 +460,19 @@ h1[tabindex="-1"]:focus{outline:none}
 /* Visão integrada (T-79): filtros, resumo do programa e as duas execuções lado a lado. */
 .integrada-filtros .filter-control{min-height:38px}
 .integrada-resumo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 16px}
-.integrada-grid{align-items:start}
-.integrada-stats{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:16px}
+.integrada-grid{align-items:start;grid-template-columns:repeat(2,minmax(0,1fr))}
+.integrada-stats{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:16px}
+/* Os valores em reais não podem quebrar nem invadir o vizinho: em cartão estreito,
+   orçado, realizado e saldo ficam um embaixo do outro. */
+.integrada-stats .stat{padding:18px 16px}
+.integrada-stats .stat-value{font-size:clamp(22px,1.6vw,28px);white-space:nowrap}
+.integrada-grid>.card{container-type:inline-size}
+@container (max-width:640px){.integrada-stats{grid-template-columns:1fr}.integrada-stats .stat+.stat{border-left:0;border-top:1px solid var(--line)}}
 .integrada-vinculo{margin-top:16px;font-size:12px}
 .integrada-grid .meta-percentual{min-width:110px}
 .integrada-grid .meta-percentual .progress{margin-top:6px}
 .integrada-grid td small{display:block;color:var(--color-neutral-700)}
-@media (max-width:760px){.integrada-grid{grid-template-columns:1fr}}
+@media (max-width:1180px){.integrada-grid{grid-template-columns:1fr}}
 
 /* Pessoas e famílias ligadas à API (T-49) */
 .stack{display:grid;gap:18px}
@@ -500,3 +506,7 @@ h1[tabindex="-1"]:focus{outline:none}
 .phone-record .actions{gap:8px}
 .phone-record .actions .btn{flex:1;min-height:44px}
 @media(max-width:580px){.so-computador{display:none}.so-celular{display:block}.agenda-semana{justify-content:space-between}.attendance{flex-wrap:wrap}.attendance-escolha{align-items:stretch;width:100%}.attendance-motivo{min-width:0;width:100%;min-height:46px;font-size:15px}}
+
+/* Login sem papel na Gestão: página sem menu lateral. */
+.main.no-profile{max-width:860px;margin:0 auto}
+.persona-current{font-family:var(--serif);font-size:14px;color:var(--pine)}
