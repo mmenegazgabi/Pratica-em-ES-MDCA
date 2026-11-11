@@ -1,6 +1,6 @@
 // Turmas e matrículas (T-53 · US-04): lista por programa, cadastro, lista de espera em
 // ordem, desligamento com data e motivo obrigatórios e aviso de conflito de horário (jsdom).
-import { beforeEach, test } from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 
@@ -49,6 +49,12 @@ const DETALHE = {
 };
 
 let container;
+// Espaçamento e caixas (T-00m): depois de cada teste, o que a tela montou passa pelo
+// verificador de layout (nada de caixa dentro de caixa nem blocos sem espaço entre eles).
+const { problemasDeLayout } = await import("./ajuda-layout.js");
+afterEach(() => {
+  if (container) assert.deepEqual(problemasDeLayout(container), []);
+});
 let registro;
 let avisos;
 const dialogo = () => document.getElementById("dialog");

@@ -2,7 +2,7 @@
 // do app e não intercepta a API.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -26,9 +26,15 @@ test("o service worker guarda todo arquivo do app (JS, CSS, fontes e página)", 
 });
 
 test("a lista do service worker só tem arquivos que existem", () => {
-  const existentes = new Set(arquivos(RAIZ, [""]));
+  // Inclui os CSS do Financeiro que a Gestão carrega (T-00j), fora da pasta da Gestão.
+  assert.deepEqual(ARQUIVOS.filter((a) => a !== "./" && !existsSync(join(RAIZ, a))), []);
+});
 
-  assert.deepEqual(ARQUIVOS.filter((a) => a !== "./" && !existentes.has(a)), []);
+test("o service worker guarda os estilos do Financeiro que a página carrega (T-00j)", () => {
+  const html = readFileSync(join(RAIZ, "index.html"), "utf8");
+  const estilos = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(estilos, ["../Financeiro/base/tokens.css", "../Financeiro/base/componentes.css", "../Financeiro/style.css", "style.css"]);
+  assert.deepEqual(estilos.filter((e) => !ARQUIVOS.includes(e)), []);
 });
 
 test("o service worker não intercepta a API nem envios", () => {

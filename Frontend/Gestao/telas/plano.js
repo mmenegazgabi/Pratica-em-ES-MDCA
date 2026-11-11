@@ -131,7 +131,7 @@ export function planoDoPrograma({ objetivos, acoes, painel }, { podeGerenciar = 
   );
 
   if (!objetivos.length) {
-    return el("div", {}, topo, el("section", { class: "card" }, vazio("Nenhum objetivo cadastrado", "Comece pelo objetivo do programa; depois cadastre as ações e as metas de cada uma.")));
+    return el("div", { class: "stack" }, topo, el("section", { class: "card" }, vazio("Nenhum objetivo cadastrado", "Comece pelo objetivo do programa; depois cadastre as ações e as metas de cada uma.")));
   }
 
   const cartoes = objetivos.map((objetivo) => {
@@ -149,7 +149,7 @@ export function planoDoPrograma({ objetivos, acoes, painel }, { podeGerenciar = 
       ),
     );
   });
-  return el("div", {}, topo, cartoes);
+  return el("div", { class: "stack" }, topo, cartoes);
 }
 
 export function mostrarPlano(container, programaId, { podeGerenciar = false, avisar = () => {}, ...substitutos } = {}) {

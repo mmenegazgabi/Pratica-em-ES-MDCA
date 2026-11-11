@@ -285,10 +285,10 @@ function abas(programaId, turmaId, ativa, detalhe) {
 function resumo(t) {
   return el(
     "section",
-    { class: "card turma-resumo" },
+    { class: "turma-resumo resumo-linha" },
     el(
       "div",
-      { class: "card-body" },
+      {},
       el("h2", {}, t.nome),
       el("p", { class: "muted" }, `${horario(t)} · ${t.espaco} · responsável ${t.responsavel}`),
       el(

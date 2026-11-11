@@ -34,14 +34,16 @@ globalThis.fetch = async (url, opcoes = {}) => {
   const corpo = RESPOSTAS.find(([padrao]) => padrao.test(url))?.[1] ?? [];
   return new Response(JSON.stringify(corpo), { status: 200 });
 };
-localStorage.setItem("mdca.financeiro.token", "token-de-teste");
-localStorage.setItem("mdca.gestao.usuario", "ana");
+// Login único (T-35): a sessão da plataforma, gravada pela página inicial.
+const SESSAO = { token: "sessao-de-teste", expira_em: "2999-01-01T00:00:00Z", usuario: { id: "ana", nome: "Ana Martins", email: "ana@mdca.test", papeis: ["coordenacao"] } };
+localStorage.setItem("mdca.sessao", JSON.stringify(SESSAO));
 
 await import("../app.js");
 
 const $ = (s) => document.querySelector(s);
 const esperar = () => new Promise((r) => setTimeout(r, 20));
-const menu = () => [...document.querySelectorAll(".sidebar .nav a")].map((a) => a.textContent);
+// Barra lateral com as classes do Financeiro (T-00k): .lateral, .lateral__item.
+const menu = () => [...document.querySelectorAll(".lateral .lateral__item > span:first-of-type")].map((s) => s.textContent);
 async function irPara(hash) {
   window.location.hash = hash;
   await esperar();
@@ -50,7 +52,7 @@ async function irPara(hash) {
 test("abre na Visão geral com o menu lateral do protótipo e o aviso de demonstração", () => {
   assert.equal($("#main h1").textContent.startsWith("Bom dia"), true);
   assert.deepEqual(
-    [...document.querySelectorAll(".sidebar .nav-label")].map((g) => g.textContent),
+    [...document.querySelectorAll(".lateral .lateral__grupo")].map((g) => g.textContent),
     ["Programas e público", "Execução e atendimento", "Resultados", "Auditoria e implantação"],
   );
   assert.ok($(".demo-banner"));
@@ -62,45 +64,45 @@ test("notificações e Visão geral mostram os alertas reais da API, sem os de i
   await irPara("#/inicio");
   await esperar();
 
-  assert.match($(".notification-button").textContent, /Notificações · \d+/);
+  // O contador de alertas abertos fica no item Visão geral, como o contador do Início no Financeiro.
+  const contador = $('.lateral__item[href="#/inicio"] .lateral__contador');
+  assert.equal(contador.hidden, false);
+  assert.match(contador.textContent, /^\d+$/);
   const destinos = [...document.querySelectorAll("#main .priority-item a")].map((a) => a.getAttribute("href"));
   assert.equal(destinos[0], "#/alertas/al-9");
   assert.match(document.querySelector("#main .priority-item").textContent, /Lara Oliveira precisa de um contato.*4 faltas seguidas/);
   // Os alertas fictícios de infrequência do protótipo saíram (o "al1" era de infrequência).
   assert.ok(!destinos.includes("#/alertas/al1"));
 
-  $('[data-action="notifications"]').click();
-  await esperar();
-  const doDialogo = [...document.querySelectorAll("#dialog .priority-item a")].map((a) => a.getAttribute("href"));
-  assert.equal(doDialogo[0], "#/alertas/al-9");
-  document.getElementById("dialog").close?.();
 });
 
 test("Programas carrega pela API, sem o aviso de demonstração", async () => {
   await irPara("#/programas");
 
   assert.equal(chamadas.at(-1).url.endsWith("/gestao/programas"), true);
-  assert.equal(chamadas.at(-1).headers.Authorization, "Bearer token-de-teste");
+  assert.equal(chamadas.at(-1).headers.Authorization, "Bearer sessao-de-teste");
   assert.equal($("#tela-api tbody td").textContent, "Semear");
   assert.equal($(".demo-banner"), null);
-  assert.equal($(".sidebar .nav a.active").textContent, "Programas e turmas");
+  assert.equal($('.lateral__item[aria-current="page"] span').textContent, "Programas e turmas");
 });
 
-test("Equipe e espaços de um programa do cadastro carrega pela API, com o usuário salvo", async () => {
+test("Equipe e espaços de um programa do cadastro carrega pela API, com a sessão do login", async () => {
   chamadas.length = 0;
   await irPara("#/programas/p-1/equipe");
 
   const urls = chamadas.map((c) => c.url.replace(/^https?:\/\/[^/]+/, ""));
   assert.ok(urls.includes("/gestao/programas/p-1/equipe?incluir_desligados=true"));
   assert.ok(urls.includes("/gestao/programas/p-1/espacos"));
-  assert.ok(chamadas.every((c) => c.headers["X-Usuario-Id"] === "ana"));
+  // Quem chama vem do token da sessão; não há mais código de acesso nem X-Usuario-Id.
+  assert.ok(chamadas.every((c) => c.headers.Authorization === "Bearer sessao-de-teste" && !("X-Usuario-Id" in c.headers)));
   assert.equal($("#tela-api tbody strong").textContent, "Ana Martins");
   assert.equal($("#main .subtitle").textContent, "Semear");
   assert.equal($(".demo-banner"), null);
 });
 
-test("o menu do usuário mostra o usuário usado na API", () => {
-  assert.match($(".api-user").textContent, /Usuário na API: ana/);
+test("o menu do usuário mostra a conta da sessão, sem formulário de usuário", () => {
+  assert.match($(".api-user").textContent, /Conectado como Ana Martins \(ana@mdca\.test\)/);
+  assert.equal(document.querySelector('[data-action="api-user"]'), null);
 });
 
 test("detalhe de programa fictício do protótipo continua na demonstração", async () => {
@@ -195,11 +197,27 @@ test("encontro registrado abre pela API, com a chamada (T-89)", async () => {
   assert.equal($(".demo-banner"), null);
 });
 
+test("nenhuma tela do protótipo tem caixa dentro de caixa nem blocos encostados (T-00m)", async () => {
+  const { problemasDeLayout } = await import("./ajuda-layout.js");
+  const rotas = [
+    "#/inicio", "#/programas/p1", "#/programas/p1/plano", "#/turmas", "#/turmas/t1", "#/pessoas/u1", "#/pessoas/u1/familia",
+    "#/pessoas/u1/documentos", "#/atividades/a1", "#/alertas/al2", "#/atendimentos", "#/rede", "#/aprendizagem",
+    "#/indicadores", "#/relatorios", "#/auditoria", "#/importacao", "#/sincronizacao", "#/guia", "#/mapa", "#/plataforma",
+  ];
+  const problemas = [];
+  for (const rota of rotas) {
+    await irPara(rota);
+    for (const p of problemasDeLayout($("#main") || document.body)) problemas.push(`${rota}: ${p}`);
+  }
+  assert.deepEqual(problemas, []);
+  await irPara("#/inicio");
+});
+
 test("seletor de módulo leva ao Financeiro e o logo ao menu inicial", () => {
-  const financas = [...document.querySelectorAll(".seg a")].find((a) => a.textContent === "Finanças");
+  const financas = [...document.querySelectorAll(".lateral__modulos a")].find((a) => a.textContent === "Finanças");
 
   assert.equal(financas.getAttribute("href"), "../Financeiro/");
-  assert.equal($(".sidebar .brand").getAttribute("href"), "../");
+  assert.equal($(".lateral .lateral__marca").getAttribute("href"), "../");
 });
 
 test("trocar de perfil muda o menu e fica salvo neste aparelho", async () => {
