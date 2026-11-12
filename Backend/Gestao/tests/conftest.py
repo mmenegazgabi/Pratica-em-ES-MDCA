@@ -112,3 +112,25 @@ def armazenamento(app):
     app.dependency_overrides[obter_armazenamento] = lambda: memoria
     yield memoria
     app.dependency_overrides.pop(obter_armazenamento, None)
+
+
+ADMIN = "admin-testes"
+
+
+@pytest.fixture
+def cabecalhos_admin(banco):
+    """Cabeçalhos de um usuário da administração (T-87: as rotas de programa pedem quem chama)."""
+    with banco.begin() as conexao:
+        conexao.execute(
+            sa.text("INSERT INTO usuarios (id, nome) VALUES (:id, 'Administração') ON CONFLICT DO NOTHING"),
+            {"id": ADMIN},
+        )
+        conexao.execute(
+            sa.text(
+                "INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES (:id, 'administracao') "
+                "ON CONFLICT DO NOTHING"
+            ),
+            {"id": ADMIN},
+        )
+    # Monta os cabeçalhos aqui: os módulos que usam esta fixture redefinem ``cabecalhos``.
+    return {"Authorization": f"Bearer {TOKEN}", "X-Usuario-Id": ADMIN}

@@ -43,11 +43,11 @@ def programa(banco):
             sa.text("INSERT INTO usuarios (id, nome) VALUES (:id, :nome)"),
             [{"id": "jessica", "nome": "Jéssica Almeida"}, {"id": "ana", "nome": "Ana Martins"}, {"id": "patricia", "nome": "Patrícia Souza"}],
         )
+        c.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('ana', 'coordenacao')"))
         c.execute(
             sa.text("INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) VALUES (:id, :u, 'p-1', :papel, :inicio)"),
             [
                 {"id": "v1", "u": "jessica", "papel": "educador", "inicio": INICIO},
-                {"id": "v2", "u": "ana", "papel": "coordenacao", "inicio": INICIO},
                 {"id": "v3", "u": "patricia", "papel": "assistente_social", "inicio": INICIO},
             ],
         )
@@ -104,7 +104,8 @@ def turma(cliente, cabecalhos, programa):
 
 
 def definir_limite(cliente, cabecalhos, valor):
-    resposta = cliente.patch(PROGRAMA, json={"limite_faltas": valor}, headers=cabecalhos)
+    # A coordenação (Ana) altera o limite; desde a T-87 a rota pede quem altera.
+    resposta = cliente.patch(PROGRAMA, json={"limite_faltas": valor}, headers=como(cabecalhos, "ana"))
     assert resposta.status_code == 200, resposta.text
     assert resposta.json()["limite_faltas"] == valor
 

@@ -38,18 +38,26 @@ Gestao/
 Sobre o cadastro canônico de Programas/Projetos
 (tabela `projetos`, ARQ-02, a mesma que o Financeiro usa em orçamentos e lançamentos):
 
-| Rota | O que faz |
-|---|---|
-| `GET /gestao/programas` | Lista os programas (id e nome) |
-| `POST /gestao/programas` | Cadastra um programa: `nome`, `identificador`, `publico`, `responsavel`, `vigencia_inicio`, `vigencia_fim` e `descricao` opcional |
-| `GET /gestao/programas/{id}` | Dados completos do programa |
-| `GET`/`POST …/{id}/convenios` | Convênios e parcerias: `nome`, `concedente` e vigência opcionais |
-| `GET`/`POST …/{id}/vagas` | Vagas ofertadas: `descricao` e `quantidade` |
-| `GET`/`POST …/{id}/objetivos` | Objetivos do plano de ação: `descricao` |
-| `GET`/`POST …/{id}/acoes` | Ações de um objetivo: `objetivo_id`, `descricao`, `periodo_inicio`, `periodo_fim`, `resultado_esperado` e `periodicidade` |
-| `GET`/`POST …/{id}/metas` | Metas de uma ação: `acao_id`, `descricao`, `valor_planejado` e `unidade` opcional |
-| `GET`/`POST …/{id}/metas/{meta_id}/registros` | O que foi realizado: `data`, `valor_realizado` e `observacao` opcional |
-| `GET …/{id}/painel` | Planejado, realizado (soma dos registros) e percentual de cada meta |
+Quem pode (T-87): **consultar** = equipe ativa do programa, direção, coordenação e
+administração; **alterar** = coordenação e administração. A coordenação é uma só: o
+papel `coordenacao` na conta (`usuarios_papeis`), que vale para todos os programas. Ela
+não existe como vínculo de programa (a API recusa e o banco tem um CHECK). A plataforma
+final não terá perfil de administração: a coordenação tem a visão geral, e a equipe fica
+limitada aos programas em que está vinculada.
+
+| Rota | O que faz | Quem pode |
+|---|---|---|
+| `GET /gestao/programas` | Lista os programas (id, nome, identificador e vigência) | Cada um vê só os que pode consultar (direção, coordenação e administração: todos) |
+| `POST /gestao/programas` | Cadastra um programa: `nome`, `identificador`, `publico`, `responsavel`, `vigencia_inicio`, `vigencia_fim` e `descricao` opcional | Coordenação e administração (US-02) |
+| `GET /gestao/programas/{id}` | Dados completos do programa | Consultar |
+| `PATCH /gestao/programas/{id}` | Edita os dados do programa: só os campos enviados mudam, e o resultado segue as regras do cadastro (um programa antigo, só com nome, precisa ganhar os obrigatórios) | Alterar |
+| `GET`/`POST …/{id}/convenios` | Convênios e parcerias: `nome`, `concedente` e vigência opcionais | Consultar / alterar |
+| `GET`/`POST …/{id}/vagas` | Vagas ofertadas: `descricao` e `quantidade` | Consultar / alterar |
+| `GET`/`POST …/{id}/objetivos` | Objetivos do plano de ação: `descricao` | Consultar / alterar |
+| `GET`/`POST …/{id}/acoes` | Ações de um objetivo: `objetivo_id`, `descricao`, `periodo_inicio`, `periodo_fim`, `resultado_esperado` e `periodicidade` | Consultar / alterar |
+| `GET`/`POST …/{id}/metas` | Metas de uma ação: `acao_id`, `descricao`, `valor_planejado` e `unidade` opcional | Consultar / alterar |
+| `GET`/`POST …/{id}/metas/{meta_id}/registros` | O que foi realizado: `data`, `valor_realizado` e `observacao` opcional | Consultar / alterar |
+| `GET …/{id}/painel` | Planejado, realizado (soma dos registros) e percentual de cada meta | Consultar |
 
 Regras:
 
@@ -61,24 +69,25 @@ Regras:
   `semestral` ou `anual`.
 - Identificador repetido (sem diferenciar maiúsculas) e vagas com a mesma descrição no
   programa respondem **409**. Programa ou meta inexistente: **404**.
-- Estas rotas exigem só o token de serviço; ainda não usam o acesso por programa
-  da seção abaixo.
+- O acesso segue a seção "Acesso às rotas de programa": quem não pode recebe **403**, e a
+  tentativa fica em `log_auditoria`. Programa inexistente continua **404**.
 
 ### Equipe, espaços e usuários (US-01)
 
 | Rota | O que faz | Quem pode |
 |---|---|---|
 | `GET /gestao/programas/{programa_id}/equipe` | Vínculos ativos (quem pode ser responsável de turma); `?incluir_desligados=true` traz o histórico | Equipe ativa do programa, direção, administração |
-| `POST /gestao/programas/{programa_id}/equipe` | Vincula uma pessoa: `usuario_id`, `papel_id`, `data_entrada` | Coordenação vinculada ao programa, administração |
-| `PATCH /gestao/programas/{programa_id}/equipe/{vinculo_id}/desligamento` | Registra a `data_saida`; o vínculo não é apagado | Coordenação vinculada ao programa, administração |
+| `POST /gestao/programas/{programa_id}/equipe` | Vincula uma pessoa: `usuario_id`, `papel_id`, `data_entrada` | Coordenação, administração |
+| `PATCH /gestao/programas/{programa_id}/equipe/{vinculo_id}/desligamento` | Registra a `data_saida`; o vínculo não é apagado | Coordenação, administração |
 | `GET /gestao/programas/{programa_id}/espacos` | Espaços do programa | Equipe ativa do programa, direção, administração |
-| `POST /gestao/programas/{programa_id}/espacos` | Cadastra um espaço: `nome`, `capacidade` opcional | Coordenação vinculada ao programa, administração |
-| `GET /gestao/usuarios` | Usuários da plataforma (ativos e desativados) com papéis da plataforma e vínculos ativos; alimenta "Usuários e acessos" e a escolha de quem vincular | Administração, coordenação ativa em algum programa |
+| `POST /gestao/programas/{programa_id}/espacos` | Cadastra um espaço: `nome`, `capacidade` opcional | Coordenação, administração |
+| `GET /gestao/usuarios` | Usuários da plataforma (ativos e desativados) com papéis da plataforma e vínculos ativos; alimenta "Usuários e acessos" e a escolha de quem vincular | Administração, coordenação |
 | `GET /gestao/papeis` | Catálogo de papéis (`id`, `nome`) | Qualquer usuário identificado |
 
 Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 409 (vínculo ativo repetido, desligamento já registrado, espaço com nome repetido),
-400 (usuário ou papel inexistente, saída antes da entrada) e 422 (corpo inválido).
+400 (usuário ou papel inexistente, papel `coordenacao` — que é da conta, não de vínculo —,
+saída antes da entrada) e 422 (corpo inválido).
 
 ## Acesso às rotas de programa (provisório até a T-33)
 
@@ -88,7 +97,7 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
   quando a pessoa entrou pela tela inicial (`mdca.sessao`); sem sessão, cai no código de
   acesso e no `X-Usuario-Id`, como antes.
 - Os papéis vêm do banco, não de cabeçalho: os da plataforma em `usuarios_papeis`
-  (direção e administração) e os do programa em `vinculos_equipe`.
+  (direção, coordenação e administração) e os do programa em `vinculos_equipe`.
 - **Vínculo ativo** é o que não tem data de saída ou tem a saída no futuro. A partir
   da data de saída o acesso ao programa é bloqueado, e o vínculo fica no histórico.
 - Usuário inexistente ou desativado não acessa nenhum programa.
@@ -108,8 +117,8 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
   -- Opcional, para testar o frontend:
   INSERT INTO projetos (id, nome) VALUES ('p-semear', 'Semear');
   INSERT INTO usuarios (id, nome) VALUES ('ana', 'Ana Martins'), ('jessica', 'Jéssica Almeida');
+  INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('ana', 'coordenacao');
   INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) VALUES
-    ('v-ana', 'ana', 'p-semear', 'coordenacao', '2026-01-10'),
     ('v-jessica', 'jessica', 'p-semear', 'educador', '2026-03-01');
   ```
 

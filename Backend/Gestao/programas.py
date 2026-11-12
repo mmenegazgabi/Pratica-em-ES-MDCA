@@ -109,15 +109,20 @@ def _eh_duplicidade(erro: IntegrityError) -> bool:
     return getattr(erro.orig, "sqlstate", None) == UNIQUE_VIOLATION
 
 
-def listar_programas(conexao: Connection) -> List[Programa]:
-    linhas = conexao.execute(
-        sa.text(
-            """
-            SELECT id, nome, identificador, vigencia_inicio, vigencia_fim
-            FROM projetos ORDER BY lower(nome), id
-            """
-        )
+def listar_programas(conexao: Connection, ids: Optional[List[str]] = None) -> List[Programa]:
+    """Todos os programas, ou só os de ``ids`` (lista vazia: nenhum)."""
+    if ids is not None and not ids:
+        return []
+    filtro = "" if ids is None else "WHERE id IN :ids"
+    consulta = sa.text(
+        f"""
+        SELECT id, nome, identificador, vigencia_inicio, vigencia_fim
+        FROM projetos {filtro} ORDER BY lower(nome), id
+        """
     )
+    if ids is not None:
+        consulta = consulta.bindparams(sa.bindparam("ids", expanding=True))
+    linhas = conexao.execute(consulta, {"ids": ids} if ids is not None else {})
     return [Programa(**linha._mapping) for linha in linhas]
 
 

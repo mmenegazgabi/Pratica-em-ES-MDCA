@@ -143,11 +143,12 @@ test("programa do cadastro real abre pela API, com as abas Resumo, Plano e metas
   );
 });
 
-test("Novo programa abre o formulário ligado à API, sem o aviso de demonstração", async () => {
+test("Novo programa abre o formulário ligado à API, com sugestões no Responsável", async () => {
   await irPara("#/programas/novo");
 
   assert.equal($(".demo-banner"), null);
   assert.ok($('#tela-api form [name="identificador"]'));
+  assert.equal($('#tela-api [name="responsavel"]').getAttribute("list"), "f-programa-responsaveis");
 });
 
 test("Turmas carrega pela API por programa; turmas fictícias do protótipo seguem na demonstração", async () => {

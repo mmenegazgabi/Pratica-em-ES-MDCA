@@ -35,7 +35,7 @@ PDF = b"%PDF-1.4\n" + b"0" * 200
 def programa(banco):
     """Programa p-1 com a turma t-1 (seg e qua, 14h às 16h) e p-2 com a turma t-9.
 
-    - ana: coordenação em p-1               - jessica: educadora em p-1 (responsável da t-1)
+    - ana: coordenação (na conta)           - jessica: educadora em p-1 (responsável da t-1)
     - patricia: assistente social em p-1    - rafael: educador em p-1 até 15/09/2026
     - bruno: educador só em p-2             - dora: direção    - admin: administração
     - t-1: lara e davi ativos desde 01/09; caio na lista de espera;
@@ -55,7 +55,7 @@ def programa(banco):
             ],
         )
         c.execute(
-            sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('dora', 'direcao'), ('admin', 'administracao')")
+            sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('ana', 'coordenacao'), ('dora', 'direcao'), ('admin', 'administracao')")
         )
         c.execute(
             sa.text(
@@ -63,7 +63,6 @@ def programa(banco):
                 "VALUES (:id, :u, :p, :papel, '2026-01-01', :saida)"
             ),
             [
-                {"id": "v1", "u": "ana", "p": "p-1", "papel": "coordenacao", "saida": None},
                 {"id": "v2", "u": "jessica", "p": "p-1", "papel": "educador", "saida": None},
                 {"id": "v3", "u": "patricia", "p": "p-1", "papel": "assistente_social", "saida": None},
                 {"id": "v4", "u": "rafael", "p": "p-1", "papel": "educador", "saida": "2026-09-15"},
