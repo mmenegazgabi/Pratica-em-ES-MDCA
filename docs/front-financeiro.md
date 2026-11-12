@@ -38,11 +38,12 @@ mais enviado. Quem só tem o papel educador é levado ao app do celular (`lancam
 | --- | --- | --- | --- |
 | Início (`#/inicio`) | Despesas aguardando aprovação e alertas de orçamento (>= 80%) | Alertas de orçamento e prestações de contas a gerar (vigência terminou ou termina em até 30 dias) | Aprovados sem conciliação |
 | Lançamentos (`#/lancamentos`) | Filas Aguardando/Aprovados/Rejeitados/Todos, filtro por projeto, painel com Aprovar e Rejeitar (motivo obrigatório) | não aparece | Abre em Aprovados (consulta) |
+| Painel (`#/painel`) | não aparece | Orçado, realizado e saldo de cada projeto (`GET /dashboard/projetos`), com filtro de período e de situação (todos, ativos, encerrados); os filtros também podem vir na rota (`#/painel?inicio=AAAA-MM-DD&fim=AAAA-MM-DD&situacao=ativo`) | não aparece |
 | Projetos (`#/projetos`) | Totais, uso por projeto, Novo projeto/Criar orçamento | Só leitura | não aparece |
 | Detalhe do projeto (`#/projetos/<orçamento>`) | Orçado, gasto, disponível, gasto / limite por categoria, últimos lançamentos e **Editar orçamento** | Igual, sem Editar orçamento | não aparece |
 | Conciliação (`#/conciliacao`) | não aparece | não aparece | Extrato e aprovados lado a lado; marca um de cada e concilia (`PATCH /lancamentos/{id}/conciliar`) |
 | Relatórios (`#/relatorios`) | Prestação de contas: projeto, período, PDF (impressão) ou planilha (CSV) | Igual | não aparece |
-| Auditoria (`#/auditoria`) | Histórico de ações com busca | Igual | não aparece |
+| Auditoria (`#/auditoria`) | Trilha do Financeiro (`GET /auditoria?modulo=financeiro`), mais recentes primeiro, horário de Brasília, filtro de período, busca na página e páginas de 50; só leitura | Igual | não aparece |
 
 O papel **Educador** vai direto para o app do celular (`lancamento/`). A gestão de
 pessoas e papéis fica na tela Administração da página inicial (`Frontend/Admin/`,
@@ -55,10 +56,11 @@ papel voltam para o Início.
 ### O que ainda usa dados de exemplo
 
 `telas/dados-exemplo.js` guarda dados fixos para o que ainda não tem backend: o
-**extrato bancário** da Conciliação e o **histórico** da Auditoria. As telas avisam ("exemplo") e nada disso é salvo. "Importar extrato" só
-mostra um aviso. O resto (lançamentos, orçamentos, conciliar, prévia e arquivos do
-relatório) já usa a API de verdade. Quando existirem as rotas, troque as importações
-de `dados-exemplo.js` por chamadas em `base/api.js` e apague o arquivo.
+**extrato bancário** da Conciliação. A tela avisa ("exemplo") e nada disso é salvo.
+"Importar extrato" só mostra um aviso. O resto (lançamentos, orçamentos, conciliar,
+prévia e arquivos do relatório, painel e auditoria) já usa a API de verdade. Quando
+existir a rota do extrato, troque a importação de `dados-exemplo.js` por uma chamada
+em `base/api.js` e apague o arquivo.
 
 ## Rotas do backend adicionadas na parte 1
 
@@ -80,8 +82,6 @@ CORS só permite GET, POST, PATCH e OPTIONS; por isso não há PUT nem DELETE.
 
 - Extrato: importar o arquivo do banco e listar os itens (a Conciliação usa o extrato
   de exemplo).
-- Registro de ações para a Auditoria. Pessoas, papéis e convites (tela Acessos)
-  dependem da US-08, login.
 - Quem rejeitou e quando, para mostrar no aviso da despesa rejeitada no celular.
 
 Tickets de acompanhamento:

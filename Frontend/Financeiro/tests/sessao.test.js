@@ -71,7 +71,7 @@ test("armazenamento quebrado não derruba a leitura", () => {
 test("itensDeMenu por papel", () => {
   const ids = (papel) => itensDeMenu(papel).map((i) => i.id);
   assert.deepEqual(ids("coordenacao"), ["inicio", "lancamentos", "projetos", "relatorios", "auditoria"]);
-  assert.deepEqual(ids("direcao"), ["inicio", "projetos", "relatorios", "auditoria"]);
+  assert.deepEqual(ids("direcao"), ["inicio", "painel", "projetos", "relatorios", "auditoria"]);
   assert.deepEqual(ids("voluntario_financeiro"), ["inicio", "lancamentos", "conciliacao"]);
   assert.deepEqual(ids("educador"), []);
   for (const papel of ["coordenacao", "direcao", "voluntario_financeiro"]) {

@@ -264,6 +264,12 @@ def remover(sim: bool) -> None:
             ("lancamentos", "id LIKE 'demo-%' OR orcamento_id LIKE 'demo-%'"),
             ("orcamentos", "id LIKE 'demo-%'"),
             ("vinculos_equipe", "id LIKE 'demo-%' OR usuario_id LIKE 'demo-%'"),
+            # O que o uso das contas deixou: sessões do login, códigos de primeiro acesso,
+            # notificações e rascunhos. As sessões e os códigos impedem apagar a conta.
+            ("sessoes", "usuario_id LIKE 'demo-%'"),
+            ("codigos_acesso", "usuario_id LIKE 'demo-%'"),
+            ("notificacoes", "destinatario_id LIKE 'demo-%'"),
+            ("rascunhos_lancamento", "autor_id LIKE 'demo-%'"),
             ("usuarios_papeis", "usuario_id LIKE 'demo-%'"),
             ("usuarios", "id LIKE 'demo-%'"),
         ):

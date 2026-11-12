@@ -50,3 +50,11 @@ test("telas novas: conciliação, relatórios e auditoria por papel", () => {
   assert.equal(rotaPermitida("auditoria", "coordenacao"), true);
   assert.equal(rotaPermitida("auditoria", "voluntario_financeiro"), false);
 });
+
+test("painel da Diretoria (US-07): rota com filtros e só para a Direção", () => {
+  assert.deepEqual(lerRota("#/painel?inicio=2026-03-01&situacao=ativo"), { tela: "painel", parametros: { inicio: "2026-03-01", situacao: "ativo" } });
+  assert.equal(rotaPermitida("painel", "direcao"), true);
+  for (const papel of ["coordenacao", "voluntario_financeiro", "educador"]) {
+    assert.equal(rotaPermitida("painel", papel), false, papel);
+  }
+});
