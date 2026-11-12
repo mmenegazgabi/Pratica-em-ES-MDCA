@@ -1,8 +1,11 @@
-"""Extrato bancário (US-05): importação de CSV e itens para conciliar.
+"""Extrato bancário (US-05): leitura do CSV e itens para conciliar.
 
-Armazenamento em memória, como o restante do Financeiro por enquanto. O item do
-extrato é o lado do banco da conciliação; ``conciliado_com`` guarda o id do
-lançamento a que ele foi ligado.
+O item do extrato é o lado do banco da conciliação; ``conciliado_com`` guarda o id do
+lançamento a que ele foi ligado. Os itens são guardados pelo repositório
+(``persistencia.py``): na tabela ``extrato_itens`` com ``DATABASE_URL`` ou em
+``caixa_do_extrato`` (memória do processo) sem ela. As regras de importação (CSV,
+limite de 1 MB, erros com o número da linha, repetidos por multiconjunto) ficam aqui
+e valem para os dois.
 """
 
 import csv
@@ -29,7 +32,10 @@ class ExtratoInvalido(ValueError):
 
 
 class ItemJaConciliado(ValueError):
-    pass
+    MENSAGEM = "Item do extrato já conciliado com outro lançamento."
+
+    def __init__(self, mensagem: str = MENSAGEM) -> None:
+        super().__init__(mensagem)
 
 
 @dataclass
@@ -168,7 +174,32 @@ def ler_csv(conteudo: bytes) -> List[ItemExtrato]:
     return itens
 
 
-# --- Armazenamento -----------------------------------------------------------
+# --- Repetidos --------------------------------------------------------------
+
+
+def chave(item: ItemExtrato) -> Tuple[date, str, float]:
+    return (item.data, item.descricao, item.valor)
+
+
+def separar_repetidos(
+    novos: List[ItemExtrato], ja_guardados: Counter
+) -> List[ItemExtrato]:
+    """Os itens que entram, pela regra de multiconjunto.
+
+    Para cada (data, descrição, valor), entram ``max(0, quantas_no_arquivo -
+    quantas_já_guardadas)``. Importar o mesmo arquivo de novo não muda nada; dois PIX
+    iguais no mesmo dia entram os dois. ``ja_guardados`` é consumido.
+    """
+    entram = []
+    for item in novos:
+        if ja_guardados[chave(item)] > 0:
+            ja_guardados[chave(item)] -= 1
+            continue
+        entram.append(item)
+    return entram
+
+
+# --- Memória (sem DATABASE_URL) ----------------------------------------------
 
 
 class CaixaDoExtrato:
@@ -177,22 +208,10 @@ class CaixaDoExtrato:
         self._itens: List[ItemExtrato] = []
 
     def importar(self, novos: List[ItemExtrato]) -> Tuple[List[ItemExtrato], int]:
-        """Guarda os itens novos; devolve (guardados, repetidos).
-
-        Regra de multiconjunto: para cada (data, descrição, valor), entram
-        ``max(0, quantas_no_arquivo - quantas_já_guardadas)``. Importar o mesmo
-        arquivo de novo não muda nada; dois PIX iguais no mesmo dia entram os dois.
-        """
+        """Guarda os itens novos; devolve (guardados, repetidos)."""
         with self._lock:
-            ja_guardados = Counter((i.data, i.descricao, i.valor) for i in self._itens)
-            guardados = []
-            for item in novos:
-                chave = (item.data, item.descricao, item.valor)
-                if ja_guardados[chave] > 0:
-                    ja_guardados[chave] -= 1
-                    continue
-                self._itens.append(item)
-                guardados.append(item)
+            guardados = separar_repetidos(novos, Counter(chave(i) for i in self._itens))
+            self._itens.extend(guardados)
         return guardados, len(novos) - len(guardados)
 
     def listar(self, em_aberto: Optional[bool] = None) -> List[ItemExtrato]:
@@ -203,31 +222,17 @@ class CaixaDoExtrato:
             itens = [i for i in itens if (i.conciliado_com is None) == em_aberto]
         return sorted(itens, key=lambda i: i.data)
 
-    def _buscar(self, item_id: str) -> Optional[ItemExtrato]:
-        return next((i for i in self._itens if i.id == item_id), None)
-
-    def vincular(self, item_id: str, lancamento_id: str) -> bool:
-        """Liga o item ao lançamento; True se a ligação foi feita agora.
-
-        False quando ``item_id`` não é de um item do extrato (referência livre) ou
-        o item já estava ligado a este mesmo lançamento.
-        """
+    def buscar(self, item_id: str) -> Optional[ItemExtrato]:
         with self._lock:
-            item = self._buscar(item_id)
-            if item is None:
-                return False
-            if item.conciliado_com == lancamento_id:
-                return False
-            if item.conciliado_com is not None:
-                raise ItemJaConciliado("Item do extrato já conciliado com outro lançamento.")
+            return next((i for i in self._itens if i.id == item_id), None)
+
+    def vincular(self, item_id: str, lancamento_id: str) -> None:
+        """Liga o item (ainda livre) ao lançamento."""
+        with self._lock:
+            item = next(i for i in self._itens if i.id == item_id)
+            if item.conciliado_com not in (None, lancamento_id):
+                raise ItemJaConciliado()
             item.conciliado_com = lancamento_id
-            return True
-
-    def desvincular(self, item_id: str, lancamento_id: str) -> None:
-        with self._lock:
-            item = self._buscar(item_id)
-            if item is not None and item.conciliado_com == lancamento_id:
-                item.conciliado_com = None
 
     def limpar(self) -> None:
         with self._lock:

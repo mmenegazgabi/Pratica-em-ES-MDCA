@@ -17,6 +17,9 @@ Siga "Rodar local com Postgres" em `docs/login.md` (a API integrada precisa roda
 partir de `Backend/`, com `DATABASE_URL`). Sem as variáveis `R2_*`, a API responde 503
 ao receber fotos; para testar sem R2, veja `docs/lancamento-celular.md`. Depois,
 abra `http://localhost:8090/`, entre e escolha Financeiro.
+Com `DATABASE_URL`, os dados do Financeiro vão para esse banco (cuidado para não
+apontar para o de produção); `FINANCEIRO_ARMAZENAMENTO=memoria` força a memória. Veja
+`docs/persistencia-financeiro.md`.
 
 ## Login e papel
 

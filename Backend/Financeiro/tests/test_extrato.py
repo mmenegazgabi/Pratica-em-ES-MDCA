@@ -1,37 +1,67 @@
-"""US-05 — extrato bancário: POST/GET /extrato e conciliação com item do extrato."""
+"""US-05 — extrato bancário: POST/GET /extrato e conciliação com item do extrato.
 
-from datetime import date
+Todos os testes rodam duas vezes: com os dados em memória e no PostgreSQL de teste
+(``TEST_DATABASE_URL``, fixture ``banco_financeiro``; sem ela, a rodada do banco é
+pulada). Os lançamentos são criados pela API, do jeito que as telas fazem.
+"""
+
+import itertools
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+import sqlalchemy as sa
 from fastapi.testclient import TestClient
 
+from Financeiro.comprovantes import ArmazenamentoEmMemoria
 from Financeiro.extrato import caixa_do_extrato
 from Financeiro.main import app
-from Financeiro.orcamento import Lancamento, Orcamento, StatusLancamento
+from Financeiro.notificacoes import caixa_de_notificacoes
+from Financeiro.persistencia import AUDITORIA_EM_MEMORIA
+from Financeiro.projetos import _projetos
+from Financeiro.rascunhos import caixa_de_rascunhos
+from Financeiro.routers.comprovantes import obter_armazenamento
 from Financeiro.routers.orcamentos import _orcamentos
 
 TOKEN = "token-de-teste-123"
+JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
 
 client = TestClient(app)
 
 
-def cabecalhos(papel="voluntario_financeiro", token=TOKEN):
+def cabecalhos(papel="voluntario_financeiro", token=TOKEN, usuario="vera"):
     headers = {}
     if token is not None:
         headers["Authorization"] = f"Bearer {token}"
     if papel is not None:
         headers["X-Papel-Usuario"] = papel
+    if usuario is not None:
+        headers["X-Usuario-Id"] = usuario
     return headers
 
 
-@pytest.fixture(autouse=True)
-def ambiente(monkeypatch):
+def esvaziar_memoria() -> None:
+    """O equivalente a reiniciar a API: some tudo o que estava só no processo."""
+    _projetos.clear()
+    _orcamentos.clear()
+    caixa_de_notificacoes.limpar()
+    caixa_de_rascunhos.limpar()
+    caixa_do_extrato.limpar()
+    AUDITORIA_EM_MEMORIA.clear()
+
+
+@pytest.fixture(autouse=True, params=["memoria", "banco"])
+def armazenamento(request, monkeypatch):
+    """Devolve o motor do banco de teste na rodada do banco e None na da memória."""
+    motor = None
+    if request.param == "banco":
+        motor = request.getfixturevalue("banco_financeiro")
+    else:
+        esvaziar_memoria()
     monkeypatch.setenv("FINANCEIRO_API_TOKEN", TOKEN)
-    _orcamentos.clear()
-    caixa_do_extrato.limpar()
-    yield
-    _orcamentos.clear()
-    caixa_do_extrato.limpar()
+    app.dependency_overrides[obter_armazenamento] = lambda: ArmazenamentoEmMemoria()
+    yield motor
+    app.dependency_overrides.pop(obter_armazenamento, None)
+    esvaziar_memoria()
 
 
 def importar(csv_texto, papel="voluntario_financeiro", nome="extrato.csv"):
@@ -312,9 +342,8 @@ def test_lista_vazia():
 
 def test_filtro_em_aberto():
     itens = importar(CSV_PONTO_E_VIRGULA).json()["itens"]
-    lancamento = aprovado()
-    criar_orcamento(lancamento)
-    conciliar(lancamento.id, itens[0]["id"])
+    lancamento_id = aprovado()
+    conciliar(lancamento_id, itens[0]["id"])
 
     em_aberto = listar(em_aberto="true").json()
     conciliados = listar(em_aberto="false").json()
@@ -322,29 +351,61 @@ def test_filtro_em_aberto():
 
     assert [i["id"] for i in em_aberto] == [itens[1]["id"]]
     assert [i["id"] for i in conciliados] == [itens[0]["id"]]
-    assert conciliados[0]["conciliado_com"] == lancamento.id
+    assert conciliados[0]["conciliado_com"] == lancamento_id
     assert len(todos) == 2
 
 
 # --- Conciliação com item do extrato -----------------------------------------
 
 
-def criar_orcamento(*lancamentos):
-    orcamento = Orcamento(
-        id="orcamento-1",
-        projeto_id="projeto-1",
-        valor_total=1000,
-        data_inicio=date(2026, 1, 1),
-        data_fim=date(2026, 12, 31),
-        categorias_despesa=["materiais"],
-        lancamentos=list(lancamentos),
+_projetos_criados = itertools.count(1)
+
+
+def criar_orcamento():
+    coordenacao = cabecalhos("coordenacao", usuario="luana")
+    nome = f"Leitura {next(_projetos_criados)}"
+    projeto = client.post("/projetos", json={"nome": nome}, headers=coordenacao)
+    assert projeto.status_code == 201, projeto.text
+    resposta = client.post(
+        "/orcamentos",
+        json={
+            "projeto_id": projeto.json()["id"],
+            "valor_total": 1000,
+            "data_inicio": "2026-01-01",
+            "data_fim": "2026-12-31",
+            "categorias_despesa": ["materiais"],
+        },
+        headers=coordenacao,
     )
-    _orcamentos.append(orcamento)
-    return orcamento
+    assert resposta.status_code == 201, resposta.text
+    return resposta.json()["id"]
 
 
-def aprovado(valor=200):
-    return Lancamento(valor=valor, status=StatusLancamento.APROVADO)
+def lancar(orcamento_id, valor="200.00", aprovar=True):
+    resposta = client.post(
+        "/lancamentos",
+        data={
+            "orcamento_id": orcamento_id,
+            "valor": valor,
+            "descricao": "Tinta",
+            "categoria": "materiais",
+            "data_despesa": "2026-05-15",
+        },
+        files={"comprovante": ("nota.jpg", JPEG, "image/jpeg")},
+        headers=cabecalhos("educador", usuario="marcos"),
+    )
+    assert resposta.status_code == 201, resposta.text
+    lancamento_id = resposta.json()["id"]
+    if aprovar:
+        aprovado = client.patch(
+            f"/lancamentos/{lancamento_id}/aprovar", headers=cabecalhos("coordenacao", usuario="luana")
+        )
+        assert aprovado.status_code == 200, aprovado.text
+    return lancamento_id
+
+
+def aprovado():
+    return lancar(criar_orcamento())
 
 
 def conciliar(lancamento_id, referencia):
@@ -355,65 +416,85 @@ def conciliar(lancamento_id, referencia):
     )
 
 
+def lancamento(lancamento_id):
+    return client.get(f"/lancamentos/{lancamento_id}", headers=cabecalhos("coordenacao")).json()
+
+
 def item_do_extrato(item_id):
     return next(i for i in listar().json() if i["id"] == item_id)
 
 
+def trilha(**params):
+    resposta = client.get("/auditoria", params=params, headers=cabecalhos("coordenacao", usuario="luana"))
+    assert resposta.status_code == 200, resposta.text
+    return resposta.json()["itens"]
+
+
 def test_conciliar_com_id_do_item_marca_o_item():
     item = importar(CSV_PONTO_E_VIRGULA).json()["itens"][0]
-    lancamento = aprovado()
-    criar_orcamento(lancamento)
+    lancamento_id = aprovado()
 
-    resposta = conciliar(lancamento.id, item["id"])
+    resposta = conciliar(lancamento_id, item["id"])
 
     assert resposta.status_code == 200
     assert resposta.json()["referencia_extrato"] == item["id"]
-    assert item_do_extrato(item["id"])["conciliado_com"] == lancamento.id
+    assert item_do_extrato(item["id"])["conciliado_com"] == lancamento_id
 
 
 def test_item_ja_conciliado_com_outro_lancamento_e_recusado():
     item = importar(CSV_PONTO_E_VIRGULA).json()["itens"][0]
-    um, outro = aprovado(), aprovado()
-    criar_orcamento(um, outro)
-    conciliar(um.id, item["id"])
+    orcamento_id = criar_orcamento()
+    um, outro = lancar(orcamento_id), lancar(orcamento_id)
+    conciliar(um, item["id"])
 
-    resposta = conciliar(outro.id, item["id"])
+    resposta = conciliar(outro, item["id"])
 
     assert resposta.status_code == 400
     assert resposta.json()["detail"] == "Item do extrato já conciliado com outro lançamento."
-    assert outro.conciliado is False
-    assert item_do_extrato(item["id"])["conciliado_com"] == um.id
+    assert lancamento(outro)["conciliado"] is False
+    assert item_do_extrato(item["id"])["conciliado_com"] == um
 
 
 def test_repetir_a_conciliacao_do_mesmo_par_e_idempotente():
     item = importar(CSV_PONTO_E_VIRGULA).json()["itens"][0]
-    lancamento = aprovado()
-    criar_orcamento(lancamento)
-    conciliar(lancamento.id, item["id"])
+    lancamento_id = aprovado()
+    conciliar(lancamento_id, item["id"])
 
-    resposta = conciliar(lancamento.id, item["id"])
+    resposta = conciliar(lancamento_id, item["id"])
 
     assert resposta.status_code == 200
-    assert item_do_extrato(item["id"])["conciliado_com"] == lancamento.id
+    assert item_do_extrato(item["id"])["conciliado_com"] == lancamento_id
+    assert [e["codigo"] for e in trilha(acao="conciliar_lancamento")] == ["conciliar_lancamento"]
+
+
+def test_lancamento_ja_conciliado_nao_prende_outro_item():
+    um, outro = importar(CSV_PONTO_E_VIRGULA).json()["itens"]
+    lancamento_id = aprovado()
+    conciliar(lancamento_id, um["id"])
+
+    resposta = conciliar(lancamento_id, outro["id"])
+
+    assert resposta.status_code == 409
+    assert item_do_extrato(outro["id"])["conciliado_com"] is None
 
 
 def test_referencia_livre_continua_aceita_e_nao_mexe_no_extrato():
     importar(CSV_PONTO_E_VIRGULA)
-    lancamento = aprovado()
-    criar_orcamento(lancamento)
+    lancamento_id = aprovado()
 
-    resposta = conciliar(lancamento.id, "EXT-2026-10-001")
+    resposta = conciliar(lancamento_id, "EXT-2026-10-001")
 
     assert resposta.status_code == 200
     assert all(i["conciliado_com"] is None for i in listar().json())
+    [evento] = trilha(acao="conciliar_lancamento")
+    assert "item_extrato_id" not in evento["detalhes"]
 
 
 def test_lancamento_nao_aprovado_nao_prende_o_item():
     item = importar(CSV_PONTO_E_VIRGULA).json()["itens"][0]
-    pendente = Lancamento(valor=10, status=StatusLancamento.PENDENTE)
-    criar_orcamento(pendente)
+    pendente = lancar(criar_orcamento(), aprovar=False)
 
-    resposta = conciliar(pendente.id, item["id"])
+    resposta = conciliar(pendente, item["id"])
 
     assert resposta.status_code == 409
     assert item_do_extrato(item["id"])["conciliado_com"] is None
@@ -421,9 +502,118 @@ def test_lancamento_nao_aprovado_nao_prende_o_item():
 
 def test_lancamento_inexistente_nao_prende_o_item():
     item = importar(CSV_PONTO_E_VIRGULA).json()["itens"][0]
-    criar_orcamento(aprovado())
 
     resposta = conciliar("nao-existe", item["id"])
 
     assert resposta.status_code == 404
     assert item_do_extrato(item["id"])["conciliado_com"] is None
+
+
+# --- Auditoria (T-34) ----------------------------------------------------------
+
+
+def test_importacao_vai_para_a_trilha_e_reimportar_nao():
+    importar(CSV_PONTO_E_VIRGULA)
+    importar(CSV_PONTO_E_VIRGULA)
+    importar("data;descricao;valor\n2026-10-05;PIX recebido doação;1500,00\n2026-10-07;Novo;1,00\n")
+
+    eventos = trilha(acao="importar_extrato")
+
+    assert [(e["acao"], e["alvo"], e["quem"]) for e in eventos] == [
+        ("Importou extrato bancário", "1 item novo · 1 repetido", "vera"),
+        ("Importou extrato bancário", "2 itens novos", "vera"),
+    ]
+    assert eventos[0]["detalhes"] == {"importados": 1, "ignorados_repetidos": 1}
+    assert eventos[0]["alvo_tipo"] == "extrato"
+
+
+def test_importacao_invalida_ou_negada_nao_grava_na_trilha_de_importacao():
+    importar("data;descricao;valor\n2026-10-05;A;x\n")
+    importar(CSV_PONTO_E_VIRGULA, "educador")
+
+    assert trilha(acao="importar_extrato") == []
+
+
+def test_conciliacao_com_item_registra_o_item_na_trilha():
+    item = importar(CSV_PONTO_E_VIRGULA).json()["itens"][0]
+    lancamento_id = aprovado()
+    conciliar(lancamento_id, item["id"])
+
+    [evento] = trilha(acao="conciliar_lancamento")
+
+    assert evento["alvo_id"] == lancamento_id
+    assert evento["detalhes"]["item_extrato_id"] == item["id"]
+    assert evento["detalhes"]["referencia_extrato"] == item["id"]
+
+
+# --- Só no banco ----------------------------------------------------------------
+
+
+def _so_no_banco(motor):
+    if motor is None:
+        pytest.skip("só no PostgreSQL")
+
+
+def test_extrato_e_ligacao_ficam_gravados_e_sobrevivem_a_reinicio(armazenamento):
+    _so_no_banco(armazenamento)
+    itens = importar(CSV_PONTO_E_VIRGULA).json()["itens"]
+    lancamento_id = aprovado()
+    conciliar(lancamento_id, itens[1]["id"])
+    antes = listar().json()
+
+    esvaziar_memoria()
+
+    assert listar().json() == antes
+    with armazenamento.connect() as conexao:
+        linhas = conexao.execute(
+            sa.text("SELECT id, valor, conciliado_com FROM extrato_itens ORDER BY data")
+        ).all()
+    assert [(l.id, str(l.valor), l.conciliado_com) for l in linhas] == [
+        (itens[0]["id"], "1500.00", None),
+        (itens[1]["id"], "-250.50", lancamento_id),
+    ]
+
+
+def test_importacoes_ao_mesmo_tempo_nao_duplicam(armazenamento):
+    _so_no_banco(armazenamento)
+    texto = "data;descricao;valor\n2026-10-05;PIX;10,00\n2026-10-05;PIX;10,00\n"
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        respostas = list(executor.map(lambda _: importar(texto), range(4)))
+
+    assert sorted(r.json()["importados"] for r in respostas) == [0, 0, 0, 2]
+    assert len(listar().json()) == 2
+
+
+def test_dois_lancamentos_ao_mesmo_tempo_no_mesmo_item_so_um_liga(armazenamento):
+    _so_no_banco(armazenamento)
+    item = importar(CSV_PONTO_E_VIRGULA).json()["itens"][0]
+    um, outro = aprovado(), aprovado()  # orçamentos diferentes: não esperam um pelo outro
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        respostas = list(executor.map(lambda l: conciliar(l, item["id"]), [um, outro]))
+
+    assert sorted(r.status_code for r in respostas) == [200, 400]
+    vencedor = um if respostas[0].status_code == 200 else outro
+    perdedor = outro if vencedor == um else um
+    assert item_do_extrato(item["id"])["conciliado_com"] == vencedor
+    assert lancamento(perdedor)["conciliado"] is False
+
+
+def test_falha_ao_ligar_desfaz_a_conciliacao(armazenamento, monkeypatch):
+    """A ligação vai na mesma transação: se ela falha, o lançamento não fica conciliado."""
+    _so_no_banco(armazenamento)
+    from Financeiro.extrato import ItemJaConciliado
+    from Financeiro.persistencia import RepositorioBanco
+
+    def falhar(self, item_id, lancamento_id):
+        raise ItemJaConciliado()
+
+    monkeypatch.setattr(RepositorioBanco, "vincular_item_extrato", falhar)
+    item = importar(CSV_PONTO_E_VIRGULA).json()["itens"][0]
+    lancamento_id = aprovado()
+
+    assert conciliar(lancamento_id, item["id"]).status_code == 400
+    assert lancamento(lancamento_id)["conciliado"] is False
+    assert item_do_extrato(item["id"])["conciliado_com"] is None
+    assert trilha(acao="conciliar_lancamento") == []

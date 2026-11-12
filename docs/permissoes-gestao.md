@@ -71,7 +71,8 @@ para escolher quem vincular à equipe. Criar e editar contas ainda não tem rota
 
 Rota: `GET /gestao/programas/{id}/visao-integrada`. Quem não vê os valores
 financeiros recebe a visão com `financeira: null`, sem 403. Toda consulta é registrada
-na auditoria (`consulta_visao_integrada`).
+na auditoria (`consulta_visao_integrada`). Os valores financeiros vêm dos orçamentos do
+próprio programa no banco (vínculo só pelo id; veja `docs/persistencia-financeiro.md`).
 
 ### Pessoas atendidas (US-03)
 

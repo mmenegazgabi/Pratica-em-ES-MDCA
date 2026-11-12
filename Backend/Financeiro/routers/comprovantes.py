@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFil
 from pydantic import BaseModel
 
 if __package__ == "routers":
-    from autenticacao import exigir_autenticacao
+    from autenticacao import exigir_acesso_financeiro
     from comprovantes import (
         TAMANHO_MAXIMO_BYTES,
         ArmazenamentoComprovantes,
@@ -25,7 +25,7 @@ if __package__ == "routers":
         validar_comprovante,
     )
 else:
-    from ..autenticacao import exigir_autenticacao
+    from ..autenticacao import exigir_acesso_financeiro
     from ..comprovantes import (
         TAMANHO_MAXIMO_BYTES,
         ArmazenamentoComprovantes,
@@ -40,7 +40,7 @@ else:
 router = APIRouter(
     prefix="/comprovantes",
     tags=["comprovantes"],
-    dependencies=[Depends(exigir_autenticacao)],
+    dependencies=[Depends(exigir_acesso_financeiro)],
 )
 
 _VARIAVEIS_R2 = ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME")

@@ -11,6 +11,10 @@ TOKEN = "token-de-teste-123"
 
 client = TestClient(app)
 
+# As rotas de orçamento passaram a exigir login (T-33): a tela manda o código de
+# acesso e o papel em toda chamada.
+LEITURA_ORCAMENTO = {"Authorization": f"Bearer {TOKEN}", "X-Papel-Usuario": "coordenacao"}
+
 ORCAMENTO = {
     "projeto_id": "projeto-1",
     "valor_total": 1000.0,
@@ -54,19 +58,18 @@ def test_criar_orcamento_para_projeto_existente_retorna_201_com_nome():
     assert resposta.status_code == 201
     assert resposta.json()["projeto_id"] == projeto["id"]
     orcamento_id = resposta.json()["id"]
-    detalhe = client.get(f"/orcamentos/{orcamento_id}").json()
+    detalhe = client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()
     assert detalhe["projeto_nome"] == "Oficina de Arte"
-    assert client.get("/orcamentos").json()[0]["projeto_nome"] == "Oficina de Arte"
+    assert client.get("/orcamentos", headers=LEITURA_ORCAMENTO).json()[0]["projeto_nome"] == "Oficina de Arte"
 
 
 def test_projeto_nome_e_nulo_quando_o_projeto_nao_existe_mais():
     projeto = criar_projeto("Temporário").json()
     orcamento_id = client.post(
-        "/orcamentos", json={**ORCAMENTO, "projeto_id": projeto["id"]}
-    ).json()["id"]
+        "/orcamentos", json={**ORCAMENTO, "projeto_id": projeto["id"]}, headers=LEITURA_ORCAMENTO).json()["id"]
     _projetos.clear()
 
-    assert client.get(f"/orcamentos/{orcamento_id}").json()["projeto_nome"] is None
+    assert client.get(f"/orcamentos/{orcamento_id}", headers=LEITURA_ORCAMENTO).json()["projeto_nome"] is None
 
 
 def test_criar_projeto_coordenacao_201():

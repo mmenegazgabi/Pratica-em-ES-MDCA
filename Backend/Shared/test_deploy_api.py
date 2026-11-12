@@ -15,21 +15,27 @@ def load_deploy_app():
     return module.app
 
 
+# Estes testes não usam banco: o Financeiro fica em memória mesmo que a máquina tenha uma
+# DATABASE_URL no ambiente (para nunca gravar num banco de verdade sem querer).
+AMBIENTE = {"FINANCEIRO_API_TOKEN": "token-deploy", "FINANCEIRO_ARMAZENAMENTO": "memoria"}
+
+
 def test_financial_routes_are_served_by_deploy_app():
     client = TestClient(load_deploy_app())
     headers = {"Authorization": "Bearer token-deploy", "X-Papel-Usuario": "coordenacao"}
-    with patch.dict(os.environ, {"FINANCEIRO_API_TOKEN": "token-deploy"}):
+    with patch.dict(os.environ, AMBIENTE):
         projeto = client.post("/projetos", json={"nome": "Infra Integration"}, headers=headers)
-    assert projeto.status_code == 201
-    response = client.post("/orcamentos", json={
-        "projeto_id": projeto.json()["id"],
-        "valor_total": 1000,
-        "data_inicio": "2026-01-01",
-        "data_fim": "2026-12-31",
-        "categorias_despesa": ["materiais"],
-    })
-    assert response.status_code == 201
-    detail = client.get("/orcamentos/" + response.json()["id"])
+        assert projeto.status_code == 201
+        # As rotas de orçamento exigem login desde a T-33.
+        response = client.post("/orcamentos", headers=headers, json={
+            "projeto_id": projeto.json()["id"],
+            "valor_total": 1000,
+            "data_inicio": "2026-01-01",
+            "data_fim": "2026-12-31",
+            "categorias_despesa": ["materiais"],
+        })
+        assert response.status_code == 201
+        detail = client.get("/orcamentos/" + response.json()["id"], headers=headers)
     assert detail.status_code == 200
     assert detail.json()["saldo"] == 1000
 
@@ -37,7 +43,7 @@ def test_financial_routes_are_served_by_deploy_app():
 def test_dashboard_da_diretoria_e_servido_pelo_deploy_app():
     client = TestClient(load_deploy_app())
     headers = {"Authorization": "Bearer token-deploy", "X-Papel-Usuario": "direcao"}
-    with patch.dict(os.environ, {"FINANCEIRO_API_TOKEN": "token-deploy"}):
+    with patch.dict(os.environ, AMBIENTE):
         resposta = client.get("/dashboard/projetos", headers=headers)
     assert resposta.status_code == 200
 
@@ -48,9 +54,10 @@ def test_deploy_app_responde_422_para_nan_no_corpo():
         '{"projeto_id": "p", "valor_total": NaN, "data_inicio": "2026-01-01",'
         ' "data_fim": "2026-12-31", "categorias_despesa": ["materiais"]}'
     )
-    response = client.post(
-        "/orcamentos", content=corpo, headers={"Content-Type": "application/json"}
-    )
+    headers = {"Content-Type": "application/json", "Authorization": "Bearer token-deploy",
+               "X-Papel-Usuario": "coordenacao"}
+    with patch.dict(os.environ, AMBIENTE):
+        response = client.post("/orcamentos", content=corpo, headers=headers)
     assert response.status_code == 422
     assert "input" not in response.json()["detail"][0]
 
@@ -87,7 +94,7 @@ def test_relatorio_de_prestacao_de_contas_e_servido_pelo_deploy_app():
     # T-25 · US-06: rota publicada e nome do arquivo liberado para o navegador.
     client = TestClient(load_deploy_app())
     headers = {"Authorization": "Bearer token-deploy", "X-Papel-Usuario": "coordenacao"}
-    with patch.dict(os.environ, {"FINANCEIRO_API_TOKEN": "token-deploy"}):
+    with patch.dict(os.environ, AMBIENTE):
         projeto = client.post("/projetos", json={"nome": "Relatorio Deploy"}, headers=headers)
         resposta = client.get(
             "/relatorios/prestacao-contas",

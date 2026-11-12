@@ -6,8 +6,8 @@ referência para quem for implementar ou alterar o gerador: cada campo do
 relatório aponta para a tabela e a coluna de onde vem.
 
 As tabelas citadas são as das migrations em `Backend/Shared/migrations/versions/`.
-Enquanto a API do Financeiro ainda guarda dados em memória, os modelos de
-`Backend/Financeiro/` seguem os mesmos nomes de campo.
+A API do Financeiro lê essas tabelas por `Backend/Financeiro/persistencia.py`
+(veja `docs/persistencia-financeiro.md`).
 
 ## Parâmetros de geração
 

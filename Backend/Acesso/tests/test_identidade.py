@@ -24,8 +24,14 @@ ORCAMENTO = {
 
 
 @pytest.fixture(autouse=True)
-def financeiro_limpo(app):
-    """As listas do Financeiro são do módulo: cada teste começa e termina vazio."""
+def financeiro_limpo(app, monkeypatch):
+    """As listas do Financeiro são do módulo: cada teste começa e termina vazio.
+
+    O login usa o banco, mas o Financeiro fica em memória aqui para os testes
+    conferirem as listas acima. O Financeiro no banco com sessão está em
+    Financeiro/tests/test_acesso_por_papel.py.
+    """
+    monkeypatch.setenv("FINANCEIRO_ARMAZENAMENTO", "memoria")
 
     def limpar():
         _orcamentos.clear()
@@ -47,6 +53,22 @@ def _sessao(banco, usuario_id, papeis=(), ativo=True):
     with banco.begin() as conexao:
         token, _ = sessoes.criar(conexao, usuario_id, False, datetime.now(timezone.utc))
     return token
+
+
+def _vinculo_no_projeto_1(banco, usuario_id):
+    """Educador só vê e lança no programa em que tem vínculo ativo (T-36)."""
+    with banco.begin() as conexao:
+        conexao.execute(sa.text(
+            "INSERT INTO projetos (id, nome, identificador) VALUES ('projeto-1', 'Semear', 'SEMEAR') "
+            "ON CONFLICT (id) DO NOTHING"
+        ))
+        conexao.execute(
+            sa.text(
+                "INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) "
+                "VALUES (:id, :u, 'projeto-1', 'educador', '2025-01-01')"
+            ),
+            {"id": f"v-{usuario_id}", "u": usuario_id},
+        )
 
 
 def _bearer(token, **extra):
@@ -113,9 +135,24 @@ def test_sem_cabecalho_com_dois_papeis_permitidos_da_403(banco, cliente):
     assert r.json()["detail"] == "Ação permitida apenas para: coordenacao, direcao."
 
 
+def test_educador_por_sessao_le_orcamentos_mas_nao_cria_nem_aprova(banco, cliente):
+    _orcamento_existente()
+    token = _sessao(banco, "edu", papeis=["educador"])
+    _vinculo_no_projeto_1(banco, "edu")
+
+    assert cliente.get("/orcamentos/orcamento-1", headers=_bearer(token)).status_code == 200
+    for cab in (_bearer(token), _bearer(token, **{"X-Papel-Usuario": "coordenacao"})):
+        criar = cliente.post("/orcamentos", json={**ORCAMENTO, "projeto_id": "projeto-1"}, headers=cab)
+        assert criar.status_code == 403
+        aprovar = cliente.patch("/lancamentos/qualquer/aprovar", headers=cab)
+        assert aprovar.status_code == 403
+    assert len(_orcamentos) == 1
+
+
 def test_autor_vem_da_sessao(banco, cliente):
     _orcamento_existente()
     token = _sessao(banco, "marcos", papeis=["educador"])
+    _vinculo_no_projeto_1(banco, "marcos")
     cab = _bearer(token, **{"X-Usuario-Id": "outra-pessoa"})
 
     rascunho = cliente.post(

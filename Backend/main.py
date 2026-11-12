@@ -5,8 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from Acesso.routers.admin import router as admin_router
-from Acesso.routers.auditoria import router as auditoria_router
 from Acesso.routers.auth import router as auth_router
+from Financeiro.routers.auditoria import router as auditoria_financeiro_router
 from Financeiro.routers.comprovantes import router as comprovantes_router
 from Financeiro.routers.dashboard import router as dashboard_router
 from Financeiro.routers.extrato import router as extrato_router
@@ -32,10 +32,10 @@ app.include_router(projetos_router)
 app.include_router(dashboard_router)
 app.include_router(relatorios_router)
 app.include_router(extrato_router)
+app.include_router(auditoria_financeiro_router)
 app.include_router(gestao_router)
 app.include_router(auth_router)
 app.include_router(admin_router)
-app.include_router(auditoria_router)
 origins = [origin.strip() for origin in os.getenv(
     "CORS_ORIGINS", "http://localhost:8080,http://127.0.0.1:8080"
 ).split(",") if origin.strip()]

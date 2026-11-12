@@ -23,7 +23,8 @@ from enum import Enum
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 if __package__ == "routers":
-    from autenticacao import Papel, exigir_papel
+    import auditoria
+    from autenticacao import AcessoFinanceiro, Papel, exigir_papel, obter_acesso
     from projetos import buscar_projeto
     from relatorio_prestacao import (
         CONTENT_TYPE_PDF,
@@ -34,9 +35,10 @@ if __package__ == "routers":
         montar_relatorio,
         nome_do_arquivo,
     )
-    from routers.orcamentos import _orcamentos
+    from persistencia import obter_repositorio
 else:
-    from ..autenticacao import Papel, exigir_papel
+    from .. import auditoria
+    from ..autenticacao import AcessoFinanceiro, Papel, exigir_papel, obter_acesso
     from ..projetos import buscar_projeto
     from ..relatorio_prestacao import (
         CONTENT_TYPE_PDF,
@@ -47,7 +49,7 @@ else:
         montar_relatorio,
         nome_do_arquivo,
     )
-    from .orcamentos import _orcamentos
+    from ..persistencia import obter_repositorio
 
 router = APIRouter(tags=["relatorios"])
 
@@ -100,14 +102,16 @@ def gerar_prestacao_de_contas(
     data_fim: date = Query(..., description="Fim do período (AAAA-MM-DD)."),
     formato: FormatoRelatorio = Query(FormatoRelatorio.PDF, description="pdf ou xlsx."),
     _papel: Papel = Depends(exigir_papel(Papel.COORDENACAO, Papel.DIRECAO)),
+    repositorio=Depends(obter_repositorio),
+    identidade: AcessoFinanceiro = Depends(obter_acesso),
 ) -> Response:
-    projeto = buscar_projeto(projeto_id)
+    projeto = buscar_projeto(projeto_id, repositorio)
     if projeto is None:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
     try:
         relatorio = montar_relatorio(
             projeto,
-            list(_orcamentos),
+            repositorio.listar_orcamentos(),
             data_inicio,
             data_fim,
             url_base=_url_base(request),
@@ -117,8 +121,18 @@ def gerar_prestacao_de_contas(
 
     gerar, content_type = _GERADORES[formato]
     nome = re.sub(r"[^A-Za-z0-9._-]", "-", nome_do_arquivo(relatorio, formato.value))
+    conteudo = gerar(relatorio)
+    # T-34: quem gerou a prestação de contas, de qual projeto e período.
+    periodo = f"{data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}"
+    auditoria.registrar(
+        repositorio, identidade, "gerar_relatorio",
+        alvo_tipo="projeto", alvo_id=projeto.id,
+        descricao=auditoria.alvo(projeto.nome, periodo, formato.value.upper()),
+        detalhes={"data_inicio": data_inicio.isoformat(), "data_fim": data_fim.isoformat(), "formato": formato.value},
+    )
+    repositorio.confirmar()
     return Response(
-        content=gerar(relatorio),
+        content=conteudo,
         media_type=content_type,
         headers={
             "Content-Disposition": f'attachment; filename="{nome}"',
