@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 import sqlalchemy as sa
 from fastapi.testclient import TestClient
 
+from Financeiro.extrato import caixa_do_extrato
 from Financeiro.main import app
 
 from Financeiro.notificacoes import caixa_de_notificacoes
@@ -47,6 +48,7 @@ def _esvaziar_memoria() -> None:
     _orcamentos.clear()
     caixa_de_notificacoes.limpar()
     caixa_de_rascunhos.limpar()
+    caixa_do_extrato.limpar()
     AUDITORIA_EM_MEMORIA.clear()
 
 

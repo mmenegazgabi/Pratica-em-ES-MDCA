@@ -7,7 +7,9 @@ PostgreSQL compartilhado com a Gestão, nas tabelas das migrations do Alembic
 - ``projetos`` — o cadastro canônico de programas, o mesmo da Gestão;
 - ``orcamentos`` + ``orcamento_categorias`` — orçamento, vigência e valor por categoria;
 - ``lancamentos`` — despesas, aprovação, rejeição, reenvio e conciliação;
-- ``notificacoes`` e ``rascunhos_lancamento``.
+- ``notificacoes`` e ``rascunhos_lancamento``;
+- ``extrato_itens`` — itens do extrato bancário importado e o lançamento a que cada um
+  foi ligado na conciliação.
 
 O saldo não é gravado: é recalculado dos lançamentos aprovados toda vez que o orçamento
 é lido, como já acontecia em memória.
@@ -27,6 +29,7 @@ mais de uma instância da API no Cloud Run.
 import itertools
 import logging
 import os
+from collections import Counter
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, Iterator, List, Optional, Tuple
@@ -35,6 +38,13 @@ from Shared import banco
 
 if __package__:
     from .alerta_saldo import _em_centavos
+    from .extrato import (
+        CaixaDoExtrato,
+        ItemExtrato,
+        ItemJaConciliado,
+        caixa_do_extrato,
+        separar_repetidos,
+    )
     from .notificacoes import (
         CaixaDeNotificacoes,
         Notificacao,
@@ -48,6 +58,13 @@ if __package__:
     from .rascunhos import CaixaDeRascunhos, Rascunho, RascunhoNaoEncontrado, caixa_de_rascunhos
 else:
     from alerta_saldo import _em_centavos
+    from extrato import (
+        CaixaDoExtrato,
+        ItemExtrato,
+        ItemJaConciliado,
+        caixa_do_extrato,
+        separar_repetidos,
+    )
     from notificacoes import (
         CaixaDeNotificacoes,
         Notificacao,
@@ -108,11 +125,13 @@ class RepositorioMemoria:
         orcamentos: List[Orcamento],
         notificacoes: CaixaDeNotificacoes,
         rascunhos: CaixaDeRascunhos,
+        extrato: CaixaDoExtrato,
     ) -> None:
         self._projetos = projetos
         self._orcamentos = orcamentos
         self._notificacoes = notificacoes
         self._rascunhos = rascunhos
+        self._extrato = extrato
 
     def confirmar(self) -> None:
         pass
@@ -185,6 +204,19 @@ class RepositorioMemoria:
     def retirar_rascunho(self, rascunho_id: str, autor_id: str) -> Rascunho:
         return self._rascunhos.retirar(rascunho_id, autor_id)
 
+    # Extrato bancário
+    def importar_extrato(self, novos: List[ItemExtrato]) -> Tuple[List[ItemExtrato], int]:
+        return self._extrato.importar(novos)
+
+    def listar_extrato(self, em_aberto: Optional[bool] = None) -> List[ItemExtrato]:
+        return self._extrato.listar(em_aberto)
+
+    def buscar_item_extrato(self, item_id: str, para_alterar: bool = False) -> Optional[ItemExtrato]:
+        return self._extrato.buscar(item_id)
+
+    def vincular_item_extrato(self, item_id: str, lancamento_id: str) -> None:
+        self._extrato.vincular(item_id, lancamento_id)
+
     # Auditoria
     def auditar(self, *, usuario_id, acao, alvo_tipo=None, alvo_id=None, descricao=None, detalhes=None) -> None:
         AUDITORIA_EM_MEMORIA.append(
@@ -214,7 +246,7 @@ class RepositorioMemoria:
 
 
 MEMORIA = RepositorioMemoria(
-    _projetos, ORCAMENTOS_EM_MEMORIA, caixa_de_notificacoes, caixa_de_rascunhos
+    _projetos, ORCAMENTOS_EM_MEMORIA, caixa_de_notificacoes, caixa_de_rascunhos, caixa_do_extrato
 )
 
 
@@ -597,6 +629,86 @@ class RepositorioBanco:
         if linha is None:
             raise RascunhoNaoEncontrado("Rascunho não encontrado")
         return self._rascunho(linha)
+
+    # Extrato bancário -----------------------------------------------------------
+
+    _COLUNAS_EXTRATO = "id, data, descricao, valor, importado_em, conciliado_com"
+
+    @staticmethod
+    def _item_extrato(linha) -> ItemExtrato:
+        return ItemExtrato(
+            id=linha.id,
+            data=linha.data,
+            descricao=linha.descricao,
+            valor=float(linha.valor),
+            importado_em=_utc(linha.importado_em),
+            conciliado_com=linha.conciliado_com,
+        )
+
+    def importar_extrato(self, novos: List[ItemExtrato]) -> Tuple[List[ItemExtrato], int]:
+        """Grava os itens que não estão repetidos; devolve (guardados, repetidos).
+
+        Duas importações ao mesmo tempo esperam uma pela outra (trava até o fim da
+        transação), para a contagem dos repetidos não ler o banco pela metade.
+        """
+        self._executar("SELECT pg_advisory_xact_lock(hashtext('financeiro.extrato'))")
+        ja_guardados: Counter = Counter()
+        for linha in self._executar(
+            "SELECT data, descricao, valor, count(*) AS quantas FROM extrato_itens "
+            "WHERE data = ANY(:datas) GROUP BY data, descricao, valor",
+            {"datas": sorted({i.data for i in novos})},
+        ):
+            ja_guardados[(linha.data, linha.descricao, float(linha.valor))] = linha.quantas
+        guardados = separar_repetidos(novos, ja_guardados)
+        for item in guardados:
+            self._executar(
+                "INSERT INTO extrato_itens (id, data, descricao, valor, importado_em) "
+                "VALUES (:id, :data, :descricao, :valor, :importado_em)",
+                {
+                    "id": item.id,
+                    "data": item.data,
+                    "descricao": item.descricao,
+                    "valor": _em_centavos(item.valor),
+                    "importado_em": item.importado_em,
+                },
+            )
+        return guardados, len(novos) - len(guardados)
+
+    def listar_extrato(self, em_aberto: Optional[bool] = None) -> List[ItemExtrato]:
+        filtro = ""
+        if em_aberto is True:
+            filtro = "WHERE conciliado_com IS NULL"
+        elif em_aberto is False:
+            filtro = "WHERE conciliado_com IS NOT NULL"
+        # "ordem" segue a ordem de gravação: na mesma data, a ordem de importação.
+        linhas = self._executar(
+            f"SELECT {self._COLUNAS_EXTRATO} FROM extrato_itens {filtro} ORDER BY data, ordem"
+        )
+        return [self._item_extrato(linha) for linha in linhas]
+
+    def buscar_item_extrato(self, item_id: str, para_alterar: bool = False) -> Optional[ItemExtrato]:
+        linha = self._executar(
+            f"SELECT {self._COLUNAS_EXTRATO} FROM extrato_itens WHERE id = :id"
+            + (" FOR UPDATE" if para_alterar else ""),
+            {"id": item_id},
+        ).first()
+        return None if linha is None else self._item_extrato(linha)
+
+    def vincular_item_extrato(self, item_id: str, lancamento_id: str) -> None:
+        """Liga o item ao lançamento na transação da conciliação (vai no confirmar())."""
+        from sqlalchemy.exc import IntegrityError
+
+        try:
+            ligado = self._executar(
+                "UPDATE extrato_itens SET conciliado_com = :lancamento "
+                "WHERE id = :id AND (conciliado_com IS NULL OR conciliado_com = :lancamento)",
+                {"id": item_id, "lancamento": lancamento_id},
+            ).rowcount
+        except IntegrityError as erro:  # índice único: o lançamento já tem outro item
+            # A transação fica perdida; a rota responde 400 sem confirmar e nada é gravado.
+            raise ItemJaConciliado("Lançamento já conciliado com outro item do extrato.") from erro
+        if not ligado:
+            raise ItemJaConciliado()
 
     # Auditoria ----------------------------------------------------------------
 

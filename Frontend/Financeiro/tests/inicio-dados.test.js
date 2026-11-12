@@ -2,7 +2,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-import { montarPendencias } from "../telas/inicio-dados.js";
+import { montarPendencias, painelDaDirecao } from "../telas/inicio-dados.js";
 
 const AGORA = new Date("2026-10-27T15:00:00Z");
 
@@ -95,5 +95,21 @@ describe("montarPendencias", () => {
   test("sem nome de projeto no orçamento, usa o projeto_id", () => {
     const r = montarPendencias("coordenacao", { lancamentos: [lancamentos[0]], orcamentos: [] }, AGORA);
     assert.equal(r.secoes[0].itens[0].detalhe, "Projeto p2 · enviada há 1 dia");
+  });
+});
+
+describe("painelDaDirecao", () => {
+  test("ativos primeiro (por nome), encerrados depois, com o total", () => {
+    const r = painelDaDirecao([
+      { projeto_id: "p3", nome: "Música", status: "encerrado", orcado: 1000, realizado: 1050, saldo: -50 },
+      { projeto_id: "p2", nome: "Leitura", status: "ativo", orcado: 10000, realizado: 6200.1, saldo: 3799.9 },
+      { projeto_id: "p1", nome: "Esporte", status: "ativo", orcado: 10000, realizado: 8500.2, saldo: 1499.8 },
+    ]);
+    assert.deepEqual(r.linhas.map((l) => l.nome), ["Esporte", "Leitura", "Música"]);
+    assert.deepEqual(r.total, { orcado: 21000, realizado: 15750.3, saldo: 5249.7 });
+  });
+
+  test("lista vazia", () => {
+    assert.deepEqual(painelDaDirecao([]), { linhas: [], total: { orcado: 0, realizado: 0, saldo: 0 } });
   });
 });

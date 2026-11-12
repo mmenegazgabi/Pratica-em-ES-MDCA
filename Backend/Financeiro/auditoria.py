@@ -10,7 +10,9 @@ Ações registradas (``acao``):
 - ``criar_projeto``, ``encerrar_projeto``, ``reabrir_projeto``;
 - ``criar_orcamento``, ``editar_orcamento``;
 - ``criar_lancamento``, ``aprovar_lancamento``, ``rejeitar_lancamento``,
-  ``reenviar_lancamento``, ``conciliar_lancamento``;
+  ``reenviar_lancamento``, ``conciliar_lancamento`` (com ``item_extrato_id`` nos
+  detalhes quando a referência é um item do extrato importado);
+- ``importar_extrato`` (só quando algum item novo entrou);
 - ``gerar_relatorio``;
 - ``acesso_negado``.
 
@@ -39,6 +41,7 @@ ROTULOS = {
     "rejeitar_lancamento": "Rejeitou despesa",
     "reenviar_lancamento": "Reenviou despesa",
     "conciliar_lancamento": "Conciliou lançamento",
+    "importar_extrato": "Importou extrato bancário",
     "gerar_relatorio": "Gerou prestação de contas",
     ACESSO_NEGADO: "Acesso negado",
 }

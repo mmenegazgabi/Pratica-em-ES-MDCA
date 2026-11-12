@@ -2,17 +2,17 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-import { aprovadosEmAberto, diasEmAberto, extratoEmAberto, mesmoValor, valoresDiferentes } from "../telas/conciliacao-dados.js";
-import { lancamentosDoPeriodo, montarCsv, resumoDoPeriodo, validarPeriodo } from "../telas/relatorios-dados.js";
-import { filtrarAuditoria } from "../telas/auditoria-dados.js";
+import { aprovadosEmAberto, diasEmAberto, mensagemDaImportacao, mesmoValor, valorDoExtrato, valoresDiferentes } from "../telas/conciliacao-dados.js";
+import { lancamentosDoPeriodo, nomePadraoDoRelatorio, resumoDoPeriodo, validarPeriodo } from "../telas/relatorios-dados.js";
 import { categoriasDoOrcamento } from "../telas/projetos-dados.js";
 
 const AGORA = new Date("2026-10-27T15:00:00Z");
 
 describe("conciliação", () => {
+  // No extrato do banco, saída é valor negativo.
   const extrato = [
-    { referencia: "E1", valor: 180, descricao: "PIX PAPELARIA" },
-    { referencia: "E2", valor: 0.3, descricao: "TARIFA" },
+    { id: "E1", valor: -180, descricao: "PIX PAPELARIA" },
+    { id: "E2", valor: -0.3, descricao: "TARIFA" },
   ];
   const lancamentos = [
     { id: "a", status: "aprovado", conciliado: false, valor: 180, aprovado_em: "2026-10-26T10:00:00Z" },
@@ -21,8 +21,15 @@ describe("conciliação", () => {
     { id: "d", status: "pendente", conciliado: false, valor: 180 },
   ];
 
-  test("extrato em aberto tira as referências já conciliadas", () => {
-    assert.deepEqual(extratoEmAberto([...extrato, { referencia: "E9", valor: 50 }], lancamentos).map((i) => i.referencia), ["E1", "E2"]);
+  test("valor do extrato: saída com sinal de menos, entrada com mais", () => {
+    assert.match(valorDoExtrato(-180), /^−R\$\s180,00$/);
+    assert.match(valorDoExtrato(50), /^\+R\$\s50,00$/);
+  });
+
+  test("mensagem da importação no singular e no plural", () => {
+    assert.equal(mensagemDaImportacao({ importados: 3, ignorados_repetidos: 2 }), "3 itens importados, 2 repetidos ignorados.");
+    assert.equal(mensagemDaImportacao({ importados: 1, ignorados_repetidos: 1 }), "1 item importado, 1 repetido ignorado.");
+    assert.equal(mensagemDaImportacao({ importados: 0, ignorados_repetidos: 0 }), "0 itens importados, 0 repetidos ignorados.");
   });
 
   test("aprovados em aberto: só aprovados não conciliados, mais antigos primeiro", () => {
@@ -42,9 +49,10 @@ describe("conciliação", () => {
     assert.equal(diasEmAberto({ aprovado_em: null }, AGORA), null);
   });
 
-  test("valores diferentes", () => {
+  test("valores diferentes (o extrato compara sem o sinal)", () => {
     assert.equal(valoresDiferentes(extrato[0], lancamentos[0]), false);
     assert.equal(valoresDiferentes(extrato[0], lancamentos[1]), true);
+    assert.equal(valoresDiferentes({ valor: 180 }, lancamentos[0]), false);
   });
 });
 
@@ -69,22 +77,10 @@ describe("relatórios", () => {
     assert.equal(validarPeriodo("2026-01-01", "2026-01-01"), null);
   });
 
-  test("CSV com ponto e vírgula, vírgula decimal e aspas escapadas", () => {
-    const csv = montarCsv(orcamento, lancamentosDoPeriodo(lancamentos, "2026-07-01", "2026-09-30"), "2026-07-01", "2026-09-30");
-    const linhas = csv.trim().split("\r\n");
-    assert.equal(linhas[0], 'Prestação de contas;"Esporte; Base"');
-    assert.equal(linhas[3], "Executado no período;1890,10");
-    assert.equal(linhas[6], "Data;Categoria;Descrição;Valor;Conciliado");
-    assert.equal(linhas[7], '2026-07-03;Uniformes;"Camisetas ""sub-12""";1240,10;não');
-  });
-});
-
-describe("auditoria", () => {
-  test("filtrar auditoria por texto", () => {
-    const registros = [{ quem: "Luana", acao: "Aprovou despesa", alvo: "Leitura" }, { quem: "Lucas", acao: "Conciliou", alvo: "EXT-1" }];
-    assert.equal(filtrarAuditoria(registros, "  ").length, 2);
-    assert.deepEqual(filtrarAuditoria(registros, "concil").map((r) => r.quem), ["Lucas"]);
-    assert.deepEqual(filtrarAuditoria(registros, "LEITURA").map((r) => r.quem), ["Luana"]);
+  test("nome padrão do arquivo quando a API não manda o Content-Disposition", () => {
+    assert.equal(nomePadraoDoRelatorio(orcamento, "2026-07-01", "2026-09-30", "pdf"), "prestacao-de-contas-esporte-base-2026-07-01-a-2026-09-30.pdf");
+    assert.equal(nomePadraoDoRelatorio({ projeto_id: "p1" }, "2026-07-01", "2026-09-30", "xlsx"), "prestacao-de-contas-p1-2026-07-01-a-2026-09-30.xlsx");
+    assert.equal(nomePadraoDoRelatorio({ projeto_nome: "Ação & Música" }, "2026-01-01", "2026-01-31", "pdf"), "prestacao-de-contas-acao-musica-2026-01-01-a-2026-01-31.pdf");
   });
 });
 

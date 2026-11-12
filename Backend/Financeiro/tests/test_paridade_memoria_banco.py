@@ -2,7 +2,8 @@
 
 Cada semente gera uma sequência aleatória (e reproduzível) de chamadas à API, do jeito
 que as telas fazem: projetos, orçamentos, lançamentos com comprovante, aprovação,
-rejeição, reenvio, conciliação, edição de orçamento, rascunhos, notificações, listas,
+rejeição, reenvio, importação do extrato, conciliação (com referência livre ou com item do
+extrato), edição de orçamento, rascunhos, notificações, listas,
 dashboard e relatório. Entram também as chamadas erradas: papel sem permissão, dado
 inválido, lançamento de outra pessoa, decisões repetidas.
 
@@ -26,6 +27,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from Financeiro.comprovantes import ArmazenamentoEmMemoria
+from Financeiro.extrato import caixa_do_extrato
 from Financeiro.main import app
 from Financeiro.notificacoes import caixa_de_notificacoes
 from Financeiro.persistencia import VARIAVEL_ARMAZENAMENTO
@@ -121,6 +123,7 @@ class Rodada:
         # Lançamento -> (orçamento, autor), e os que foram rejeitados (para o reenvio).
         self.dono = {}
         self.rejeitados = []
+        self.itens_extrato = []
 
     def chamar(self, nome, metodo, url, sem_ordem=False, **kwargs):
         resposta = getattr(client, metodo)(url, **kwargs)
@@ -155,6 +158,8 @@ class Rodada:
             self.chamar(f"{etiqueta}:lancamento", "get", f"/lancamentos/{lancamento_id}", headers=coord)
         for filtro in ({}, {"status": "ativo"}, {"data_inicio": "2026-03-01", "data_fim": "2026-06-30"}):
             self.chamar(f"{etiqueta}:dashboard{filtro}", "get", "/dashboard/projetos", params=filtro, headers=direcao)
+        for filtro in ({}, {"em_aberto": "true"}, {"em_aberto": "false"}):
+            self.chamar(f"{etiqueta}:extrato{filtro}", "get", "/extrato", params=filtro, headers=coord)
         # T-34: a trilha do Financeiro registra o mesmo nas duas formas de armazenamento.
         self.chamar(f"{etiqueta}:auditoria", "get", "/auditoria", params={"tamanho": 200}, headers=coord)
         for projeto_id in self.projetos:
@@ -184,7 +189,7 @@ class Rodada:
             (self._lancar, 6), (self._aprovar, 4), (self._rejeitar, 3), (self._reenviar, 2),
             (self._conciliar, 2), (self._editar_orcamento, 2), (self._status_projeto, 1),
             (self._rascunho, 1), (self._completar_rascunho, 1), (self._ler_notificacao, 2),
-            (self._criar_orcamento_extra, 1), (self._leitura_avulsa, 2),
+            (self._criar_orcamento_extra, 1), (self._leitura_avulsa, 2), (self._importar_extrato, 1),
         ]
         funcoes = [f for f, peso in acoes for _ in range(peso)]
         for _ in range(OPERACOES):
@@ -295,9 +300,26 @@ class Rodada:
         if r.status_code == 200 and lancamento_id in self.rejeitados:
             self.rejeitados.remove(lancamento_id)
 
+    def _importar_extrato(self, rng):
+        # Linhas com poucas variações: reimportar repete itens (multiconjunto).
+        linhas = [
+            f"2026-{rng.randint(3, 5):02d}-{rng.randint(1, 3):02d};PIX {rng.randint(1, 3)};-{rng.randint(1, 3)}0,00"
+            for _ in range(rng.randint(1, 4))
+        ]
+        if rng.random() < 0.1:
+            linhas.append("ontem;PIX;1,00")  # linha inválida: 400 e nada entra
+        papel = rng.choices(["voluntario_financeiro", "coordenacao", "educador"], [4, 1, 1])[0]
+        csv = ("data;descricao;valor\n" + "\n".join(linhas) + "\n").encode()
+        r = self.chamar(
+            "importar-extrato", "post", "/extrato",
+            files={"arquivo": ("extrato.csv", csv, "text/csv")}, headers=como(papel, "vera"),
+        )
+        if r.status_code == 201:
+            self.itens_extrato += [i["id"] for i in r.json()["itens"]]
+
     def _conciliar(self, rng):
         papel = rng.choices(["voluntario_financeiro", "coordenacao"], [5, 1])[0]
-        referencia = rng.choice(["ext-1", "ext-2", "ext-3", ""])
+        referencia = rng.choice(["ext-1", "ext-2", "ext-3", ""] + self.itens_extrato[-3:] * 2)
         self.chamar(
             "conciliar", "patch", f"/lancamentos/{self._algum_lancamento(rng)}/conciliar",
             json={"referencia_extrato": referencia}, headers=como(papel, "vera"),
@@ -379,6 +401,7 @@ def _esvaziar_memoria():
     _orcamentos.clear()
     caixa_de_notificacoes.limpar()
     caixa_de_rascunhos.limpar()
+    caixa_do_extrato.limpar()
     AUDITORIA_EM_MEMORIA.clear()
 
 
@@ -392,7 +415,7 @@ def _preparar_banco(monkeypatch, motor):
 
     monkeypatch.delenv(VARIAVEL_ARMAZENAMENTO, raising=False)
     with motor.begin() as conexao:
-        conexao.execute(sa.text("TRUNCATE projetos, rascunhos_lancamento CASCADE"))
+        conexao.execute(sa.text("TRUNCATE projetos, rascunhos_lancamento, extrato_itens CASCADE"))
     _esvaziar_memoria()
 
 
@@ -464,5 +487,6 @@ def test_cenarios_cobrem_os_caminhos_de_sucesso_e_de_erro(banco_financeiro, monk
         ("conciliar", 200), ("completar-rascunho", 201), ("ler-notificacao", 200), ("ler-notificacao", 404),
         ("conciliar", 409), ("editar-orcamento", 200), ("editar-orcamento", 400),
         ("rascunho", 201), ("projeto-repetido", 409), ("orcamento-invalido", 400),
+        ("importar-extrato", 201), ("importar-extrato", 403),
     }
     assert esperados <= vistos, f"faltaram: {sorted(esperados - vistos)}"

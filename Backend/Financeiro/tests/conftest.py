@@ -16,6 +16,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import make_url
 
 from Financeiro.comprovantes import ArmazenamentoEmMemoria
+from Financeiro.extrato import caixa_do_extrato
 from Financeiro.main import app
 from Financeiro.notificacoes import caixa_de_notificacoes
 from Financeiro.persistencia import VARIAVEL_ARMAZENAMENTO
@@ -79,7 +80,7 @@ def limpar_banco(motor) -> None:
         conexao.execute(
             sa.text(
                 "TRUNCATE projetos, usuarios, log_auditoria, nucleos_familiares, responsaveis, "
-                "rascunhos_lancamento CASCADE"
+                "rascunhos_lancamento, extrato_itens CASCADE"
             )
         )
 
@@ -90,6 +91,7 @@ def esvaziar_memoria() -> None:
     _orcamentos.clear()
     caixa_de_notificacoes.limpar()
     caixa_de_rascunhos.limpar()
+    caixa_do_extrato.limpar()
     AUDITORIA_EM_MEMORIA.clear()
 
 

@@ -18,6 +18,7 @@ Financeiro usa o mesmo cadastro de programas.
 | Lançamentos (despesas) | `lancamentos` |
 | Notificações in-app | `notificacoes` (nova) |
 | Rascunhos de lançamento | `rascunhos_lancamento` (nova) |
+| Extrato bancário importado | `extrato_itens` (nova, `e4b8c1d7f2a9`) |
 | Arquivos dos comprovantes | bucket R2 (sem mudança) |
 
 - `orcamentos.categorias` **continua necessária**: guarda todas as categorias do
@@ -26,6 +27,17 @@ Financeiro usa o mesmo cadastro de programas.
   orçamento é lido, em centavos.
 - `lancamentos.comprovante_chave` guarda a chave do arquivo no R2;
   `comprovante_url` continua com o caminho que a API mostra (`/` + chave).
+- `extrato_itens` guarda cada linha do CSV importado (`POST /extrato`): `data`,
+  `descricao`, `valor` (`numeric(14,2)`, negativo é saída), `importado_em` e
+  `conciliado_com` (o lançamento ligado na conciliação, FK para `lancamentos.id`). Um
+  índice único parcial em `conciliado_com` garante no máximo um item por lançamento;
+  `ordem` só mantém a ordem de importação na mesma data. A leitura do CSV e as regras
+  (1 MB, erro com o número da linha, repetidos por multiconjunto) ficam em
+  `Financeiro/extrato.py` e valem para a memória e o banco. Duas importações ao mesmo
+  tempo esperam uma pela outra (trava até o fim da transação).
+- Conciliar com o `id` de um item do extrato lê o item com `SELECT ... FOR UPDATE` e
+  liga os dois lados **na mesma transação** do lançamento: se a ligação falha, o
+  lançamento não fica conciliado. Item já ligado a outro lançamento responde 400.
 
 ## Como o código está organizado
 
@@ -66,8 +78,13 @@ de Coordenação ou Direção.
 
 ## Produção
 
-**Situação:** a produção já está na head, `d9f1a7c3b5e2`. Depois do merge,
-`alembic upgrade head` não tem nada a aplicar lá.
+**Situação:** a head agora é a `e4b8c1d7f2a9` (extrato bancário), que vem depois da
+`e4a6c8b0d2f1` (coordenação só na conta, T-87) e só **cria** a tabela `extrato_itens` e
+seus índices: o código anterior continua funcionando com ela, então pode ser aplicada
+antes do deploy (`alembic upgrade head`, que também aplica a `e4a6c8b0d2f1` se a
+produção ainda não estiver nela). Rollback: `alembic downgrade e4a6c8b0d2f1` (apaga os
+itens do extrato importados; os lançamentos, inclusive a referência `item_extrato_ref`,
+ficam).
 
 A migration `c2d8e4f6a1b3` vem **depois** da `6bd565cae094` (alertas da Gestão, T-59) e
 só **adiciona**:
@@ -87,7 +104,7 @@ Para conferir:
 ```bash
 cd Backend/Shared
 # DATABASE_URL da produção no ambiente ou em Backend/.env
-alembic current        # deve mostrar d9f1a7c3b5e2 (head) (mergepoint)
+alembic current        # depois do upgrade: e4b8c1d7f2a9 (head)
 ```
 
 Os dados que estavam em memória no Cloud Run não são migrados (não há de onde lê-los).
@@ -119,6 +136,8 @@ Pede a senha das contas no terminal e confirmação (`SIM`) antes de gravar.
 | `Financeiro/tests/test_persistencia_banco.py` | fluxo pela API conferido por SQL, "reinício" (memória esvaziada), trava entre conexões, 503 sem banco | Postgres |
 | `Financeiro/tests/test_paridade_memoria_banco.py` | sequências aleatórias de chamadas (sementes fixas) com respostas idênticas na memória e no banco, e iguais depois do reinício | Postgres |
 | `Shared/tests/test_migration_persistencia_financeiro.py` | um único head e histórico em linha (sem banco); colunas, regras, preenchimento e downgrade da migration | Postgres |
+| `Shared/tests/test_migration_extrato_itens.py` | `extrato_itens`: colunas, FK, um item por lançamento, downgrade | Postgres |
+| `Financeiro/tests/test_extrato.py` | importação, listagem, conciliação com item e auditoria, cada teste na memória **e** no banco; importações e conciliações simultâneas | memória e Postgres |
 | `Gestao/tests/test_gestao_visao_integrada*.py` | a Visão integrada lendo o Financeiro do banco, só pelo id | Postgres |
 | `Financeiro/tests/test_acesso_por_papel.py` | T-36: papel vindo do login, educador restrito ao vínculo, Coordenação vê tudo, voluntário não aprova | Postgres |
 | `Financeiro/tests/test_auditoria_financeiro.py` | T-34: cada ação na trilha, mesma transação, acesso negado, quem lê a trilha | Postgres |

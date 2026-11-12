@@ -2,9 +2,9 @@
 import { el, limpar } from "../base/dom.js";
 import { icone } from "../base/icones.js";
 import { formatarData, formatarMoeda } from "../base/formatar.js";
-import { listarLancamentos, listarOrcamentos } from "../base/api.js";
-import { falhou } from "./orcamento-dialogo.js";
-import { lancamentosDoPeriodo, montarCsv, resumoDoPeriodo, validarPeriodo } from "./relatorios-dados.js";
+import { baixarRelatorio, listarLancamentos, listarOrcamentos } from "../base/api.js";
+import { falhou, mensagemDeErro } from "./orcamento-dialogo.js";
+import { lancamentosDoPeriodo, nomePadraoDoRelatorio, resumoDoPeriodo, validarPeriodo } from "./relatorios-dados.js";
 
 function campo(rotulo, id, controle) {
   return el("div", { class: "campo" }, el("label", { for: id }, rotulo), controle);
@@ -14,8 +14,8 @@ function numero(rotulo, valor) {
   return el("div", {}, el("div", { style: "color:var(--texto-suave)" }, rotulo), el("b", { class: "num" }, valor));
 }
 
-function baixar(nome, conteudo) {
-  const url = URL.createObjectURL(new Blob(["﻿" + conteudo], { type: "text/csv;charset=utf-8" }));
+function baixar(nome, blob) {
+  const url = URL.createObjectURL(blob);
   const link = el("a", { href: url, download: nome, style: "display:none" });
   document.body.append(link);
   link.click();
@@ -46,14 +46,17 @@ export async function mostrar(container, { parametros = {} }) {
   const formatos = el("div", { role: "radiogroup", "aria-label": "Formato", style: "display:flex;border:1px solid var(--borda-campo);border-radius:var(--raio);overflow:hidden" });
   const nota = el("p", { style: "margin:12px 0 0;color:var(--texto-suave);font-size:11px;line-height:1.5" });
   const erro = el("p", { role: "alert", style: "margin:8px 0 0;color:var(--perigo-texto);font-size:12px", hidden: true });
-  const gerar = el("button", { type: "button", class: "btn", style: "margin-top:16px;width:100%;justify-content:center" }, icone("baixar"), "Gerar relatório");
-  const previa = el("div", { class: "relatorio-previa", style: "background:var(--fundo-suave);border-radius:8px;padding:16px;min-height:420px" });
+  const erroGerar = el("p", { role: "alert", style: "margin:8px 0 0;color:var(--perigo-texto);font-size:12px", hidden: true });
+  let gerando = false;
+  const rotuloGerar = el("span", {}, "Gerar relatório");
+  const gerar = el("button", { type: "button", class: "btn", style: "margin-top:16px;width:100%;justify-content:center" }, icone("baixar"), rotuloGerar);
+  const previa = el("div", { style: "background:var(--fundo-suave);border-radius:8px;padding:16px;min-height:420px" });
 
   const atual = () => orcamentos.find((o) => o.id === projeto.value);
 
   function desenharFormatos() {
     limpar(formatos).append(
-      ...[["pdf", "PDF"], ["planilha", "Planilha"]].map(([valor, rotulo]) =>
+      ...[["pdf", "PDF"], ["xlsx", "Planilha (XLSX)"]].map(([valor, rotulo]) =>
         el(
           "button",
           {
@@ -74,7 +77,7 @@ export async function mostrar(container, { parametros = {} }) {
     const invalido = validarPeriodo(inicio.value, fim.value);
     erro.hidden = !invalido;
     erro.textContent = invalido || "";
-    gerar.disabled = Boolean(invalido) || !lancamentosOk;
+    gerar.disabled = Boolean(invalido) || !lancamentosOk || gerando;
     if (!lancamentosOk) {
       nota.textContent = "";
       return limpar(previa).append(el("p", { class: "aviso-tela", role: "alert" }, "Não foi possível carregar os lançamentos deste projeto."));
@@ -83,12 +86,12 @@ export async function mostrar(container, { parametros = {} }) {
     const doPeriodo = lancamentosDoPeriodo(lancamentos, inicio.value, fim.value);
     const resumo = resumoDoPeriodo(orcamento, doPeriodo);
     nota.textContent =
-      "Inclui só lançamentos aprovados." +
+      "O arquivo oficial inclui só lançamentos aprovados." +
       (resumo.naoConciliados === 0 ? "" : resumo.naoConciliados === 1 ? " 1 lançamento do período ainda não foi conciliado." : ` ${resumo.naoConciliados} lançamentos do período ainda não foram conciliados.`);
     limpar(previa).append(
       el(
         "div",
-        { class: "relatorio-pagina", style: "background:#fff;border:1px solid var(--borda);border-radius:4px;padding:18px 22px;font-size:11px" },
+        { style: "background:#fff;border:1px solid var(--borda);border-radius:4px;padding:18px 22px;font-size:11px" },
         el(
           "div",
           { style: "display:flex;justify-content:space-between;gap:12px" },
@@ -115,20 +118,36 @@ export async function mostrar(container, { parametros = {} }) {
     desenharPrevia();
   }
 
+  function mostrarErroGerar(texto) {
+    erroGerar.hidden = !texto;
+    erroGerar.textContent = texto || "";
+  }
+
+  // O arquivo oficial vem da API (PDF ou XLSX); a prévia é só para conferir.
+  async function gerarRelatorio() {
+    const orcamento = atual();
+    const pedido = { projeto_id: orcamento.projeto_id, data_inicio: inicio.value, data_fim: fim.value, formato };
+    mostrarErroGerar("");
+    gerando = true;
+    gerar.disabled = true;
+    rotuloGerar.textContent = "Gerando…";
+    const r = await baixarRelatorio(pedido);
+    gerando = false;
+    rotuloGerar.textContent = "Gerar relatório";
+    desenharPrevia();
+    if (falhou(r) || !r.blob) return mostrarErroGerar(mensagemDeErro(r, "Não foi possível gerar o relatório. Tente de novo."));
+    baixar(r.nome || nomePadraoDoRelatorio(orcamento, pedido.data_inicio, pedido.data_fim, formato), r.blob);
+  }
+
   projeto.addEventListener("change", () => {
     inicio.value = atual().data_inicio;
     fim.value = atual().data_fim;
+    mostrarErroGerar("");
     carregarLancamentos();
   });
   inicio.addEventListener("change", desenharPrevia);
   fim.addEventListener("change", desenharPrevia);
-  gerar.addEventListener("click", () => {
-    if (formato === "pdf") return window.print();
-    const orcamento = atual();
-    const doPeriodo = lancamentosDoPeriodo(lancamentos, inicio.value, fim.value);
-    const nome = `prestacao-de-contas-${String(orcamento.projeto_nome || orcamento.projeto_id).toLowerCase().replace(/\s+/g, "-")}-${inicio.value}-a-${fim.value}.csv`;
-    baixar(nome, montarCsv(orcamento, doPeriodo, inicio.value, fim.value));
-  });
+  gerar.addEventListener("click", gerarRelatorio);
 
   desenharFormatos();
   limpar(container).append(
@@ -137,7 +156,7 @@ export async function mostrar(container, { parametros = {} }) {
       { style: "display:flex;gap:20px;align-items:flex-start" },
       el(
         "div",
-        { class: "relatorio-opcoes", style: "width:230px;flex:none" },
+        { style: "width:230px;flex:none" },
         el("h1", {}, "Prestação de contas"),
         el("p", { class: "sub" }, "Para financiadores e conselho"),
         campo("Projeto", "rel-projeto", projeto),
@@ -147,6 +166,7 @@ export async function mostrar(container, { parametros = {} }) {
         erro,
         nota,
         gerar,
+        erroGerar,
       ),
       el("div", { style: "flex:1;min-width:0" }, previa),
     ),

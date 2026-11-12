@@ -58,6 +58,7 @@ if __package__ == "routers":
         limpar_nome_original,
         validar_comprovante,
     )
+    from extrato import ItemJaConciliado
     from orcamento import (
         AprovacaoInvalida,
         ConciliacaoInvalida,
@@ -90,6 +91,7 @@ else:
         limpar_nome_original,
         validar_comprovante,
     )
+    from ..extrato import ItemJaConciliado
     from ..orcamento import (
         AprovacaoInvalida,
         ConciliacaoInvalida,
@@ -670,6 +672,13 @@ def conciliar_lancamento(
             detail=f"Referência do extrato deve ter no máximo {REFERENCIA_TAMANHO_MAXIMO} caracteres.",
         )
 
+    # Referência que é o id de um item do extrato liga os dois lados; qualquer
+    # outro texto continua valendo como referência livre. O item é lido travado
+    # (no banco, SELECT ... FOR UPDATE) e ligado na mesma transação do lançamento.
+    item = repositorio.buscar_item_extrato(referencia, para_alterar=True)
+    if item is not None and item.conciliado_com not in (None, lancamento_id):
+        raise HTTPException(status_code=400, detail=ItemJaConciliado.MENSAGEM)
+
     ja_conciliado = next(l for l in orcamento.lancamentos if l.id == lancamento_id).conciliado
     try:
         lancamento = orcamento.conciliar_lancamento(lancamento_id, referencia)
@@ -679,10 +688,18 @@ def conciliar_lancamento(
         raise HTTPException(status_code=400, detail=str(erro)) from erro
 
     repositorio.salvar_lancamento(orcamento, lancamento)
+    if item is not None and item.conciliado_com is None:
+        try:
+            repositorio.vincular_item_extrato(item.id, lancamento.id)
+        except ItemJaConciliado as erro:
+            raise HTTPException(status_code=400, detail=str(erro)) from erro
     if not ja_conciliado:  # repetir a mesma referência não muda nada nem gera registro
+        detalhes = {"referencia_extrato": referencia}
+        if item is not None:
+            detalhes["item_extrato_id"] = item.id
         auditar_lancamento(
             repositorio, identidade, "conciliar_lancamento", orcamento, lancamento,
-            referencia, detalhes={"referencia_extrato": referencia},
+            referencia, detalhes=detalhes,
         )
     repositorio.confirmar()
 

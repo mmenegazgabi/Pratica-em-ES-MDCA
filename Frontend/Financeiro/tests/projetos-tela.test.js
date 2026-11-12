@@ -20,13 +20,17 @@ const lancs = [
 ];
 let chamadas;
 let editar;
+let projetos;
+let mudarStatus;
 
-function simular() {
+function simular({ listaDeProjetos = [{ id: "p1", nome: "Esporte", status: "ativo" }, { id: "p2", nome: "Horta", status: "ativo" }] } = {}) {
   chamadas = [];
+  projetos = listaDeProjetos;
   globalThis.fetch = async (url, op = {}) => {
     const u = String(url).replace(/^https?:\/\/[^/]+/, "");
     chamadas.push(`${op.method || "GET"} ${u}`);
-    if (u.startsWith("/projetos")) return resposta(200, [{ id: "p1", nome: "Esporte" }, { id: "p2", nome: "Horta" }]);
+    if (op.method === "PATCH" && u.endsWith("/status")) return mudarStatus(u, JSON.parse(op.body));
+    if (u.startsWith("/projetos")) return Array.isArray(projetos) ? resposta(200, projetos) : projetos;
     if (op.method === "PATCH") return editar(JSON.parse(op.body));
     if (u.startsWith("/orcamentos/o1")) return resposta(200, orc);
     if (u.startsWith("/orcamentos")) return resposta(200, [orc]);
@@ -103,4 +107,67 @@ test("detalhe: direção não edita", async () => {
   simular();
   await detalhe.mostrar(container(), { parametros: { id: "o1" }, sessao: { papel: "direcao", nome: "Jane" }, navegar: () => {} });
   assert.doesNotMatch(container().textContent, /Editar orçamento/);
+});
+
+const botao = (texto) => [...container().querySelectorAll("button")].find((b) => b.textContent === texto);
+
+test("lista: projeto encerrado aparece como Encerrado", async () => {
+  simular({ listaDeProjetos: [{ id: "p1", nome: "Esporte", status: "encerrado" }, { id: "p2", nome: "Horta", status: "ativo" }] });
+  await lista.mostrar(container(), { parametros: {}, sessao: coord, navegar: () => {} });
+  const linhas = [...container().querySelectorAll("tbody tr")];
+  assert.match(linhas[0].textContent, /Encerrado/);
+  assert.doesNotMatch(linhas[1].textContent, /Encerrado/);
+});
+
+test("detalhe: encerrar pede confirmação, chama PATCH /projetos/{id}/status e mostra Encerrado", async () => {
+  simular();
+  mudarStatus = (u, corpo) => {
+    projetos = [{ id: "p1", nome: "Esporte", status: corpo.status }];
+    return resposta(200, projetos[0]);
+  };
+  await detalhe.mostrar(container(), { parametros: { id: "o1" }, sessao: coord, navegar: () => {} });
+  assert.doesNotMatch(container().textContent, /Encerrado/);
+  botao("Encerrar projeto").click();
+  const dialogo = container().querySelector("dialog");
+  assert.ok(dialogo, "abre o diálogo de confirmação");
+  assert.match(dialogo.textContent, /Esporte/);
+  assert.equal(chamadas.filter((c) => c.startsWith("PATCH")).length, 0, "não muda antes de confirmar");
+  [...dialogo.querySelectorAll("button")].find((b) => b.textContent === "Cancelar").click();
+  assert.equal(container().querySelector("dialog"), null);
+
+  botao("Encerrar projeto").click();
+  container().querySelector("dialog form").dispatchEvent(new window.Event("submit", { cancelable: true }));
+  await esperar();
+  assert.ok(chamadas.includes("PATCH /projetos/p1/status"));
+  assert.equal(container().querySelector("dialog"), null);
+  assert.match(container().textContent, /Encerrado/);
+  assert.ok(botao("Reativar projeto"));
+});
+
+test("detalhe: reativar (direção) manda status ativo; erro aparece no diálogo", async () => {
+  simular({ listaDeProjetos: [{ id: "p1", nome: "Esporte", status: "encerrado" }] });
+  const corpos = [];
+  mudarStatus = (u, corpo) => {
+    corpos.push(corpo);
+    return resposta(404, { detail: "Projeto não encontrado" });
+  };
+  await detalhe.mostrar(container(), { parametros: { id: "o1" }, sessao: { papel: "direcao", nome: "Jane" }, navegar: () => {} });
+  assert.match(container().textContent, /Encerrado/);
+  botao("Reativar projeto").click();
+  const dialogo = container().querySelector("dialog");
+  dialogo.querySelector("form").dispatchEvent(new window.Event("submit", { cancelable: true }));
+  await esperar();
+  assert.deepEqual(corpos, [{ status: "ativo" }]);
+  assert.match(dialogo.querySelector('[role="alert"]').textContent, /Projeto não encontrado/);
+  assert.ok(container().querySelector("dialog"), "o diálogo continua aberto");
+});
+
+test("detalhe: voluntário não encerra; sem a lista de projetos o botão não aparece", async () => {
+  simular();
+  await detalhe.mostrar(container(), { parametros: { id: "o1" }, sessao: { papel: "voluntario_financeiro", nome: "Lucas" }, navegar: () => {} });
+  assert.equal(botao("Encerrar projeto"), undefined);
+  simular({ listaDeProjetos: resposta(503, {}) });
+  await detalhe.mostrar(container(), { parametros: { id: "o1" }, sessao: coord, navegar: () => {} });
+  assert.match(container().textContent, /85% usado/);
+  assert.equal(botao("Encerrar projeto"), undefined);
 });

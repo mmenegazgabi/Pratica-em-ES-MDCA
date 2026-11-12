@@ -39,6 +39,8 @@ mesmos da Gestão. Implementação: `Backend/Financeiro/autenticacao.py`; testes
 | Aprovar / rejeitar despesa | `PATCH /lancamentos/{id}/aprovar`, `/rejeitar` | Sim | Sim | **Não** | — |
 | Reenviar despesa rejeitada | `PATCH /lancamentos/{id}/reenviar` | Quem lançou | Quem lançou | Quem lançou | Quem lançou |
 | Conciliar com o extrato | `PATCH /lancamentos/{id}/conciliar` | — | — | Sim | — |
+| Importar extrato (CSV) | `POST /extrato` | Sim | — | Sim | — |
+| Ver extrato importado | `GET /extrato` | Sim | Sim | Sim | — |
 | Dashboard da Diretoria | `GET /dashboard/projetos` | — | Sim | — | — |
 | Prestação de contas (PDF/XLSX) | `GET /relatorios/prestacao-contas` | Sim | Sim | — | — |
 | Auditoria do Financeiro | `GET /auditoria?modulo=financeiro` | Sim | Sim | — | — |
@@ -50,7 +52,8 @@ Sem login, todas as rotas acima respondem **401**.
 
 Ficam em `log_auditoria` (`modulo = 'financeiro'`), na mesma transação da ação: cadastrar
 e encerrar/reabrir projeto; criar e editar orçamento; criar, aprovar, rejeitar, reenviar e
-conciliar lançamento; gerar prestação de contas; e todo **acesso negado (403)**, com quem
+conciliar lançamento; importar extrato bancário (quando entra algum item novo); gerar
+prestação de contas; e todo **acesso negado (403)**, com quem
 tentou e a rota. A trilha é só de leitura. Detalhes em
 [persistencia-financeiro.md](persistencia-financeiro.md).
 

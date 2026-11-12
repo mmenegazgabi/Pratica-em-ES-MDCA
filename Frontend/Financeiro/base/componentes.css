@@ -21,6 +21,7 @@
 .etiqueta--aprovado { color: var(--aprovado-texto); background: var(--aprovado-fundo); }
 .etiqueta--rejeitado { color: var(--rejeitado-texto); background: var(--rejeitado-fundo); }
 .etiqueta--conciliado { color: var(--conciliado-texto); background: var(--conciliado-fundo); }
+.etiqueta--encerrado { color: var(--texto-medio); background: var(--fundo-suave); box-shadow: inset 0 0 0 1px var(--borda); }
 
 .filtro { border: 1px solid var(--borda); background: var(--fundo); border-radius: var(--raio); padding: 5px 10px; font: 11.5px var(--fonte); color: var(--texto-medio); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
 .filtro--ativo { border-color: var(--verde); background: var(--ativo-fundo); color: var(--ativo-texto); font-weight: 500; }
