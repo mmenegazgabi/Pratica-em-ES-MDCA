@@ -1,5 +1,5 @@
 // Tela de Programas: estados de carregando, lista, vazio, erro e acesso restrito (jsdom).
-import { beforeEach, test } from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 
@@ -9,6 +9,12 @@ const { API_PADRAO, ERROS, ErroApi, urlDaApi } = await import("../base/api.js");
 const { mostrarProgramas } = await import("../telas/programas.js");
 
 let container;
+// Espaçamento e caixas (T-00m): depois de cada teste, o que a tela montou passa pelo
+// verificador de layout (nada de caixa dentro de caixa nem blocos sem espaço entre eles).
+const { problemasDeLayout } = await import("./ajuda-layout.js");
+afterEach(() => {
+  if (container) assert.deepEqual(problemasDeLayout(container), []);
+});
 const texto = () => container.textContent.replace(/\s+/g, " ").trim();
 const enviar = (form) => form.dispatchEvent(new window.Event("submit", { cancelable: true }));
 const esperar = () => new Promise((r) => setTimeout(r, 0));
@@ -69,31 +75,6 @@ test("o botão de novo programa só aparece para quem cadastra", async () => {
   assert.ok(container.querySelector('a[href="#/programas/novo"]'));
 });
 
-test("sem usuário identificado (400) pede o usuário e mantém o código salvo", async () => {
-  localStorage.setItem("mdca.financeiro.token", "token-salvo");
-  let chamadas = 0;
-  const buscar = async () => {
-    chamadas += 1;
-    if (chamadas === 1) throw new ErroApi(ERROS.SEM_USUARIO, 400, "Identificação do usuário obrigatória.");
-    return [];
-  };
-  await mostrarProgramas(container, { buscar });
-  assert.match(texto(), /Informe seu usuário/);
-
-  const form = container.querySelector("form");
-  enviar(form);
-  assert.equal(chamadas, 1);
-  assert.match(container.querySelector('[role="alert"]:not([hidden])').textContent, /Informe seu usuário/);
-
-  container.querySelector("#f-usuario").value = " jessica ";
-  enviar(form);
-  await esperar();
-
-  assert.equal(chamadas, 2);
-  assert.equal(localStorage.getItem("mdca.gestao.usuario"), "jessica");
-  assert.equal(localStorage.getItem("mdca.financeiro.token"), "token-salvo");
-});
-
 test("nome vindo da API entra como texto, nunca como HTML", async () => {
   await mostrarProgramas(container, { buscar: async () => [{ id: "p-1", nome: '<img src=x onerror="alert(1)">' }] });
 
@@ -108,28 +89,17 @@ test("sem programas mostra o estado vazio", async () => {
   assert.equal(container.querySelector("table"), null);
 });
 
-test("sem código de acesso (401) pede o código e carrega depois de informado", async () => {
-  let chamadas = 0;
-  const buscar = async () => {
-    chamadas += 1;
-    if (chamadas === 1) throw new ErroApi(ERROS.NAO_AUTENTICADO, 401);
-    return [{ id: "p-1", nome: "Semear" }];
-  };
-  await mostrarProgramas(container, { buscar });
-  assert.match(texto(), /Acesso restrito/);
+test("sem sessão do login único, manda entrar pela plataforma, sem pedir código", async () => {
+  for (const erro of [new ErroApi(ERROS.SESSAO_EXPIRADA, 401, "Entre na plataforma para continuar."), new ErroApi(ERROS.NAO_AUTENTICADO, 401)]) {
+    await mostrarProgramas(container, { buscar: async () => Promise.reject(erro) });
 
-  const form = container.querySelector("form");
-  enviar(form);
-  assert.equal(chamadas, 1);
-  assert.match(container.querySelector('[role="alert"]:not([hidden])').textContent, /Informe o código de acesso/);
-
-  container.querySelector("#f-codigo-acesso").value = "token-de-teste";
-  enviar(form);
-  await esperar();
-
-  assert.equal(chamadas, 2);
-  assert.equal(localStorage.getItem("mdca.financeiro.token"), "token-de-teste");
-  assert.equal(container.querySelector("tbody td").textContent, "Semear");
+    assert.match(texto(), /Sessão encerrada/);
+    const entrar = container.querySelector("a.btn");
+    assert.equal(entrar.textContent, "Entrar de novo");
+    assert.equal(entrar.getAttribute("href"), "../");
+    assert.equal(container.querySelector("form"), null);
+    assert.equal(container.querySelector("#f-codigo-acesso"), null);
+  }
 });
 
 test("perfil sem permissão (403) mostra acesso restrito sem pedir código", async () => {
@@ -174,7 +144,7 @@ test("na tela de erro, o servidor avançado fica fechado quando é o padrão", a
 });
 
 test("na tela de erro, dá para voltar do servidor local para a API publicada", async () => {
-  localStorage.setItem("mdca.financeiro.api", "http://localhost:8000");
+  localStorage.setItem("mdca.api", "http://localhost:8000");
   let chamadas = 0;
   const buscar = async () => {
     chamadas += 1;
@@ -192,7 +162,7 @@ test("na tela de erro, dá para voltar do servidor local para a API publicada", 
   await esperar();
 
   assert.equal(chamadas, 2);
-  assert.equal(localStorage.getItem("mdca.financeiro.api"), null);
+  assert.equal(localStorage.getItem("mdca.api"), null);
   assert.equal(urlDaApi(), API_PADRAO);
   assert.match(texto(), /Nenhum programa cadastrado/);
 });

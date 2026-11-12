@@ -41,12 +41,11 @@ def programa(banco):
                 ]
             ],
         )
-        c.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('dora', 'direcao'), ('admin', 'administracao')"))
+        c.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('ana', 'coordenacao'), ('dora', 'direcao'), ('admin', 'administracao')"))
         c.execute(
             sa.text("INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) VALUES (:id, :u, :p, :papel, :inicio)"),
             [
                 {"id": "v1", "u": "jessica", "p": "p-1", "papel": "educador", "inicio": INICIO},
-                {"id": "v2", "u": "ana", "p": "p-1", "papel": "coordenacao", "inicio": INICIO},
                 {"id": "v3", "u": "patricia", "p": "p-1", "papel": "assistente_social", "inicio": INICIO},
                 {"id": "v4", "u": "bruno", "p": "p-2", "papel": "assistente_social", "inicio": INICIO},
             ],

@@ -78,11 +78,13 @@ de Coordenação ou Direção.
 
 ## Produção
 
-**Situação:** a produção está na `d9f1a7c3b5e2`. A head agora é a `e4b8c1d7f2a9`
-(extrato bancário), que só **cria** a tabela `extrato_itens` e seus índices: o código
-anterior continua funcionando com ela, então pode ser aplicada antes do deploy
-(`alembic upgrade head`). Rollback: `alembic downgrade d9f1a7c3b5e2` (apaga os itens do
-extrato importados; os lançamentos, inclusive a referência `item_extrato_ref`, ficam).
+**Situação:** a head agora é a `e4b8c1d7f2a9` (extrato bancário), que vem depois da
+`e4a6c8b0d2f1` (coordenação só na conta, T-87) e só **cria** a tabela `extrato_itens` e
+seus índices: o código anterior continua funcionando com ela, então pode ser aplicada
+antes do deploy (`alembic upgrade head`, que também aplica a `e4a6c8b0d2f1` se a
+produção ainda não estiver nela). Rollback: `alembic downgrade e4a6c8b0d2f1` (apaga os
+itens do extrato importados; os lançamentos, inclusive a referência `item_extrato_ref`,
+ficam).
 
 A migration `c2d8e4f6a1b3` vem **depois** da `6bd565cae094` (alertas da Gestão, T-59) e
 só **adiciona**:

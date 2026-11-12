@@ -71,6 +71,7 @@ export function nomeDoAutor(autorId) {
 const ITENS = {
   inicio: { id: "inicio", rotulo: "Início", icone: "inicio", rota: "#/inicio" },
   lancamentos: { id: "lancamentos", rotulo: "Lançamentos", icone: "lancamentos", rota: "#/lancamentos" },
+  painel: { id: "painel", rotulo: "Painel", icone: "painel", rota: "#/painel" },
   projetos: { id: "projetos", rotulo: "Projetos", icone: "projetos", rota: "#/projetos" },
   conciliacao: { id: "conciliacao", rotulo: "Conciliação", icone: "conciliacao", rota: "#/conciliacao" },
   relatorios: { id: "relatorios", rotulo: "Relatórios", icone: "relatorios", rota: "#/relatorios" },
@@ -79,7 +80,8 @@ const ITENS = {
 
 const MENU_POR_PAPEL = {
   coordenacao: ["inicio", "lancamentos", "projetos", "relatorios", "auditoria"],
-  direcao: ["inicio", "projetos", "relatorios", "auditoria"],
+  // O painel é o dashboard da Diretoria (US-07): a API só responde para a Direção.
+  direcao: ["inicio", "painel", "projetos", "relatorios", "auditoria"],
   voluntario_financeiro: ["inicio", "lancamentos", "conciliacao"],
   educador: [],
 };

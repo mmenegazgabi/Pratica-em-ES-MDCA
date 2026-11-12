@@ -11,7 +11,7 @@ que os itens foram importados.
 Só adiciona uma tabela: o código que já está no ar continua funcionando.
 
 Revision ID: e4b8c1d7f2a9
-Revises: d9f1a7c3b5e2
+Revises: e4a6c8b0d2f1
 Create Date: 2026-11-11 10:00:00.000000
 
 """
@@ -23,7 +23,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'e4b8c1d7f2a9'
-down_revision: Union[str, Sequence[str], None] = 'd9f1a7c3b5e2'
+down_revision: Union[str, Sequence[str], None] = 'e4a6c8b0d2f1'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -1,5 +1,5 @@
 // Usuários e acessos (T-40): contas, perfis e programas pela API; só consulta (jsdom).
-import { beforeEach, test } from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 
@@ -9,6 +9,12 @@ const { ERROS, ErroApi } = await import("../base/api.js");
 const { mostrarUsuarios } = await import("../telas/usuarios.js");
 
 let container;
+// Espaçamento e caixas (T-00m): depois de cada teste, o que a tela montou passa pelo
+// verificador de layout (nada de caixa dentro de caixa nem blocos sem espaço entre eles).
+const { problemasDeLayout } = await import("./ajuda-layout.js");
+afterEach(() => {
+  if (container) assert.deepEqual(problemasDeLayout(container), []);
+});
 const texto = (no = container) => no.textContent.replace(/\s+/g, " ").trim();
 // Nome e id ficam em elementos separados (<strong> e <small>): um espaço entre eles.
 const celula = (td) => [...td.childNodes].map((n) => n.textContent).join(" ").replace(/\s+/g, " ").trim();

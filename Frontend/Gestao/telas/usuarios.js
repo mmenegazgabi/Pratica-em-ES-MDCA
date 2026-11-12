@@ -33,11 +33,11 @@ export function tabelaDeUsuarios(usuarios) {
     el("span", {}, "Os perfis da plataforma e os vínculos com programas definem o que cada pessoa acessa. O cadastro e a edição de contas ainda não estão disponíveis nesta versão."),
   );
   if (!usuarios?.length) {
-    return el("div", {}, aviso, el("section", { class: "card" }, el("div", { class: "empty" }, el("h2", {}, "Nenhum usuário cadastrado"), el("p", {}, "As contas da plataforma aparecem aqui."))));
+    return el("div", { class: "stack" }, aviso, el("section", { class: "card" }, el("div", { class: "empty" }, el("h2", {}, "Nenhum usuário cadastrado"), el("p", {}, "As contas da plataforma aparecem aqui."))));
   }
   return el(
     "div",
-    {},
+    { class: "stack" },
     aviso,
     el(
       "section",

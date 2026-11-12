@@ -16,8 +16,7 @@ Gestao/
   index.html      # entrada (carrega app.js como módulo)
   sw.js           # service worker: guarda os arquivos do app para abrir sem rede no navegador
   app.js          # moldura, rotas e telas de demonstração vindas do protótipo
-  style.css       # design system MDCA + estilos da aplicação (bloco no fim)
-  assets/         # fontes locais (Bitter e General Sans)
+  style.css       # estilos da Gestão sobre o visual do Financeiro (T-00j)
   base/
     api.js        # cliente único da API: toda chamada HTTP passa por aqui
     estados.js    # estados carregando, erro e acesso restrito
@@ -96,23 +95,28 @@ Nenhum outro arquivo deve chamar `fetch`: o teste `estrutura.test.js` falha se i
   do próprio site; a API não passa por ele. Ao mudar a lista de arquivos do app, atualize
   `ARQUIVOS` no `sw.js` (o teste `pwa.test.js` confere) e troque a `VERSAO`.
 
-## Acesso e perfis (provisórios)
+## Acesso e perfis
 
-- **Login único (T-35):** quem entra pela tela inicial da plataforma tem a sessão em
-  `mdca.sessao`, e a Gestão manda o token dela (veja `docs/login.md`).
-- **Código de acesso:** sem sessão, a API exige o token de serviço do
-  Financeiro. A tela pede o código quando a API responde 401, e ele fica salvo só neste
-  aparelho, nas mesmas chaves do Financeiro (um código vale para os dois módulos).
-  O campo "Servidor (avançado)" troca o endereço da API, para testar com o backend local.
-  Ele aparece também na tela de erro (aberto quando o endereço não é o padrão); em
-  branco, volta para a API publicada.
-- **Seu usuário:** as rotas de programa e de usuários exigem saber quem chama
-  (`X-Usuario-Id`, o `id` da tabela `usuarios`, ex.: `jessica`). A tela de acesso pede o
-  usuário junto com o código, e ele pode ser trocado em "Usuário na API" no menu do
-  usuário. Fica salvo só neste aparelho, em `mdca.gestao.usuario`. Até o login, qualquer
-  pessoa com o código pode se identificar como outro usuário.
-- **Perfil:** escolhido na entrada ou no menu do usuário e salvo em `mdca.gestao.papel`.
-  Ele só define o que aparece no menu; quem protege os dados é a API (RBAC, T-33).
+- **Login único (T-35):** a pessoa entra pela página inicial da plataforma
+  (`Frontend/index.html`, e-mail e senha), que grava a sessão em `mdca.sessao`. A Gestão
+  manda o token dessa sessão em toda chamada, e a API lê quem é a pessoa e os papéis
+  dela no banco (veja `docs/login.md`).
+- **Sem sessão** (nunca entrou ou expirou), a Gestão manda para a página inicial, como o
+  Financeiro. Se a sessão vencer com uma tela aberta, a tela mostra "Sessão encerrada"
+  com o botão "Entrar de novo". Não há mais código de acesso nem usuário digitado na tela.
+  Exceções: as prévias do mapa de telas (`?mini=1`), que só usam dados fictícios, e o
+  aparelho sem conexão, que abre do cache para o registro em campo.
+- **Servidor (avançado):** na tela de erro, troca o endereço da API para testar com o
+  backend local. Fica em `mdca.api`, a mesma chave da página inicial; em branco, volta
+  para a API publicada.
+- **Perfil:** vem dos papéis da pessoa logada (`usuarios_papeis`), em `base/papeis.js`
+  (`perfisDaSessao`): Administração → admin, Coordenação → coord, Direção → director,
+  Assistente social → social, Psicólogo → psych, Educador → educator. A pessoa entra com
+  o mais amplo; se tiver mais de um, escolhe entre os dela em "Entrar como" no menu do
+  usuário (a escolha fica em `mdca.gestao.papel`). Quem não tem papel na Gestão (ex.:
+  voluntário financeiro) vê uma página que leva ao Financeiro. Os perfis fictícios do
+  protótipo (Ana, Jéssica…) só aparecem nas prévias sem login. O perfil só define o que
+  aparece no menu; quem protege os dados é a API.
 
 ## Rodar localmente
 
@@ -122,7 +126,8 @@ python3 -m http.server 8080 --directory Frontend
 ```
 
 Para usar o backend local, suba a API em outra porta (ex.: 8000; o CORS já aceita
-`http://localhost:8080`) e informe `http://localhost:8000` em "Servidor (avançado)".
+`http://localhost:8080`), entre pela página inicial (`http://localhost:8080/`) e informe
+`http://localhost:8000` no servidor da página inicial ou em "Servidor (avançado)".
 
 ## Testes
 
@@ -131,3 +136,42 @@ cd Frontend/Gestao
 npm install
 npm test
 ```
+
+## Visual
+
+A Gestão usa o mesmo visual do Financeiro ("B · Neutro e funcional": Inter, branco,
+verde `#3f8a3a`, bordas finas). O `index.html` carrega, antes do `style.css`, os arquivos
+`../Financeiro/base/tokens.css`, `../Financeiro/base/componentes.css` e
+`../Financeiro/style.css`, só para leitura, como a página de Administração
+(`Frontend/Admin`). O `sw.js` guarda os três, para o registro em campo abrir sem internet.
+
+A estrutura das telas usa as classes do Financeiro (T-00k): barra lateral `.lateral` (marca,
+menu com `.lateral__item`, contador de alertas abertos no item Visão geral e a pessoa com
+"Sair" embaixo) e área `.principal`, sem barra superior. Adaptações da Gestão, montadas com
+as peças deles: o seletor de módulo (dois `.filtro`), os grupos do menu, o menu do perfil do
+protótipo e, no celular, a barra lateral como menu que abre por cima.
+
+O `style.css` não cria cor nem fonte própria: as variáveis que as telas já usavam
+(`--color-*`, `--pine`, `--line`…) apontam para as do Financeiro, e a seção do fim dá aos
+componentes da Gestão (botões, etiquetas, caixas, tabelas, campos, abas, avisos e
+diálogo) os tamanhos e o acabamento do Financeiro. O teste `tests/visual.test.js`
+confere isso. Plano completo: `plano-identidade-visual-gestao.md` (arquivo de contexto
+da Gestão), cards T-00j a T-00m.
+
+
+### Caixas e espaçamento (T-00l e T-00m)
+
+- **Caixa (`.card`) só para tabelas, formulários, diálogos e painéis.** Texto, dados, linha
+  do tempo e listas curtas vão numa **seção**: `secao(titulo, subtitulo, corpo, acao)` de
+  `base/dom.js` (no `app.js`, a função `secao` do protótipo). Nunca caixa dentro de caixa.
+- **O espaço entre blocos vem do contêiner, nunca da margem do bloco.** Blocos irmãos
+  (caixas, seções, avisos, abas, tabelas) ficam dentro de `.stack` (22 px entre blocos da
+  tela) ou `.pilha-justa` (12 px, dentro de uma caixa ou seção). A área da página (`.main`),
+  `.card-body` e `.secao__corpo` já dão esse espaço.
+- **Os testes conferem:** `tests/ajuda-layout.js` roda depois de cada teste de tela e em
+  todas as rotas do protótipo (`app.test.js`) e falha com caixa dentro de caixa ou blocos
+  sem contêiner; `tests/visual.test.js` falha com cor, fonte, tamanho de texto ou raio fora
+  do Financeiro, margem própria em caixas, avisos, abas e tabelas, ou `style="..."` fixo.
+- **Celular:** para conferir em 390 px, abra a tela dentro de um quadro (iframe) dessa
+  largura. A captura do Chrome sem janela não desce de ~500 px e corta a imagem, o que
+  parece conteúdo passando da borda sem ser.

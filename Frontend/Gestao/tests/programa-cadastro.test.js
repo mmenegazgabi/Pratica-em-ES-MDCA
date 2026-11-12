@@ -1,12 +1,12 @@
 // Cadastro, edição e detalhe de programa pela API da T-44 (T-45 · US-02), no jsdom.
-import { beforeEach, test } from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 
 const dom = new JSDOM('<!DOCTYPE html><body><dialog id="dialog"></dialog></body>', { url: "http://localhost/Gestao/" });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, localStorage: dom.window.localStorage });
 const { ERROS, ErroApi } = await import("../base/api.js");
-const { mostrarCadastroDePrograma, mostrarEdicaoDePrograma, mostrarPrograma, validarPrograma } = await import(
+const { mostrarCadastroDePrograma, mostrarEdicaoDePrograma, mostrarPrograma, nomesParaSugestao, validarPrograma } = await import(
   "../telas/programas.js"
 );
 
@@ -23,6 +23,12 @@ const PROGRAMA = {
 };
 
 let container;
+// Espaçamento e caixas (T-00m): depois de cada teste, o que a tela montou passa pelo
+// verificador de layout (nada de caixa dentro de caixa nem blocos sem espaço entre eles).
+const { problemasDeLayout } = await import("./ajuda-layout.js");
+afterEach(() => {
+  if (container) assert.deepEqual(problemasDeLayout(container), []);
+});
 let registro;
 let caminhos;
 let avisos;
@@ -74,6 +80,54 @@ test("formulário incompleto não chama a API e mostra a mensagem", async () => 
 
   assert.equal(registro.length, 0);
   assert.equal(texto(aviso()), "Preencha público, responsável, início da vigência e fim da vigência.");
+});
+
+// --- Responsável com sugestões (T-87) ----------------------------------------------
+
+const USUARIOS = [
+  { id: "jessica", nome: "Jéssica Almeida", ativo: true },
+  { id: "ana", nome: "Ana Martins", ativo: true },
+  { id: "antiga", nome: "Conta Antiga", ativo: false },
+  { id: "ana-2", nome: "Ana Martins", ativo: true },
+];
+
+test("sugestões do Responsável: usuários ativos, em ordem e sem repetir nomes", () => {
+  assert.deepEqual(nomesParaSugestao(USUARIOS), ["Ana Martins", "Jéssica Almeida"]);
+  assert.deepEqual(nomesParaSugestao(undefined), []);
+});
+
+test("o campo Responsável sugere os usuários e continua aceitando outro nome", async () => {
+  const enviados = [];
+  mostrarCadastroDePrograma(container, {
+    listarUsuarios: async () => USUARIOS,
+    cadastrar: async (dados) => (enviados.push(dados), { ...PROGRAMA, ...dados }),
+    ir: () => {},
+  });
+  await esperar();
+
+  const campo = container.querySelector('[name="responsavel"]');
+  const lista = container.querySelector(`datalist#${campo.getAttribute("list")}`);
+  assert.deepEqual([...lista.options].map((o) => o.value), ["Ana Martins", "Jéssica Almeida"]);
+
+  preencher({ ...PROGRAMA, responsavel: "Maria do Convênio" });
+  await enviar(container.querySelector("form"));
+  assert.equal(enviados[0].responsavel, "Maria do Convênio");
+});
+
+test("sem a lista de usuários (403), o Responsável funciona sem sugestões", async () => {
+  const enviados = [];
+  mostrarCadastroDePrograma(container, {
+    listarUsuarios: async () => Promise.reject(new ErroApi(ERROS.SEM_PERMISSAO, 403)),
+    cadastrar: async (dados) => (enviados.push(dados), { ...PROGRAMA, ...dados }),
+    ir: () => {},
+  });
+  await esperar();
+
+  assert.equal(container.querySelector("datalist").options.length, 0);
+  assert.equal(aviso().hidden, true);
+  preencher(PROGRAMA);
+  await enviar(container.querySelector("form"));
+  assert.equal(enviados.length, 1);
 });
 
 test("cadastro completo envia os dados e abre o programa salvo", async () => {

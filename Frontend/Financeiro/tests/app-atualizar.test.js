@@ -59,7 +59,7 @@ test("papel tirado depois do login some do menu", async () => {
   sessaoDeTeste({ papeis: ["direcao", "coordenacao"], papel: "coordenacao" });
   eu = [200, pessoa(["direcao"])];
   await abrir();
-  assert.deepEqual(rotulos(raiz), ["Início", "Projetos", "Relatórios", "Auditoria"]);
+  assert.deepEqual(rotulos(raiz), ["Início", "Painel", "Projetos", "Relatórios", "Auditoria"]);
   assert.match(raiz.querySelector(".lateral__usuario").textContent, /Diretoria/);
 });
 

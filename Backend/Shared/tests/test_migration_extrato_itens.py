@@ -21,7 +21,7 @@ TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 
 REVISAO = "e4b8c1d7f2a9"
 # Junção do login com a persistência do Financeiro (a produção estava nela em 11/11).
-ANTERIOR = "d9f1a7c3b5e2"
+ANTERIOR = "e4a6c8b0d2f1"
 FOREIGN_KEY_VIOLATION = "23503"
 UNIQUE_VIOLATION = "23505"
 NOT_NULL_VIOLATION = "23502"

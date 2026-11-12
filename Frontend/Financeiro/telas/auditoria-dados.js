@@ -1,55 +1,48 @@
 // Auditoria: regras sem DOM (testáveis no Node).
 
-/** Quantos eventos a tela pede por página ao GET /auditoria. */
+/** Itens por página pedidos a GET /auditoria (a API aceita até 200). */
 export const TAMANHO_DA_PAGINA = 50;
 
-const FORMATO_OCORRIDO = new Intl.DateTimeFormat("pt-BR", {
-  timeZone: "America/Sao_Paulo",
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
+/** Filtra o histórico por texto (quem, ação ou detalhe), sem diferenciar maiúsculas. */
+export function filtrarAuditoria(registros, texto) {
+  const busca = String(texto || "").trim().toLowerCase();
+  if (!busca) return registros;
+  return registros.filter((r) => [r.quem, r.acao, r.alvo].some((campo) => String(campo ?? "").toLowerCase().includes(busca)));
+}
 
-/** "2026-10-05T12:00:00Z" → "05/10/2026 09:00" (horário de Brasília). */
-export function formatarOcorrido(iso) {
-  const data = iso ? new Date(iso) : null;
-  if (!data || Number.isNaN(data.getTime())) return "—";
-  const partes = Object.fromEntries(FORMATO_OCORRIDO.formatToParts(data).map((p) => [p.type, p.value]));
+/** "2026-11-11T21:06:20+00:00" → "11/11/2026 18:06", no horário de Brasília (o da ONG). */
+export function formatarQuando(iso) {
+  const data = new Date(iso);
+  if (Number.isNaN(data.getTime())) return String(iso ?? "");
+  const partes = Object.fromEntries(
+    new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(data)
+      .map((p) => [p.type, p.value]),
+  );
   return `${partes.day}/${partes.month}/${partes.year} ${partes.hour}:${partes.minute}`;
 }
 
-/** Período e página da tela → consulta do GET /auditoria; período invertido não vai para a API. */
-export function filtrosDaAuditoria({ desde = "", ate = "", pagina = 1 } = {}) {
-  if (desde && ate && desde > ate) return { filtros: null, erro: "A data inicial não pode ser depois da final." };
-  const filtros = { pagina: Math.max(1, Math.trunc(Number(pagina)) || 1), tamanho: TAMANHO_DA_PAGINA };
-  if (desde) filtros.desde = desde;
-  if (ate) filtros.ate = ate;
-  return { filtros, erro: null };
+/** Filtros da tela → parâmetros de GET /auditoria (vazios ficam de fora). */
+export function filtrosDaApi({ desde, ate, pagina }) {
+  return { desde: desde || "", ate: ate || "", pagina: pagina || 1, tamanho: TAMANHO_DA_PAGINA };
 }
 
-const semAcento = (texto) =>
-  String(texto ?? "")
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
-
-/** Busca na página já carregada: pessoa, ação ou descrição (sem diferenciar acento e maiúsculas). */
-export function filtrarNaPagina(itens, texto) {
-  const busca = semAcento(texto).trim();
-  if (!busca) return itens;
-  return itens.filter((e) => [e.quem, e.acao, e.alvo].some((campo) => semAcento(campo).includes(busca)));
+/** "1–50 de 120"; "Nenhum registro" quando não há nada. */
+export function intervaloDaPagina(pagina, tamanho, total) {
+  if (!total) return "Nenhum registro";
+  const primeiro = (pagina - 1) * tamanho + 1;
+  const ultimo = Math.min(pagina * tamanho, total);
+  return `${primeiro}–${ultimo} de ${total}`;
 }
 
-/** "N eventos", "Página X de Y" e se há página anterior/próxima. */
-export function paginacao({ total = 0, pagina = 1, tamanho = TAMANHO_DA_PAGINA } = {}) {
-  const paginas = Math.max(1, Math.ceil(total / tamanho));
-  return {
-    total: `${total} ${total === 1 ? "evento" : "eventos"}`,
-    pagina: `Página ${Math.min(pagina, paginas)} de ${paginas}`,
-    temAnterior: pagina > 1,
-    temProxima: pagina < paginas,
-  };
+export function ultimaPagina(tamanho, total) {
+  return Math.max(1, Math.ceil((total || 0) / tamanho));
 }

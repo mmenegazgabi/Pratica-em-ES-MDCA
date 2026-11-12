@@ -13,7 +13,7 @@
 import * as api from "../base/api.js";
 import { consultarComCopia } from "../base/copia-local.js";
 import { carregarNaTela } from "../base/estados.js";
-import { el } from "../base/dom.js";
+import { el, secao } from "../base/dom.js";
 import { SITUACAO } from "../base/fila.js";
 import { hojeIso } from "../base/formulario.js";
 
@@ -414,7 +414,7 @@ export function mostrarRegistro(
           el("h2", {}, "Quem participou?"),
           el("button", { type: "button", class: "btn small", onclick: todosPresentes }, "Marcar todos presentes"),
         ),
-        el("p", { class: "muted", style: "font-size:12px" }, `Turma ${t.nome} · ${dataBr(data.value)}`),
+        el("p", { class: "muted" }, `Turma ${t.nome} · ${dataBr(data.value)}`),
         pessoas.length ? pessoas.map(linhaDaPessoa) : vazio("Ninguém matriculado nessa data", "Volte e confira a data do encontro."),
       );
     }
@@ -428,7 +428,7 @@ export function mostrarRegistro(
             el(
               "div",
               { class: "file-item" },
-              el("span", {}, arquivo.name, el("small", { style: "display:block" }, tamanhoLegivel(arquivo.size))),
+              el("span", {}, arquivo.name, el("small", {}, tamanhoLegivel(arquivo.size))),
               el("button", { type: "button", class: "btn small", onclick: () => (arquivos.splice(indice, 1), montar()) }, "Remover"),
             ),
           ),
@@ -635,7 +635,7 @@ export function mostrarEncontro(container, programaId, atividadeId, { avisar = (
             "span",
             {},
             ev.nome_arquivo,
-            el("small", { style: "display:block" }, `${ev.autor} · ${dataBr(ev.data)} · ${tamanhoLegivel(ev.tamanho)}${ev.descricao ? ` · ${ev.descricao}` : ""}`),
+            el("small", {}, `${ev.autor} · ${dataBr(ev.data)} · ${tamanhoLegivel(ev.tamanho)}${ev.descricao ? ` · ${ev.descricao}` : ""}`),
           ),
           el("button", { type: "button", class: "btn small", onclick: (e) => baixar(ev, e.currentTarget) }, "Baixar"),
         ),
@@ -657,7 +657,7 @@ export function mostrarEncontro(container, programaId, atividadeId, { avisar = (
       el(
         "div",
         { class: "stack" },
-        cartao(
+        secao(
           "Registro da atividade",
           a.turma,
           el(
@@ -672,7 +672,7 @@ export function mostrarEncontro(container, programaId, atividadeId, { avisar = (
         ),
         cartao("Frequência", "Chamada do encontro", chamada(a)),
       ),
-      cartao("Evidências", "Arquivos vinculados ao encontro; cada download fica registrado", evidencias(a)),
+      secao("Evidências", "Arquivos vinculados ao encontro; cada download fica registrado", evidencias(a)),
     );
   });
 }

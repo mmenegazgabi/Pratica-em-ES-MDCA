@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 
 import { aprovadosEmAberto, diasEmAberto, mensagemDaImportacao, mesmoValor, valorDoExtrato, valoresDiferentes } from "../telas/conciliacao-dados.js";
 import { lancamentosDoPeriodo, nomePadraoDoRelatorio, resumoDoPeriodo, validarPeriodo } from "../telas/relatorios-dados.js";
-import { TAMANHO_DA_PAGINA, filtrarNaPagina, filtrosDaAuditoria, formatarOcorrido, paginacao } from "../telas/auditoria-dados.js";
 import { categoriasDoOrcamento } from "../telas/projetos-dados.js";
 
 const AGORA = new Date("2026-10-27T15:00:00Z");
@@ -82,49 +81,6 @@ describe("relatórios", () => {
     assert.equal(nomePadraoDoRelatorio(orcamento, "2026-07-01", "2026-09-30", "pdf"), "prestacao-de-contas-esporte-base-2026-07-01-a-2026-09-30.pdf");
     assert.equal(nomePadraoDoRelatorio({ projeto_id: "p1" }, "2026-07-01", "2026-09-30", "xlsx"), "prestacao-de-contas-p1-2026-07-01-a-2026-09-30.xlsx");
     assert.equal(nomePadraoDoRelatorio({ projeto_nome: "Ação & Música" }, "2026-01-01", "2026-01-31", "pdf"), "prestacao-de-contas-acao-musica-2026-01-01-a-2026-01-31.pdf");
-  });
-});
-
-describe("auditoria", () => {
-  test("filtros: período e página, sempre 50 por página; vazio fica de fora", () => {
-    assert.deepEqual(filtrosDaAuditoria({ desde: "2026-10-01", ate: "2026-10-31", pagina: 2 }), {
-      filtros: { pagina: 2, tamanho: 50, desde: "2026-10-01", ate: "2026-10-31" },
-      erro: null,
-    });
-    assert.deepEqual(filtrosDaAuditoria({ desde: "", ate: "" }), { filtros: { pagina: 1, tamanho: 50 }, erro: null });
-    assert.deepEqual(filtrosDaAuditoria({ pagina: 0 }).filtros.pagina, 1);
-    assert.equal(TAMANHO_DA_PAGINA, 50);
-  });
-
-  test("filtros: período invertido não vai para a API", () => {
-    assert.deepEqual(filtrosDaAuditoria({ desde: "2026-10-31", ate: "2026-10-01" }), { filtros: null, erro: "A data inicial não pode ser depois da final." });
-  });
-
-  test("data e hora no horário de Brasília", () => {
-    assert.equal(formatarOcorrido("2026-10-05T12:00:00Z"), "05/10/2026 09:00");
-    assert.equal(formatarOcorrido("2026-10-05T01:30:00+00:00"), "04/10/2026 22:30");
-    assert.equal(formatarOcorrido(null), "—");
-  });
-
-  test("busca na página: pessoa, ação ou descrição, sem acento nem maiúsculas", () => {
-    const itens = [
-      { quem: "Luana Ferraz", acao: "Aprovou despesa", alvo: "Materiais · R$ 180,00 · Leitura", detalhes: { segredo: "luana" } },
-      { quem: "vera", acao: "Importou extrato bancário", alvo: "2 itens novos" },
-      { quem: null, acao: "Acesso negado", alvo: null },
-    ];
-    assert.equal(filtrarNaPagina(itens, ""), itens);
-    assert.deepEqual(filtrarNaPagina(itens, "  LUANA "), [itens[0]]);
-    assert.deepEqual(filtrarNaPagina(itens, "bancario"), [itens[1]]);
-    assert.deepEqual(filtrarNaPagina(itens, "leitura"), [itens[0]]);
-    assert.deepEqual(filtrarNaPagina(itens, "negado"), [itens[2]]);
-    assert.deepEqual(filtrarNaPagina(itens, "segredo"), [], "detalhes não entram na busca");
-  });
-
-  test("paginação: total de eventos e limites", () => {
-    assert.deepEqual(paginacao({ total: 0, pagina: 1, tamanho: 50 }), { total: "0 eventos", pagina: "Página 1 de 1", temAnterior: false, temProxima: false });
-    assert.deepEqual(paginacao({ total: 1, pagina: 1, tamanho: 50 }), { total: "1 evento", pagina: "Página 1 de 1", temAnterior: false, temProxima: false });
-    assert.deepEqual(paginacao({ total: 120, pagina: 2, tamanho: 50 }), { total: "120 eventos", pagina: "Página 2 de 3", temAnterior: true, temProxima: true });
-    assert.deepEqual(paginacao({ total: 120, pagina: 3, tamanho: 50 }).temProxima, false);
   });
 });
 

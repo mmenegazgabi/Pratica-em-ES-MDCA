@@ -38,11 +38,12 @@ mais enviado. Quem só tem o papel educador é levado ao app do celular (`lancam
 | --- | --- | --- | --- |
 | Início (`#/inicio`) | Despesas aguardando aprovação e alertas de orçamento (>= 80%) | Alertas de orçamento, prestações de contas a gerar (vigência terminou ou termina em até 30 dias) e orçado, realizado e saldo por projeto (`GET /dashboard/projetos`, com total) | Aprovados sem conciliação |
 | Lançamentos (`#/lancamentos`) | Filas Aguardando/Aprovados/Rejeitados/Todos, filtro por projeto, painel com Aprovar e Rejeitar (motivo obrigatório) | não aparece | Abre em Aprovados (consulta) |
+| Painel (`#/painel`) | não aparece | Orçado, realizado e saldo de cada projeto (`GET /dashboard/projetos`), com filtro de período e de situação (todos, ativos, encerrados); os filtros também podem vir na rota (`#/painel?inicio=AAAA-MM-DD&fim=AAAA-MM-DD&situacao=ativo`) | não aparece |
 | Projetos (`#/projetos`) | Totais, uso por projeto (projeto encerrado aparece como "Encerrado"), Novo projeto/Criar orçamento | Só leitura | não aparece |
 | Detalhe do projeto (`#/projetos/<orçamento>`) | Orçado, gasto, disponível, gasto / limite por categoria, últimos lançamentos, **Editar orçamento** e **Encerrar/Reativar projeto** (com confirmação, `PATCH /projetos/{id}/status`) | Igual, sem Editar orçamento | não aparece |
 | Conciliação (`#/conciliacao`) | não aparece | não aparece | Extrato em aberto (`GET /extrato?em_aberto=true`) e aprovados lado a lado; marca um de cada e concilia (`PATCH /lancamentos/{id}/conciliar` com o `id` do item em `referencia_extrato`); **Importar extrato (CSV)** (`POST /extrato`). A Conciliação e a importação são do voluntário financeiro; a API também aceita a importação pela coordenação, mas o front não oferece |
 | Relatórios (`#/relatorios`) | Prestação de contas: projeto, período, prévia na tela e arquivo oficial da API em PDF ou Planilha (XLSX) (`GET /relatorios/prestacao-contas`) | Igual | não aparece |
-| Auditoria (`#/auditoria`) | Trilha do Financeiro (`GET /auditoria?modulo=financeiro`): período, páginas de 50 (Anterior/Próxima) e busca nesta página (espera 300 ms) | Igual | não aparece |
+| Auditoria (`#/auditoria`) | Trilha do Financeiro (`GET /auditoria?modulo=financeiro`), mais recentes primeiro, horário de Brasília, filtro de período, busca na página e páginas de 50; só leitura | Igual | não aparece |
 
 O papel **Educador** vai direto para o app do celular (`lancamento/`). A gestão de
 pessoas e papéis fica na tela Administração da página inicial (`Frontend/Admin/`,
@@ -54,8 +55,8 @@ papel voltam para o Início.
 
 ### Dados de exemplo
 
-Nenhum. `telas/dados-exemplo.js` (extrato e histórico fixos) saiu: a Conciliação e a
-Auditoria usam a API. A geração do relatório também deixou de ser feita no navegador
+Nenhum. `telas/dados-exemplo.js` (extrato fixo) saiu: a Conciliação usa o extrato da
+API. A geração do relatório também deixou de ser feita no navegador
 (saíram o CSV montado no front e a impressão com `window.print`): o arquivo é o oficial
 do backend, com o nome do `Content-Disposition` (ou
 `prestacao-de-contas-<projeto>-<início>-a-<fim>.<pdf|xlsx>` se o cabeçalho não vier).
@@ -74,14 +75,6 @@ Detalhes das telas ligadas à API:
   extrato não carregar, só a coluna dele mostra o erro. O extrato fica no banco
   (tabela `extrato_itens`, junto dos lançamentos; veja `docs/persistencia-financeiro.md`),
   e a importação e a conciliação vão para a auditoria do Financeiro.
-- **Auditoria**: usa o `GET /auditoria` do Financeiro (`modulo=financeiro` fixo, sem
-  filtro de módulo), com `desde`/`ate`, `pagina` e `tamanho=50`. Colunas Data/hora
-  (`quando`, horário de Brasília), Pessoa (`quem`), Ação (`acao`, o texto que a API já
-  manda) e Descrição (`alvo`); `detalhes` nunca aparece. "N eventos" vem do `total`, e
-  Anterior/Próxima trocam de página (mudar o período volta à primeira). A busca filtra
-  só a página carregada, por pessoa, ação ou descrição (sem chamar a API; espera
-  300 ms). Só a resposta do pedido mais recente aparece; período invertido avisa sem
-  chamar a API; a busca pendente é cancelada ao sair da tela.
 - **Início da direção**: o painel "Projetos" lista ativos primeiro e os encerrados
   marcados, com uma linha de total. Se `GET /dashboard/projetos` falhar, as pendências
   continuam e o painel mostra o aviso.
@@ -104,9 +97,6 @@ CORS só permite GET, POST, PATCH e OPTIONS; por isso não há PUT nem DELETE.
 
 ## Falta no backend
 
-- As ações do Financeiro ainda não entram em `log_auditoria` (os dados do Financeiro
-  estão em memória até a E3): a Auditoria mostra hoje as ações da plataforma e da
-  Gestão.
 - Quem rejeitou e quando, para mostrar no aviso da despesa rejeitada no celular.
 
 Tickets de acompanhamento:

@@ -1,6 +1,13 @@
 """GET /gestao/programas: leitura do cadastro canônico no PostgreSQL (T-00f)."""
 
+import pytest
 import sqlalchemy as sa
+
+
+@pytest.fixture
+def cabecalhos(cabecalhos_admin):
+    """Estes testes cobrem o cadastro; quem chama é a administração (o acesso por papel fica em test_gestao_acesso_programas.py)."""
+    return cabecalhos_admin
 
 
 def inserir_projetos(banco, *projetos):

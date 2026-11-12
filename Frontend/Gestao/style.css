@@ -1,119 +1,81 @@
-/* MDCA — tokens e componentes copiados de Design/Financeiro/_ds/mdca-…/styles.css
-   (mesmo design system do protótipo financeiro). Para mudar o visual das duas
-   partes juntas, altere lá e copie para cá; as fontes ficam embutidas (assets/). */
+/* MDCA · Gestão — visual do Financeiro (T-00j).
+   As cores, a fonte e os componentes base vêm de ../Financeiro/base/tokens.css e
+   componentes.css (carregados antes deste arquivo no index.html, só leitura, como a
+   página de Administração). As variáveis abaixo são os nomes que as telas da Gestão
+   já usam, agora apontando para as do Financeiro: nenhuma cor, fonte, raio ou sombra
+   próprios (plano-identidade-visual-gestao.md, seção 3.1). */
 
 :root {
-  /* — Raw palette — */
-  --green-950: #111111; /* hero gradient start, confirmed */
-  --green-900: #2d4c2e; /* hero gradient midpoint, confirmed exact */
-  --green-800: #355433;
-  --green-700: #436d43; /* hero gradient end, confirmed */
-  --green-600: #457048;
-  --green-500: #64b05a;
-  --green-400: #6aba60; /* PRIMARY: sampled straight off the "Quero ser voluntário" button */
-  --green-300: #9aca93;
-  --green-200: #c9e5c4;
-  --green-100: #e6f3e3;
+  /* Nomes antigos do protótipo, mantidos como apelidos para não quebrar as telas. */
+  --green-950: var(--ativo-texto); --green-900: var(--ativo-texto); --green-800: var(--ativo-texto);
+  --green-700: var(--verde); --green-600: var(--verde); --green-500: var(--verde); --green-400: var(--verde);
+  --green-300: var(--verde); --green-200: var(--ativo-fundo); --green-100: var(--ativo-fundo);
+  --cream-50: var(--fundo); --cream-100: var(--fundo); --beige-200: var(--fundo-suave);
+  --gray-900: var(--texto); --gray-800: var(--texto); --gray-500: var(--texto-suave);
+  --logo-red: var(--vermelho); --logo-green: var(--verde); --logo-blue: var(--conciliado-texto); --logo-yellow: var(--amarelo);
 
-  --cream-50: #fffdf1;  /* page background, confirmed exact (rgb 255,253,241) */
-  --cream-100: #fdf9e6;
-  --beige-200: #f3e5cb; /* card fill, confirmed exact (rgb 243,229,203) */
+  --color-bg: var(--fundo);
+  --color-surface: var(--fundo);
+  --color-text: var(--texto);
+  --color-accent: var(--verde);
+  --color-accent-2: var(--verde);
+  --color-divider: var(--borda);
 
-  /* True neutral grays — the site's text is plain black/gray, not green-tinted */
-  --gray-900: #000000; /* headings, confirmed exact */
-  --gray-800: #1e1e1e; /* body copy, confirmed exact */
-  --gray-500: #7a7a7a; /* muted/meta copy, confirmed exact */
+  --color-neutral-100: var(--fundo-suave);
+  --color-neutral-200: var(--linha);
+  --color-neutral-300: var(--borda);
+  --color-neutral-400: var(--borda-campo);
+  --color-neutral-500: var(--texto-suave);
+  --color-neutral-600: var(--texto-suave);
+  --color-neutral-700: var(--texto-medio);
+  --color-neutral-800: var(--texto);
+  --color-neutral-900: var(--texto);
 
-  /* The four letter-colors of the MDCA wordmark, read straight from the site's
-     own logo.svg. The logo is the one place the site itself leaves green for
-     red/blue/yellow — used here for status color and the brand mark. */
-  --logo-red: #f02d34;
-  --logo-green: #009d53;
-  --logo-blue: #195bae;
-  --logo-yellow: #fde118;
+  --color-accent-100: var(--ativo-fundo);
+  --color-accent-200: var(--ativo-fundo);
+  --color-accent-300: var(--verde);
+  --color-accent-400: var(--verde);
+  --color-accent-500: var(--verde);
+  --color-accent-600: var(--verde);
+  --color-accent-700: var(--verde);
+  --color-accent-800: var(--ativo-texto);
+  --color-accent-900: var(--ativo-texto);
+  --color-accent-2-100: var(--ativo-fundo); --color-accent-2-200: var(--ativo-fundo);
+  --color-accent-2-300: var(--verde); --color-accent-2-400: var(--verde); --color-accent-2-500: var(--verde);
+  --color-accent-2-600: var(--verde); --color-accent-2-700: var(--ativo-texto); --color-accent-2-800: var(--ativo-texto);
+  --color-accent-2-900: var(--ativo-texto);
 
-  /* — Token API expected by the screens (color-bg, color-accent, tonal ramps…) — */
-  --color-bg: var(--cream-50);
-  --color-surface: var(--beige-200); /* no white anywhere: cards, fields and dialogs sit on the
-     site's warm beige instead, lifted off the page by shadow rather than by contrast with white */
-  --color-text: var(--gray-900);
-  --color-accent: var(--green-400);
-  --color-accent-2: var(--green-600);
-  --color-divider: rgba(0, 0, 0, 0.12);
+  --status-approved: var(--verde);
+  --status-pending: var(--amarelo);
+  --status-rejected: var(--vermelho);
+  --status-reconciled: var(--conciliado-texto);
+  --status-closed: var(--texto-suave);
 
-  /* Neutral ramp — warm cream surfaces at the light end (confirmed), true gray
-     text at the dark end (confirmed); the site mixes both, not one warm ramp. */
-  --color-neutral-100: #fdf9e6;
-  --color-neutral-200: #f6efd7;
-  --color-neutral-300: #f3e5cb;
-  --color-neutral-400: #b8b2a4;
-  --color-neutral-500: #7a7a7a;
-  --color-neutral-600: #5c5c5c;
-  --color-neutral-700: #404040;
-  --color-neutral-800: #1e1e1e;
-  --color-neutral-900: #000000;
+  --font-heading: var(--fonte);
+  --font-heading-weight: 600;
+  --font-body: var(--fonte);
 
-  /* Accent ramp — the site's green, one role, ten steps */
-  --color-accent-100: #e6f3e3;
-  --color-accent-200: #c9e5c4;
-  --color-accent-300: #9aca93;
-  --color-accent-400: #6aba60;
-  --color-accent-500: #64b05a;
-  --color-accent-600: #457048;
-  --color-accent-700: #436d43;
-  --color-accent-800: #355433;
-  --color-accent-900: #2d4c2e;
-
-  /* Mono scheme on the green side: no second accent on the site — kept as an
-     alias of the green ramp so both variable sets resolve; treat as one role. */
-  --color-accent-2-100: #e6f3e3;
-  --color-accent-2-200: #c9e5c4;
-  --color-accent-2-300: #9aca93;
-  --color-accent-2-400: #6aba60;
-  --color-accent-2-500: #457048;
-  --color-accent-2-600: #436d43;
-  --color-accent-2-700: #355433;
-  --color-accent-2-800: #2d4c2e;
-  --color-accent-2-900: #111111;
-
-  /* Status colors — the logo's other three letters, put to work as the
-     financial module's status system (the marketing site has no status colors
-     of its own to draw on, so this is the one deliberate extension). */
-  --status-approved: var(--green-400);
-  --status-pending: var(--logo-yellow);
-  --status-rejected: var(--logo-red);
-  --status-reconciled: var(--logo-blue);
-  --status-closed: var(--color-neutral-600);
-
-  --font-heading: "Bitter", Georgia, "Times New Roman", serif; /* confirmed: site headings and buttons */
-  --font-heading-weight: 700; /* the site's H1 sets bold; --btn overrides to 500,
-     its own signature pairing of a serif label over a sans-serif body */
-  /* Body font is confirmed "Neue Montreal" on the live site — a paid Pangram
-     Pangram face with no legitimate CDN source. General Sans (Fontshare, free)
-     is the closest free substitute: same grotesque proportions, same foundry
-     lineage. Swap the family below if MDCA licenses the real font later. */
-  --font-body: "General Sans", "Neue Montreal", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-
+  /* Espaçamento só com valores que o Financeiro usa (seção 5.3 do plano). */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 40px;
-  --space-8: 56px;
+  --space-5: 22px;
+  --space-6: 26px;
+  --space-7: 26px;
+  --space-8: 26px;
 
-  /* Radii — pills for actions/badges, soft radii for surfaces, as on the site */
-  --radius-pill: 999px;
-  --radius-sm: var(--radius-pill); /* small chips/toggles read as pills, like the site's badges */
-  --radius-md: 16px; /* tiles, fields, inline photos */
-  --radius-lg: 24px; /* cards, photos */
+  /* Raios do Financeiro: 4 (etiqueta), 6 (campo), 7 (botão), 8 (caixa), 10 (diálogo). */
+  --radius-pill: 6px;
+  --radius-sm: 6px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
 
-  /* Shadows — soft, always downward, tinted green (never gray) */
-  --shadow-sm: 0 2px 14px rgba(15, 40, 15, 0.06);
-  --shadow-md: 0 10px 30px rgba(15, 40, 15, 0.1);
-  --shadow-lg: 0 18px 40px rgba(15, 40, 15, 0.18);
-  --shadow-button: 0 6px 18px rgba(60, 114, 54, 0.28);
+  /* Sem sombras, como no Financeiro; só o diálogo tem uma, a mesma do .dialogo deles. */
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, .12);
+  --shadow-button: none;
 
   --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
@@ -270,7 +232,7 @@ textarea.input { min-height: 90px; resize: vertical; }
 .tag-outline { border: 1.5px solid var(--color-accent-600); color: var(--color-accent-700); }
 /* Status colors — the logo's red/blue/yellow, reserved for badges only (never
    buttons, links or chrome), so a lançamento's status reads at a glance. */
-.tag-warning { background: color-mix(in srgb, var(--status-pending) 22%, var(--cream-100)); color: color-mix(in srgb, var(--status-pending) 65%, black); }
+.tag-warning { background: color-mix(in srgb, var(--status-pending) 22%, var(--cream-100)); color: color-mix(in srgb, var(--status-pending) 65%, var(--texto)); }
 .tag-danger { background: color-mix(in srgb, var(--status-rejected) 14%, var(--cream-100)); color: var(--status-rejected); }
 .tag-info { background: color-mix(in srgb, var(--status-reconciled) 14%, var(--cream-100)); color: var(--status-reconciled); }
 
@@ -320,14 +282,8 @@ textarea.input { min-height: 90px; resize: vertical; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
 
 
-@font-face{font-family:"Bitter";font-style:normal;font-weight:400 700;font-display:swap;src:url("assets/bitter-latin.woff2") format("woff2")}
-@font-face{font-family:"Bitter";font-style:italic;font-weight:400;font-display:swap;src:url("assets/bitter-italic-latin.woff2") format("woff2")}
-@font-face{font-family:"General Sans";font-style:normal;font-weight:400;font-display:swap;src:url("assets/general-sans-400.woff2") format("woff2")}
-@font-face{font-family:"General Sans";font-style:normal;font-weight:500;font-display:swap;src:url("assets/general-sans-500.woff2") format("woff2")}
-@font-face{font-family:"General Sans";font-style:normal;font-weight:600;font-display:swap;src:url("assets/general-sans-600.woff2") format("woff2")}
-@font-face{font-family:"General Sans";font-style:normal;font-weight:700;font-display:swap;src:url("assets/general-sans-700.woff2") format("woff2")}
 /* Layout específico de Gestão. Tokens e componentes: bloco MDCA acima. */
-:root{--pine:var(--color-accent-700);--pine2:var(--color-accent-800);--mint:var(--color-accent-100);--leaf:var(--color-accent-700);--cream:var(--color-bg);--paper:var(--color-neutral-100);--ink:var(--color-text);--muted:var(--color-neutral-600);--line:var(--color-divider);--gold:var(--color-accent);--amber:var(--status-pending);--red:var(--status-rejected);--serif:var(--font-heading);--sans:var(--font-body)}
+:root{--pine:var(--verde);--pine2:var(--ativo-texto);--mint:var(--ativo-fundo);--leaf:var(--verde);--cream:var(--fundo);--paper:var(--fundo-suave);--ink:var(--texto);--muted:var(--texto-suave);--line:var(--borda);--gold:var(--verde);--amber:var(--amarelo);--red:var(--vermelho);--serif:var(--fonte);--sans:var(--fonte)}
 [hidden]{display:none!important}button,input,select,textarea{font:inherit}button,a,input,select,textarea{touch-action:manipulation}button{cursor:pointer}a{text-decoration:none}a:hover{color:var(--color-accent-700)}svg.icon{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;vertical-align:middle}h1{font-size:36px;font-weight:400;letter-spacing:-.02em;margin-bottom:6px}h2{font-size:25px;font-weight:400;margin-bottom:5px}h3{font-size:20px;font-weight:400;margin-bottom:6px}small,.muted{color:var(--muted)}small{font-size:11px}strong{font-weight:600}.skip{position:fixed;top:-60px;z-index:99;background:var(--cream);padding:12px}.skip:focus{top:5px}
 .sidebar{position:fixed;inset:0 auto 0 0;width:246px;border-right:1px solid var(--line);background:var(--paper);display:flex;flex-direction:column;z-index:30;color:var(--ink)}.brand{padding:20px 20px 16px;border-bottom:1px solid var(--line);display:block;color:var(--ink)}.brand-name{font-family:var(--serif);font-size:19px;font-weight:600;letter-spacing:-.01em;display:block;line-height:1.25}.brand small{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);display:block;margin-top:3px}.brand-symbol{display:none}.workspace{padding:14px 20px;border-bottom:1px solid var(--line)}.workspace .seg{width:100%}.workspace .seg a,.workspace .seg button{flex:1;justify-content:center;display:flex;font-size:13px;padding:7px 10px;background:transparent;color:var(--color-neutral-700);border:0;border-radius:0;font-family:var(--sans)}.workspace .seg a+button{border-left:1px solid var(--line)}.workspace .seg .selected{box-shadow:inset 0 0 0 1px var(--gold);color:var(--gold)}
 .nav{flex:1;overflow:auto;display:block;padding:8px 0 20px;border:0;background:transparent}.nav-label{padding:14px 20px 4px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.nav a{display:flex;align-items:center;gap:8px;width:100%;padding:7px 20px;border-left:2px solid transparent;font-family:var(--sans);font-size:13.5px;line-height:1.55;color:color-mix(in srgb,var(--ink) 78%,transparent)}.nav a>.icon{display:none}.nav a:hover{background:color-mix(in srgb,var(--ink) 4%,transparent);color:var(--pine)}.nav a.active{font-family:var(--serif);font-size:15px;border-left-color:var(--gold);color:var(--pine);background:color-mix(in srgb,var(--gold) 10%,transparent)}.nav .divider{margin:4px 0}.count{border:1px solid var(--gold);border-radius:var(--radius-sm);color:var(--gold);font-size:10px;padding:0 5px;margin-left:auto}.side-bottom{border-top:1px solid var(--line);background:var(--color-neutral-200);padding:12px 16px 14px}.persona-caption{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}.persona-buttons{display:flex;flex-wrap:wrap;gap:5px}.persona-buttons button{flex:none;font:inherit;font-size:11.5px;padding:4px 9px;border-radius:var(--radius-sm);border:1px solid var(--line);background:transparent;color:var(--color-neutral-700)}.persona-buttons button.active{font-family:var(--serif);border-color:var(--gold);color:var(--pine);background:color-mix(in srgb,var(--gold) 12%,transparent)}.persona-buttons button:hover{border-color:var(--gold)}.persona-note{font-size:10.5px;color:var(--color-neutral-700);margin-top:8px;line-height:1.5}.side-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px}.side-links a{font-size:10px;color:var(--color-neutral-700)}.prototype-pill{font-size:9px;color:var(--muted);margin-top:10px;display:block}.shell{margin-left:246px;min-height:100vh}
@@ -335,11 +291,11 @@ textarea.input { min-height: 90px; resize: vertical; }
 .btn{min-height:36px;white-space:nowrap}.btn.primary,.btn.gold{color:var(--color-accent-800);background:var(--color-accent);border-color:transparent;box-shadow:var(--shadow-button)}.btn.primary:hover,.btn.gold:hover{background:var(--color-accent-500)}.btn.primary:active,.btn.gold:active{background:var(--color-accent-600)}.btn:not(.primary):not(.gold):not(.ghost):not(.btn-ghost):not(.danger){border-color:var(--color-accent-600);color:var(--color-accent-700)}.btn:not(.primary):not(.gold):hover{background:var(--color-accent-100)}.btn:not(.primary):not(.gold):active{background:var(--color-accent-200)}.btn.small{font-size:13px;min-height:30px;padding:6px 12px}.btn.ghost{border-color:transparent;color:var(--color-accent-700)}.btn.danger{color:var(--status-rejected);border-color:var(--status-rejected)}.btn.danger:hover{background:color-mix(in srgb,var(--status-rejected) 10%,transparent)}.text-link{font-size:13px;font-family:var(--serif);font-weight:500;color:var(--color-accent-700);display:inline-flex;align-items:center;gap:6px}.text-link .icon{width:14px}
 .toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:18px}.filters{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.filter-label{font-size:11px;color:var(--muted)}.filter-control{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--color-surface);padding:6px 10px;font-size:14px;min-height:36px;color:var(--ink);max-width:100%}.search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--color-surface);padding:0 12px;min-width:230px;color:var(--muted)}.search input{border:0;background:transparent;font:inherit;font-size:12px;padding:9px 0;width:100%;color:var(--ink)}.search:focus-within{border-color:var(--gold)}.search input:focus-visible{outline:0}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:24px}.stat{border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3);background:transparent;min-width:0}.stat-top{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:var(--space-2)}.stat-icon{display:none}.stat-value{font-family:var(--serif);font-size:34px;font-weight:400;font-variant-numeric:tabular-nums;letter-spacing:-.015em;line-height:1.2}.stat-value em{font-size:21px;font-style:normal;color:var(--muted)}.stat-note{font-size:11px;color:color-mix(in srgb,var(--ink) 50%,transparent);margin-top:var(--space-2)}.stat-note b{font-weight:400;color:var(--color-neutral-700)}
-.grid-main{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:24px;margin-bottom:24px}.card{gap:0;padding:0;min-width:0}.card-head{padding:18px 20px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px}.card-head small{font-size:11px;display:block;margin-top:3px}.card-body{padding:0 20px 20px;opacity:1;font-size:13px}.card-footer{border-top:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--muted)}.program-row{padding:14px 0;border-bottom:1px solid var(--line)}.program-row:last-child{border:0}.row-top{display:flex;justify-content:space-between;align-items:center;gap:12px}.program-title{display:flex;gap:8px;align-items:center;font-family:var(--serif);font-size:19px;font-weight:400;color:var(--ink)}.mini-icon{color:var(--pine);display:grid;place-items:center;width:26px;height:26px;border:1px solid var(--line);border-radius:var(--radius-sm)}.progress{height:10px;position:relative;background:var(--color-neutral-200);border:1px solid var(--line);border-radius:var(--radius-pill);overflow:hidden;margin-top:12px}.progress span{display:block;height:100%;background:var(--color-accent);border-right:2px solid var(--color-accent-700)}.progress.amber span{background:color-mix(in srgb,var(--status-pending) 75%,var(--cream-100));border-right-color:color-mix(in srgb,var(--status-pending) 65%,black)}.progress-label{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--color-neutral-700);margin-top:5px;font-variant-numeric:tabular-nums}.progress-label strong{font-weight:400}
-.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;letter-spacing:.02em;padding:4px 12px;border-radius:var(--radius-pill);font-weight:500;white-space:nowrap;border:0;background:var(--color-neutral-200);color:var(--color-neutral-700)}.badge.green{background:var(--color-accent-100);color:var(--color-accent-800)}.badge.amber{background:color-mix(in srgb,var(--status-pending) 22%,var(--cream-100));color:color-mix(in srgb,var(--status-pending) 65%,black)}.badge.red{background:color-mix(in srgb,var(--status-rejected) 14%,var(--cream-100));color:var(--status-rejected)}.priority-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.priority-item:last-child{border:0}.priority-mark{width:28px;height:28px;border:1px solid var(--gold);color:var(--pine);border-radius:50%;display:grid;place-items:center;flex-shrink:0}.priority-item h3{font-size:18px;margin-bottom:5px}.priority-item p{font-size:12px;color:var(--color-neutral-700);margin-bottom:7px}
+.grid-main{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:24px;margin-bottom:24px}.card{gap:0;padding:0;min-width:0}.card-head{padding:18px 20px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px}.card-head small{font-size:11px;display:block;margin-top:3px}.card-body{padding:0 20px 20px;opacity:1;font-size:13px}.card-footer{border-top:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--muted)}.program-row{padding:14px 0;border-bottom:1px solid var(--line)}.program-row:last-child{border:0}.row-top{display:flex;justify-content:space-between;align-items:center;gap:12px}.program-title{display:flex;gap:8px;align-items:center;font-family:var(--serif);font-size:19px;font-weight:400;color:var(--ink)}.mini-icon{color:var(--pine);display:grid;place-items:center;width:26px;height:26px;border:1px solid var(--line);border-radius:var(--radius-sm)}.progress{height:10px;position:relative;background:var(--color-neutral-200);border:1px solid var(--line);border-radius:var(--radius-pill);overflow:hidden;margin-top:12px}.progress span{display:block;height:100%;background:var(--color-accent);border-right:2px solid var(--color-accent-700)}.progress.amber span{background:color-mix(in srgb,var(--status-pending) 75%,var(--cream-100));border-right-color:color-mix(in srgb,var(--status-pending) 65%, var(--texto))}.progress-label{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--color-neutral-700);margin-top:5px;font-variant-numeric:tabular-nums}.progress-label strong{font-weight:400}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;letter-spacing:.02em;padding:4px 12px;border-radius:var(--radius-pill);font-weight:500;white-space:nowrap;border:0;background:var(--color-neutral-200);color:var(--color-neutral-700)}.badge.green{background:var(--color-accent-100);color:var(--color-accent-800)}.badge.amber{background:color-mix(in srgb,var(--status-pending) 22%,var(--cream-100));color:color-mix(in srgb,var(--status-pending) 65%, var(--texto))}.badge.red{background:color-mix(in srgb,var(--status-rejected) 14%,var(--cream-100));color:var(--status-rejected)}.priority-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.priority-item:last-child{border:0}.priority-mark{width:28px;height:28px;border:1px solid var(--gold);color:var(--pine);border-radius:50%;display:grid;place-items:center;flex-shrink:0}.priority-item h3{font-size:18px;margin-bottom:5px}.priority-item p{font-size:12px;color:var(--color-neutral-700);margin-bottom:7px}
 .table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-600);padding:var(--space-2);border-bottom:1px solid var(--line);font-weight:600}td{padding:var(--space-2);border-bottom:1px solid var(--line)}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:var(--color-accent-100)}td small{display:block;font-size:11px;margin-top:3px}td .person{display:flex;align-items:center;gap:10px}td strong,.activity-title{font-family:var(--serif);font-size:15px;font-weight:400;color:var(--ink)}.date-block{font-size:13px;line-height:1.4}.date-block small{font-size:10px}
 .footer{padding:14px 30px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;color:var(--muted);font-size:10px}.offline-banner{padding:10px 30px;font-size:12px;background:var(--color-accent-100);color:var(--color-accent-800);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:15px}.program-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}.program-card{padding:var(--space-4);gap:var(--space-2);display:flex;flex-direction:column}.program-card .cover{display:none}.program-card h2{font-size:27px;min-height:2.24em}.program-card p{font-size:13px;color:var(--color-neutral-700);line-height:1.7;min-height:3.4em}.program-card .actions{margin-top:auto}.tabs{display:flex;gap:24px;overflow:auto;margin-bottom:24px;border-bottom:1px solid var(--line)}.tab{padding:10px 0;font-size:13px;color:var(--color-neutral-700);border-bottom:1px solid transparent;white-space:nowrap}.tab.active{font-family:var(--serif);font-size:15px;color:var(--pine);border-bottom-color:var(--gold)}
-.detail-grid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(260px,1fr);gap:24px}.details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin:18px 0}.details dt{font-size:11px;color:var(--muted);margin-bottom:5px}.details dd{margin:0;font-size:13px;overflow-wrap:anywhere}.info-box{padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-md);font-size:12px;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start;color:var(--color-neutral-700);background:var(--color-neutral-100)}.info-box .icon{color:var(--pine)}.info-box.amber{border-color:color-mix(in srgb,var(--status-pending) 60%,transparent);background:color-mix(in srgb,var(--status-pending) 12%,var(--cream-100));color:color-mix(in srgb,var(--status-pending) 55%,black)}.info-box.red{border-color:color-mix(in srgb,var(--status-rejected) 40%,transparent);background:color-mix(in srgb,var(--status-rejected) 8%,var(--cream-100));color:var(--status-rejected)}.info-box.amber .icon,.info-box.red .icon{color:currentColor}.timeline{padding:7px 0}.timeline-item{padding:0 0 24px 25px;border-left:1px solid var(--line);position:relative}.timeline-item:last-child{padding-bottom:0}.timeline-item:before{content:'';width:7px;height:7px;position:absolute;left:-4px;top:4px;border-radius:50%;border:1px solid var(--gold);background:var(--cream)}.timeline-item small{font-size:10px}.timeline-item h3{font-size:19px;margin:4px 0}.timeline-item p{font-size:12px;color:var(--color-neutral-700);margin:0}.empty{text-align:center;padding:44px 22px;color:var(--color-neutral-700)}.empty>.icon{width:38px;height:38px;color:var(--gold);margin-bottom:16px}.empty h2{font-size:27px;color:var(--ink)}.empty p{font-size:13px}.empty .btn{margin-top:8px}
+.detail-grid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(260px,1fr);gap:24px}.details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin:18px 0}.details dt{font-size:11px;color:var(--muted);margin-bottom:5px}.details dd{margin:0;font-size:13px;overflow-wrap:anywhere}.info-box{padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-md);font-size:12px;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start;color:var(--color-neutral-700);background:var(--color-neutral-100)}.info-box .icon{color:var(--pine)}.info-box.amber{border-color:color-mix(in srgb,var(--status-pending) 60%,transparent);background:color-mix(in srgb,var(--status-pending) 12%,var(--cream-100));color:color-mix(in srgb,var(--status-pending) 55%, var(--texto))}.info-box.red{border-color:color-mix(in srgb,var(--status-rejected) 40%,transparent);background:color-mix(in srgb,var(--status-rejected) 8%,var(--cream-100));color:var(--status-rejected)}.info-box.amber .icon,.info-box.red .icon{color:currentColor}.timeline{padding:7px 0}.timeline-item{padding:0 0 24px 25px;border-left:1px solid var(--line);position:relative}.timeline-item:last-child{padding-bottom:0}.timeline-item:before{content:'';width:7px;height:7px;position:absolute;left:-4px;top:4px;border-radius:50%;border:1px solid var(--gold);background:var(--cream)}.timeline-item small{font-size:10px}.timeline-item h3{font-size:19px;margin:4px 0}.timeline-item p{font-size:12px;color:var(--color-neutral-700);margin:0}.empty{text-align:center;padding:44px 22px;color:var(--color-neutral-700)}.empty>.icon{width:38px;height:38px;color:var(--gold);margin-bottom:16px}.empty h2{font-size:27px;color:var(--ink)}.empty p{font-size:13px}.empty .btn{margin-top:8px}
 .form-card{max-width:870px;margin:auto}.form-body{padding:var(--space-6)}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.field{display:flex;flex-direction:column;font-size:12px;min-width:0}.field.wide{grid-column:1/-1}.field label{font-size:13px;font-weight:500;margin-bottom:6px;color:var(--color-neutral-700)}.field input,.field select,.field textarea{width:100%;min-height:36px;padding:6px 12px;font:inherit;font-size:14px;color:var(--ink);caret-color:var(--gold);background:var(--color-surface);border:1px solid var(--line);border-radius:var(--radius-md)}.field input:hover,.field select:hover,.field textarea:hover{border-color:var(--color-neutral-500)}.field input:focus-visible,.field select:focus-visible,.field textarea:focus-visible{border-color:var(--gold);outline-offset:0}.field textarea{min-height:100px;resize:vertical}.field small{font-size:11px;margin-top:5px}.field input[type=file]{font-size:12px}.form-actions{padding:var(--space-4) var(--space-6);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}.stepper{display:flex;justify-content:space-between;gap:12px;padding:20px 24px;border-bottom:1px solid var(--line)}.step{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted)}.step b{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-weight:400;font-family:var(--serif);font-size:15px}.step.active{color:var(--pine)}.step.active b{border-color:var(--gold);color:var(--pine)}.check-row{display:flex;align-items:center;gap:10px;font-size:13px;padding:10px 0}.check-row input{width:16px;height:16px;accent-color:var(--gold)}.attendance{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.attendance .person{display:flex;align-items:center;gap:10px}.attendance label{font-size:14px}.attendance select{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--color-surface);padding:9px;font-size:13px;color:var(--ink)}.file-item{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line);border-radius:var(--radius-md);padding:12px;margin:9px 0;font-size:12px;overflow-wrap:anywhere}.dropzone{border:1px dashed var(--gold);border-radius:var(--radius-md);padding:24px;text-align:center;margin-top:16px}.dropzone>.icon{width:27px;height:27px;color:var(--pine);margin-bottom:10px}.dropzone p{font-size:13px}.dropzone input{max-width:100%;font-size:12px}.wizard{max-width:850px;margin:auto}
 .chart{display:flex;height:200px;gap:22px;align-items:flex-end;padding:20px 15px 30px;border-bottom:1px solid var(--line)}.chart-column{flex:1;display:flex;gap:5px;align-items:flex-end;height:100%;position:relative;justify-content:center}.chart-column span{width:32px;max-width:35%;background:var(--color-accent-300);border:1px solid var(--pine);border-bottom:0}.chart-column span.plan{background:var(--color-neutral-200);border-color:var(--muted)}.chart-column small{position:absolute;bottom:-24px;font-size:11px}.chart-legend{display:flex;gap:18px;font-size:11px;color:var(--color-neutral-700);margin-top:20px}.chart-legend span:before{content:'';display:inline-block;width:16px;height:10px;border:1px solid var(--pine);background:var(--color-accent-300);margin-right:7px}.chart-legend span:nth-child(2):before{border-color:var(--muted);background:var(--color-neutral-200)}.report-preview{padding:40px 46px;max-width:900px;margin:auto;background:var(--paper);box-shadow:var(--shadow-sm);border:1px solid var(--line)}.report-preview .report-brand{font:400 26px/1.2 var(--serif);border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:24px}.report-preview .report-brand small{display:block;font-family:var(--sans);font-size:11px;margin-top:5px}.report-preview h1{font-size:34px}.report-preview h2{font-size:26px;margin-top:24px}.report-preview p{font-size:13px;line-height:1.7}.report-preview table{white-space:normal}
 .login{display:grid;grid-template-columns:1.05fr 1fr;min-height:100vh;background:var(--cream)}.login-story{padding:64px 56px;display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid var(--line)}.login-story .brand{padding:0;border:0}.login-story .brand-name{font-size:24px}.login-story h1{font-size:52px;font-weight:300;margin:18px 0 14px;letter-spacing:-.02em;line-height:1.12}.login-story p{max-width:44ch;text-align:left;color:var(--color-neutral-800);font-size:15px}.login-art{display:none}.login-story>small{font-size:12px}.login-panel{padding:64px 56px;display:flex;align-items:center;justify-content:center}.login-panel>div{max-width:430px;width:100%}.login-panel h1{font-size:30px}.login-panel .field{margin:18px 0}.login-panel .btn{min-height:44px;width:100%;margin-top:9px}.login-foot{border-top:1px solid var(--line);padding-top:18px;font-size:12px;color:var(--color-neutral-700);line-height:1.7;margin-top:22px}.section-heading{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:28px 0 14px}.guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}.guide-card{padding:24px}.guide-card .number{font:400 32px var(--serif);color:var(--pine);margin-bottom:12px}.guide-card p{font-size:13px;line-height:1.7;color:var(--color-neutral-700);min-height:45px}.route-list{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0}.route-list a{font:400 15px var(--serif);border:1px solid var(--line);padding:7px 10px;border-radius:var(--radius-md)}.route-list a:hover{border-color:var(--gold);background:var(--mint)}
@@ -382,10 +338,10 @@ h1[tabindex="-1"]:focus{outline:none}
 .mobile-preview-layout{display:grid;justify-items:center;max-width:1020px;margin:0 auto}
 .mobile-preview-device-wrap{display:grid;justify-items:center;gap:12px}
 .mobile-preview-device-wrap>small{font-size:11px;color:var(--color-neutral-600)}
-.mobile-device{width:min(100%,418px);padding:14px;background:#201f1d;border-radius:42px;box-shadow:0 18px 40px rgba(20,24,20,.2)}
+.mobile-device{width:min(100%,418px);padding:14px;background:var(--texto);border-radius:42px;box-shadow:var(--shadow-lg)}
 .mobile-device-screen{position:relative;overflow:hidden;width:100%;aspect-ratio:390/844;border-radius:30px;background:var(--color-bg)}
 .mobile-device-screen iframe{display:block;width:100%;height:100%;border:0;background:var(--color-bg)}
-.mobile-device-notch{position:absolute;top:0;left:50%;z-index:5;width:120px;height:25px;transform:translateX(-50%);border-radius:0 0 16px 16px;background:#201f1d;pointer-events:none}
+.mobile-device-notch{position:absolute;top:0;left:50%;z-index:5;width:120px;height:25px;transform:translateX(-50%);border-radius:0 0 16px 16px;background:var(--texto);pointer-events:none}
 
 
 
@@ -460,13 +416,18 @@ h1[tabindex="-1"]:focus{outline:none}
 /* Visão integrada (T-79): filtros, resumo do programa e as duas execuções lado a lado. */
 .integrada-filtros .filter-control{min-height:38px}
 .integrada-resumo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 16px}
-.integrada-grid{align-items:start}
-.integrada-stats{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:16px}
+.integrada-grid{align-items:start;grid-template-columns:repeat(2,minmax(0,1fr))}
+.integrada-stats{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:16px}
+/* Os valores em reais não podem quebrar nem invadir o vizinho: em cartão estreito,
+   orçado, realizado e saldo ficam um embaixo do outro. */
+.integrada-stats .stat-value{white-space:nowrap}
+.integrada-grid>.card{container-type:inline-size}
+@container (max-width:560px){.integrada-grid .integrada-stats{grid-template-columns:1fr}.integrada-grid .integrada-stats .stat{padding-left:0}.integrada-grid .integrada-stats .stat+.stat{border-left:0;border-top:1px solid var(--line)}}
 .integrada-vinculo{margin-top:16px;font-size:12px}
 .integrada-grid .meta-percentual{min-width:110px}
 .integrada-grid .meta-percentual .progress{margin-top:6px}
 .integrada-grid td small{display:block;color:var(--color-neutral-700)}
-@media (max-width:760px){.integrada-grid{grid-template-columns:1fr}}
+@media (max-width:1180px){.integrada-grid{grid-template-columns:1fr}}
 
 /* Pessoas e famílias ligadas à API (T-49) */
 .stack{display:grid;gap:18px}
@@ -500,3 +461,332 @@ h1[tabindex="-1"]:focus{outline:none}
 .phone-record .actions{gap:8px}
 .phone-record .actions .btn{flex:1;min-height:44px}
 @media(max-width:580px){.so-computador{display:none}.so-celular{display:block}.agenda-semana{justify-content:space-between}.attendance{flex-wrap:wrap}.attendance-escolha{align-items:stretch;width:100%}.attendance-motivo{min-width:0;width:100%;min-height:46px;font-size:15px}}
+
+/* =====================================================================================
+   Componentes da Gestão no visual do Financeiro (T-00j)
+   Mesmos tamanhos, pesos, raios e cores de Frontend/Financeiro/base/componentes.css.
+   Só variáveis do tokens.css; nenhum valor de cor escrito à mão.
+   ===================================================================================== */
+
+body { font-family: var(--fonte); font-size: 12px; background: var(--fundo); color: var(--texto); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4, h5, h6 { font-family: var(--fonte); letter-spacing: -.015em; line-height: 1.25; }
+h1 { font-size: 19px; font-weight: 600; margin: 0; }
+h2 { font-size: 13px; font-weight: 600; margin: 0 0 4px; }
+h3 { font-size: 12px; font-weight: 600; margin: 0 0 4px; }
+a:hover { color: var(--ativo-texto); }
+
+/* Botões: .btn da Gestão = .btn--sec do Financeiro; .btn.primary = .btn do Financeiro. */
+.btn { gap: 6px; min-height: 0; padding: 7px 12px; border: 1px solid var(--borda-campo); border-radius: 7px;
+  background: var(--fundo); color: var(--texto); font: 500 12px var(--fonte); letter-spacing: 0; box-shadow: none; }
+.btn:not(.primary):not(.gold):not(.ghost):not(.btn-ghost):not(.danger) { border-color: var(--borda-campo); color: var(--texto); }
+.btn:not(.primary):not(.gold):hover { background: var(--fundo-suave); }
+.btn:not(.primary):not(.gold):active { background: var(--linha); }
+.btn.primary, .btn.gold { background: var(--verde); color: var(--fundo); border-color: transparent; box-shadow: none; }
+.btn.primary:hover, .btn.gold:hover, .btn.primary:active, .btn.gold:active { background: var(--verde); filter: brightness(.94); }
+.btn.small { padding: 4px 9px; font-size: 11px; min-height: 0; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--verde); }
+.btn.danger { background: var(--fundo); color: var(--perigo-texto); border-color: var(--perigo-borda); }
+.btn.danger:hover { background: var(--rejeitado-fundo); }
+.btn:disabled { opacity: .5; }
+.btn .icon { width: 15px; height: 15px; }
+
+/* Etiquetas: .badge da Gestão = .etiqueta do Financeiro. */
+.badge { gap: 4px; padding: 1px 7px; border: 0; border-radius: 4px; font-size: 10.5px; font-weight: 500; letter-spacing: 0;
+  background: var(--linha); color: var(--texto-medio); }
+.badge.gray { background: var(--linha); color: var(--texto-medio); }
+.badge.green { background: var(--aprovado-fundo); color: var(--aprovado-texto); }
+.badge.amber { background: var(--pendente-fundo); color: var(--pendente-texto); }
+.badge.red { background: var(--rejeitado-fundo); color: var(--rejeitado-texto); }
+.badge.blue { background: var(--conciliado-fundo); color: var(--conciliado-texto); }
+
+/* Caixas: .card da Gestão = .caixa do Financeiro (branca, borda fina, raio 8, sem sombra). */
+.card { background: var(--fundo); border: 1px solid var(--borda); border-radius: 8px; box-shadow: none; }
+.card-head { padding: 10px 12px; border-bottom: 1px solid var(--borda); align-items: center; gap: 12px; }
+.card-head h2 { font-size: 12px; font-weight: 600; margin: 0; letter-spacing: 0; }
+.card-head small { display: block; font-size: 11px; color: var(--texto-suave); margin-top: 1px; }
+.card-body { padding: 12px; }
+/* Tabela e lista ocupam a caixa de ponta a ponta (plano, seção 3.2). */
+.card-body:has(> .table-wrap:only-child), .card-body:has(> table:only-child) { padding: 0; }
+.card-footer { padding: 8px 12px; border-top: 1px solid var(--borda); font-size: 11px; color: var(--texto-suave); }
+
+/* Indicadores (até a T-00l reorganizar): números no tamanho do Financeiro. */
+.stat { border: 1px solid var(--borda); border-radius: 8px; padding: 12px 14px; background: var(--fundo); }
+.stat-label { font-size: 11px; color: var(--texto-suave); letter-spacing: 0; text-transform: none; }
+.stat-value { font-family: var(--fonte); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.stat-value em { font-style: normal; font-size: 13px; color: var(--texto-suave); }
+.stat-note { font-size: 11px; color: var(--texto-suave); }
+
+/* Tabelas: .tabela do Financeiro. */
+table { font-size: 12px; font-variant-numeric: tabular-nums; }
+th { padding: 8px 12px; font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none;
+  color: var(--texto-suave); background: var(--fundo-suave); border-bottom: 1px solid var(--borda); }
+td { padding: 10px 12px; border-bottom: 1px solid var(--linha); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: var(--fundo-suave); }
+td small { display: block; font-size: 11px; color: var(--texto-suave); margin-top: 1px; }
+td strong, .activity-title { font-family: var(--fonte); font-size: 12px; font-weight: 500; color: var(--texto); }
+
+/* Abas: sublinhado verde, texto 12 px. */
+.tabs { gap: 18px; border-bottom: 1px solid var(--borda); }
+.tab { padding: 8px 0; font-size: 12px; color: var(--texto-suave); border-bottom: 2px solid transparent; }
+.tab:hover { color: var(--texto); }
+.tab.active { font-family: var(--fonte); font-size: 12px; font-weight: 500; color: var(--ativo-texto); border-bottom-color: var(--verde); }
+
+/* Campos: .campo / .entrada do Financeiro. */
+.field label, .field > label, .field-label { font-size: 11px; font-weight: 500; color: var(--texto-medio); margin-bottom: 5px; }
+.field input, .field select, .field textarea, :is(.card, dialog) :is(.field input, .field select, .field textarea) {
+  min-height: 0; padding: 7px 9px; border: 1px solid var(--borda-campo); border-radius: 6px;
+  background: var(--fundo); color: var(--texto); font: 12px var(--fonte); caret-color: var(--verde); }
+.field input:hover, .field select:hover, .field textarea:hover { border-color: var(--texto-suave); }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--verde); outline-offset: -1px; border-color: var(--borda-campo); }
+.field textarea { min-height: 72px; }
+.field small { font-size: 11px; color: var(--texto-suave); }
+.field input[readonly], :is(.card, dialog) .field input[readonly] { background: var(--fundo-suave); color: var(--texto-medio); border-color: var(--borda); }
+.filter-control { min-height: 0; padding: 5px 10px; border: 1px solid var(--borda); border-radius: 6px; background: var(--fundo);
+  color: var(--texto-medio); font: 11.5px var(--fonte); }
+.search { min-height: 0; border: 1px solid var(--borda); border-radius: 6px; background: var(--fundo); padding: 0 10px; }
+.search input { font-size: 12px; padding: 6px 0; color: var(--texto); }
+.search:focus-within { border-color: var(--verde); }
+
+/* Avisos e erros: texto no fundo da cor do status, sem borda (mensagens do Financeiro). */
+.info-box { border: 0; border-radius: 6px; padding: 8px 12px; font-size: 12px; background: var(--fundo-suave); color: var(--texto-medio); }
+.info-box .icon { color: var(--texto-suave); }
+.info-box.amber { background: var(--pendente-fundo); color: var(--pendente-texto); border: 0; }
+.info-box.red { background: var(--rejeitado-fundo); color: var(--rejeitado-texto); border: 0; }
+.error-message { border: 0; border-radius: 6px; padding: 8px 12px; font-size: 12px; background: var(--rejeitado-fundo); color: var(--rejeitado-texto); }
+
+/* Estado vazio: .vazio do Financeiro. */
+.empty { padding: 32px 16px; color: var(--texto-suave); font-size: 12px; }
+.empty > .icon { width: 22px; height: 22px; color: var(--texto-suave); margin-bottom: 8px; }
+.empty h2 { font-size: 13px; font-weight: 600; color: var(--texto); }
+.empty p { font-size: 12px; color: var(--texto-suave); }
+
+/* Dados do registro, linha do tempo e listas. */
+.details dt { font-size: 11px; color: var(--texto-suave); }
+.details dd { font-size: 12px; color: var(--texto); }
+.timeline-item { border-left-color: var(--borda); }
+.timeline-item:before { width: 6px; height: 6px; left: -4px; border: 0; background: var(--verde); }
+.timeline-item small { font-size: 11px; color: var(--texto-suave); }
+.timeline-item h3 { font-family: var(--fonte); font-size: 12px; font-weight: 600; margin: 2px 0; }
+.timeline-item p { font-size: 12px; color: var(--texto-medio); }
+.file-item { font-size: 12px; }
+
+/* Diálogo: .dialogo do Financeiro. */
+dialog { border: 1px solid var(--borda); border-radius: 10px; box-shadow: var(--shadow-lg); background: var(--fundo); color: var(--texto); }
+dialog::backdrop { background: color-mix(in srgb, var(--texto) 35%, transparent); }
+.dialog-head { padding: 14px 18px; border-bottom: 1px solid var(--borda); }
+.dialog-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.dialog-body { padding: 18px; font-size: 12px; opacity: 1; }
+
+/* Aviso rápido (toast) e itens de prioridade. */
+#toast { background: var(--texto); color: var(--fundo); border-radius: 6px; box-shadow: var(--shadow-lg); font-size: 12px; padding: 10px 16px; }
+.priority-mark { border-color: var(--borda); color: var(--texto-suave); }
+.priority-item h3 { font-size: 12px; font-weight: 600; }
+.priority-item p { font-size: 11px; color: var(--texto-suave); }
+
+/* Títulos, rótulos e links genéricos do protótipo na escala do Financeiro. */
+h4 { font-size: 12px; font-weight: 600; }
+h5, h6 { font-size: 11px; font-weight: 600; }
+.card-body { font-size: 12px; }
+.card-title { font-family: var(--fonte); font-size: 13px; font-weight: 600; }
+.dialog-title { font-size: 15px; font-weight: 600; }
+.input, .table, .radio, .attendance label { font-size: 12px; }
+.eyebrow, .stat-top { font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--texto-suave); font-weight: 500; }
+.text-link { font-family: var(--fonte); font-size: 12px; font-weight: 500; color: var(--verde); }
+.text-link:hover { color: var(--ativo-texto); }
+.program-title { font-family: var(--fonte); font-size: 13px; font-weight: 600; color: var(--texto); }
+.mini-icon { color: var(--texto-suave); border-color: var(--borda); border-radius: 6px; width: 24px; height: 24px; }
+.program-row small, .program-row p { font-size: 11px; color: var(--texto-suave); }
+.date-block { font-size: 12px; }
+
+/* Celular: campos de 16 px e toque grande, como o app do educador do Financeiro (lancamento.css). */
+@media (max-width: 580px) {
+  .field input, .field select, .field textarea, :is(.card, dialog) :is(.field input, .field select, .field textarea) { min-height: 44px; font-size: 16px; }
+  .form-actions .btn { min-height: 48px; font-size: 16px; }
+  .badge { font-size: 10.5px; padding: 1px 7px; }
+}
+
+/* =====================================================================================
+   Estrutura das telas igual à do Financeiro (T-00k)
+   .app, .lateral, .lateral__* e .principal vêm de ../Financeiro/style.css. Aqui ficam só
+   as adaptações da Gestão, montadas com as variáveis e peças do Financeiro.
+   ===================================================================================== */
+
+/* A Gestão tem mais itens e rótulos mais longos que o Financeiro: barra um pouco mais larga. */
+.gestao .lateral { width: 224px; z-index: 30; }
+.gestao .lateral__marca { text-decoration: none; }
+.lateral__modulos { display: flex; gap: 6px; margin: 0 6px 14px; }
+.lateral__modulos .filtro { flex: 1; justify-content: center; text-decoration: none; }
+.lateral__menu { overflow-y: auto; }
+.lateral__grupo { margin: 12px 8px 4px; font-size: 10px; font-weight: 500; color: var(--texto-suave); text-transform: uppercase; letter-spacing: .04em; }
+.lateral__grupo:first-child { margin-top: 0; }
+.lateral__item .icon { width: 15px; height: 15px; flex: none; }
+.lateral__item { text-decoration: none; }
+
+/* Pessoa no rodapé da barra: o mesmo bloco do Financeiro, clicável para trocar o perfil do protótipo. */
+.lateral__usuario { position: relative; }
+.lateral__pessoa { display: flex; gap: 8px; align-items: center; width: 100%; padding: 0; border: 0; background: none; text-align: left; font: inherit; color: var(--texto); cursor: pointer; }
+.lateral__usuario .user-menu { position: absolute; bottom: calc(100% + 8px); left: 0; width: 240px; z-index: 40;
+  padding: 12px; border: 1px solid var(--borda); border-radius: 8px; background: var(--fundo); box-shadow: var(--shadow-lg); font-size: 11px; }
+.user-menu .persona-caption { font-size: 11px; color: var(--texto-suave); margin-bottom: 8px; }
+.user-menu .persona-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.user-menu .persona-buttons button { border: 1px solid var(--borda); background: var(--fundo); border-radius: 6px; padding: 4px 9px; font: 11.5px var(--fonte); color: var(--texto-medio); cursor: pointer; }
+.user-menu .persona-buttons button.active { border-color: var(--verde); background: var(--ativo-fundo); color: var(--ativo-texto); font-weight: 500; }
+.user-menu .persona-note { margin-top: 8px; color: var(--texto-suave); font-size: 11px; line-height: 1.45; }
+
+/* Área principal: o padding é o do Financeiro (.principal); o conteúdo não soma outro. */
+.gestao .principal { display: flex; flex-direction: column; min-height: 100vh; box-sizing: border-box; }
+.gestao .principal .main { padding: 0; min-height: 0; max-width: 1200px; width: 100%; margin: 0; flex: 1; }
+.gestao .principal h1 { font-size: 19px; font-weight: 600; letter-spacing: -.015em; margin: 0; }
+
+/* Cabeçalho de página: título e subtítulo à esquerda, ação à direita, sem linha embaixo. */
+.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin: 0 0 16px; padding: 0; border: 0; }
+.page-head .subtitle, .page-head .sub { margin: 3px 0 0; font-size: 12px; color: var(--texto-suave); }
+.page-head .eyebrow { margin-bottom: 4px; }
+.page-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Caminho da página: o "Projetos /" do Financeiro, em linha antes do título. */
+.breadcrumbs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 0 0 6px; font-size: 11px; color: var(--texto-suave); }
+.breadcrumbs a { color: var(--texto-suave); text-decoration: none; }
+.breadcrumbs a:hover { color: var(--texto); }
+.breadcrumbs [aria-current="page"] { color: var(--texto-medio); }
+
+/* Avisos de uma linha (demonstração e sem conexão): mensagem no fundo do status, sem borda. */
+.aviso-faixa { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; padding: 7px 12px; border: 0; border-radius: 6px;
+  background: var(--pendente-fundo); color: var(--pendente-texto); font-size: 11.5px; }
+.aviso-faixa .icon { width: 15px; height: 15px; flex: none; }
+.aviso-faixa--offline { background: var(--fundo-suave); color: var(--texto-medio); justify-content: space-between; }
+
+/* Rodapé discreto (só os atalhos do protótipo). */
+.gestao .footer { margin-top: 26px; padding: 12px 0 0; border-top: 1px solid var(--borda); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  font-size: 11px; color: var(--texto-suave); background: none; }
+.gestao .footer a { color: var(--texto-suave); margin-left: 12px; text-decoration: none; }
+.gestao .footer a:hover { color: var(--texto); }
+
+/* Estados (carregando, erro, sem permissão, sessão encerrada): o .vazio do Financeiro, sem caixa. */
+.card.estado { border: 0; background: none; }
+
+/* Topo do celular: só aparece quando a barra lateral vira menu. */
+.topo-celular { display: none; }
+
+@media (max-width: 768px) {
+  .gestao .lateral { position: fixed; top: 0; left: 0; bottom: 0; height: 100vh; transform: translateX(-100%); transition: transform .2s; z-index: 40; }
+  .gestao .lateral.open { transform: none; box-shadow: var(--shadow-lg); }
+  .mobile-scrim.visible { display: block; position: fixed; inset: 0; z-index: 35; background: color-mix(in srgb, var(--texto) 35%, transparent); }
+  .gestao .principal { padding: 0 16px 16px; }
+  .topo-celular { display: flex; align-items: center; gap: 8px; margin: 0 -16px 14px; padding: 8px 12px; border-bottom: 1px solid var(--borda); background: var(--fundo); position: sticky; top: 0; z-index: 20; }
+  .topo-celular__titulo { font-size: 13px; font-weight: 600; }
+  .mobile-toggle { border: 0; background: none; padding: 6px; color: var(--texto); }
+  .page-head { flex-direction: column; align-items: stretch; }
+}
+
+/* =====================================================================================
+   Telas sem excesso de caixas (T-00l)
+   Caixa (.card) só para tabelas, formulários, diálogos e painéis; o resto é seção.
+   ===================================================================================== */
+
+/* Seção: o cabeçalho das caixas do Financeiro ("Por categoria"), sem a borda em volta. */
+.secao { min-width: 0; }
+.secao__cabeca { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; padding: 0 0 8px; border-bottom: 1px solid var(--borda); }
+.secao__cabeca h2 { font-size: 12px; font-weight: 600; margin: 0; letter-spacing: 0; }
+.secao__cabeca small { display: block; font-size: 11px; color: var(--texto-suave); margin-top: 1px; }
+.secao__corpo { padding-top: 12px; font-size: 12px; }
+.secao__rodape { padding-top: 8px; font-size: 11px; color: var(--texto-suave); }
+.secao .details { margin: 0; }
+
+/* Linha de resumo (pessoa, turma): título, dados e etiquetas, sem caixa. */
+.resumo-linha { padding: 0 0 4px; }
+.resumo-linha h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; letter-spacing: -.01em; }
+.resumo-linha p { margin: 0 0 6px; font-size: 12px; color: var(--texto-suave); }
+.resumo-linha .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Indicadores numa faixa só: separadores verticais, sem uma caixa por número. */
+.stats { gap: 0; margin: 0 0 22px; border-top: 1px solid var(--borda); border-bottom: 1px solid var(--borda); }
+.stats .stat { border: 0; border-radius: 0; background: none; padding: 12px 16px; }
+.stats .stat + .stat { border-left: 1px solid var(--borda); }
+.stats .stat:first-child { padding-left: 0; }
+.stat-value { margin-top: 2px; }
+.stat-note { margin-top: 2px; }
+
+/* Lista de prioridades ("Precisam do seu olhar"): linhas com divisória, ícone fino. */
+.secao .priority-item { padding: 10px 0; border-bottom: 1px solid var(--linha); }
+.secao .priority-item:last-child { border-bottom: 0; }
+.priority-mark { width: 24px; height: 24px; border: 0; background: var(--fundo-suave); border-radius: 6px; }
+.priority-mark .icon { width: 14px; height: 14px; }
+
+/* Linha do tempo: o ponto tem a cor do tipo do evento (como as etiquetas). */
+.timeline-item--frequencia::before, .timeline-item--busca_ativa::before { background: var(--amarelo); }
+.timeline-item--alerta::before { background: var(--vermelho); }
+.timeline-item--cadastro::before, .timeline-item--responsavel::before, .timeline-item--documento::before { background: var(--texto-suave); }
+.timeline-item--autorizacao::before { background: var(--conciliado-texto); }
+.timeline-item--matricula::before { background: var(--verde); }
+
+/* Arquivos (evidências e documentos): nome e detalhe em duas linhas, ação à direita. */
+.file-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--linha); }
+.file-item:last-child { border-bottom: 0; }
+.file-item small { display: block; font-size: 11px; color: var(--texto-suave); margin-top: 1px; }
+
+/* Grades das telas: espaço da escala entre colunas e entre blocos. */
+.grid-main, .detail-grid { gap: 22px; }
+.stack { gap: 22px; }
+
+/* Espaço entre os blocos da página vem de um contêiner com gap, nunca da margem de cada
+   bloco: assim dois blocos nunca encostam (plano, seção 8). O conteúdo de toda tela fica
+   dentro de .main, que é esse contêiner. */
+.gestao .principal .main { display: flex; flex-direction: column; gap: 18px; }
+.gestao .principal .main > * { margin-top: 0; margin-bottom: 0; }
+.gestao .principal .main > .page-head { margin-bottom: -2px; }
+/* Barras de filtro sem linha embaixo, como os filtros do Financeiro. */
+.toolbar { border-bottom: 0; padding-bottom: 0; }
+
+/* Dentro de um contêiner com gap, nenhum bloco soma margem própria (abas e avisos tinham). */
+.stack > *, .secao__corpo > .stack > * { margin-top: 0; margin-bottom: 0; }
+.tabs { margin: 0; }
+.info-box, .error-message { margin: 0; }
+.secao__corpo > .info-box { margin-top: 12px; }
+
+/* Encontros com falta do alerta: linhas com divisória, sem marcador. */
+.alerta-faltas { list-style: none; margin: 0; padding: 0; }
+.alerta-faltas li { padding: 8px 0; border-bottom: 1px solid var(--linha); font-size: 12px; color: var(--texto-suave); }
+.alerta-faltas li:last-child { border-bottom: 0; }
+.alerta-faltas a { color: var(--texto); font-weight: 500; text-decoration: none; }
+.alerta-faltas a:hover { color: var(--verde); }
+
+/* Classes que substituem os style="..." fixos do protótipo (T-00l). Larguras e alturas de
+   barras continuam no style, porque vêm do dado (como no Financeiro). */
+.texto-11 { font-size: 11px; }
+.texto-12 { font-size: 12px; }
+.obrigatorio { color: var(--perigo-texto); }
+.linha-inteira { grid-column: 1 / -1; }
+.acoes-direita { justify-content: flex-end; }
+.acoes-rodape { margin-top: 22px; }
+.afastado { margin-top: 16px; }
+.afastado-pouco { margin-top: 8px; }
+.afastado-baixo { margin-bottom: 16px; }
+.pessoa-linha { display: flex; gap: 12px; align-items: center; margin: 4px 0 12px; }
+/* Painel lateral do detalhe (ex.: "Próximo passo") com a altura do próprio conteúdo. */
+.detail-grid { align-items: start; }
+
+/* Faixa de indicadores em duas colunas (até 760 px): cada linha começa sem
+   recuo nem divisória à esquerda, e a segunda linha ganha a divisória de cima. */
+@media (max-width: 760px) {
+  .stats .stat:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .stats .stat:nth-child(n + 3) { border-top: 1px solid var(--borda); }
+}
+
+/* Dentro de caixas e seções, blocos seguidos (aviso + tabela, texto + lista) ganham o
+   espaço da escala pelo contêiner, e não por margem própria. */
+.card-body > * + *, .secao__corpo > * + * { margin-top: 12px; }
+.form-body > * + *, .dialog-body > * + * { margin-top: 12px; }
+
+/* Pilha justa: blocos seguidos dentro de uma caixa ou seção (aviso + tabela, indicadores +
+   tabela), com o espaço menor da escala. */
+.pilha-justa { display: flex; flex-direction: column; gap: 12px; }
+.pilha-justa > * { margin-top: 0; margin-bottom: 0; }
+
+/* Foco visível ao navegar pelo teclado, como no app do educador do Financeiro. */
+:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline-offset: -1px; }
+
+/* Login sem papel na Gestão: página sem menu lateral. */
+.main.no-profile{max-width:860px;margin:0 auto}

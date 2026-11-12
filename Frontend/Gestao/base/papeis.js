@@ -2,8 +2,9 @@
 //
 // Aqui só se decide o que cada perfil VÊ na interface. Quem protege os dados é a
 // API (RBAC, T-33): esconder um item do menu não impede ninguém de chamar a rota.
-// Até o login único (T-35), o perfil é escolhido na tela de entrada e fica salvo
-// neste aparelho.
+// Com o login (T-35), o perfil vem dos papéis da pessoa (`perfisDaSessao`); sem
+// sessão (modo de teste com o código de acesso), ele é escolhido no menu do usuário
+// e fica salvo neste aparelho.
 
 export const PAPEIS = {
   coord: { name: "Ana Martins", label: "Coordenação", programs: ["p1", "p2", "p3"] },
@@ -85,7 +86,45 @@ export function menuDoPapel(papel, secaoAtual = "") {
   })).filter((g) => g.itens.length);
 }
 
+// Login (T-35): papel da plataforma (tabela `papeis`) -> perfil da interface.
+// O voluntário financeiro não tem perfil na Gestão.
+export const PERFIL_DO_PAPEL = {
+  administracao: "admin",
+  coordenacao: "coord",
+  direcao: "director",
+  assistente_social: "social",
+  psicologo: "psych",
+  educador: "educator",
+};
+// Do mais amplo ao mais restrito: sem escolha salva, a pessoa entra com o primeiro.
+const ORDEM_DOS_PERFIS = ["admin", "coord", "director", "social", "psych", "educator"];
+
+/** Perfis da Gestão que a pessoa logada tem, do mais amplo ao mais restrito. */
+export function perfisDaSessao(sessao) {
+  const papeis = Array.isArray(sessao?.usuario?.papeis) ? sessao.usuario.papeis : [];
+  const ids = new Set(papeis.map((p) => PERFIL_DO_PAPEL[typeof p === "string" ? p : p?.id]).filter(Boolean));
+  return ORDEM_DOS_PERFIS.filter((perfil) => ids.has(perfil));
+}
+
+/**
+ * Perfil com que a pessoa logada entra: o escolhido antes neste aparelho, se ainda
+ * for um dos dela, ou o mais amplo. ``null`` quando ela não tem papel na Gestão.
+ */
+export function perfilDaSessao(sessao, salvo = lerPapelSalvo()) {
+  const perfis = perfisDaSessao(sessao);
+  if (!perfis.length) return null;
+  return perfis.includes(salvo) ? salvo : perfis[0];
+}
+
 const CHAVE_PAPEL = "mdca.gestao.papel";
+
+function lerPapelSalvo() {
+  try {
+    return localStorage.getItem(CHAVE_PAPEL);
+  } catch {
+    return null;
+  }
+}
 
 export function lerPapel() {
   try {

@@ -2,6 +2,12 @@
 
 import pytest
 
+
+@pytest.fixture
+def cabecalhos(cabecalhos_admin):
+    """Estes testes cobrem o cadastro; quem chama é a administração (o acesso por papel fica em test_gestao_acesso_programas.py)."""
+    return cabecalhos_admin
+
 PROGRAMA = {
     "nome": "Convivência e fortalecimento de vínculos",
     "identificador": "SCFV",
