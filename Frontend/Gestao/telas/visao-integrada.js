@@ -70,7 +70,7 @@ function fisica({ metas, percentual_medio: medio }) {
     "Gestão · metas do plano de ação",
     el(
       "div",
-      {},
+      { class: "pilha-justa" },
       el("div", { class: "stats integrada-stats" }, indicador("Média das metas", porcento(medio), `${metas.length} ${metas.length === 1 ? "meta" : "metas"}`)),
       el(
         "div",
@@ -107,7 +107,7 @@ function financeira(dados) {
     `Financeiro · projeto ${dados.projeto}`,
     el(
       "div",
-      {},
+      { class: "pilha-justa" },
       el(
         "div",
         { class: "stats integrada-stats" },
@@ -216,6 +216,6 @@ export function mostrarVisaoIntegrada(container, { programaInicial = "", ...subs
       ),
     );
     consultar();
-    return el("div", {}, filtros, aviso, resultado);
+    return el("div", { class: "stack" }, filtros, aviso, resultado);
   });
 }

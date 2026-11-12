@@ -184,7 +184,7 @@ export function mostrarEquipe(container, programaId, { podeGerenciar = false, av
 
     return el(
       "div",
-      { class: "tela-equipe" },
+      { class: "tela-equipe stack" },
       cartao(
         "Equipe e acesso",
         "Vínculos e responsabilidades dentro deste programa. Quem foi desligado perde o acesso e continua no histórico.",

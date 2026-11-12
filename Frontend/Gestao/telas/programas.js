@@ -9,7 +9,7 @@
 import * as api from "../base/api.js";
 import { ErroApi } from "../base/api.js";
 import { carregarNaTela } from "../base/estados.js";
-import { el } from "../base/dom.js";
+import { el, secao } from "../base/dom.js";
 import { abrirFormulario, campo } from "../base/formulario.js";
 
 const API_PADRAO = {
@@ -271,8 +271,8 @@ export function mostrarPrograma(container, programaId, { podeGerenciar = false, 
       ([programa, listaDeConvenios, listaDeVagas]) =>
         el(
           "div",
-          {},
-          cartao("Sobre o programa", programa.nome, sobre(programa)),
+          { class: "stack" },
+          secao("Sobre o programa", programa.nome, sobre(programa)),
           el(
             "div",
             { class: "detail-grid" },

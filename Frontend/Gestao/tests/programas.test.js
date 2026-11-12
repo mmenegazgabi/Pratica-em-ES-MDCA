@@ -1,5 +1,5 @@
 // Tela de Programas: estados de carregando, lista, vazio, erro e acesso restrito (jsdom).
-import { beforeEach, test } from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 
@@ -9,6 +9,12 @@ const { API_PADRAO, ERROS, ErroApi, urlDaApi } = await import("../base/api.js");
 const { mostrarProgramas } = await import("../telas/programas.js");
 
 let container;
+// Espaçamento e caixas (T-00m): depois de cada teste, o que a tela montou passa pelo
+// verificador de layout (nada de caixa dentro de caixa nem blocos sem espaço entre eles).
+const { problemasDeLayout } = await import("./ajuda-layout.js");
+afterEach(() => {
+  if (container) assert.deepEqual(problemasDeLayout(container), []);
+});
 const texto = () => container.textContent.replace(/\s+/g, " ").trim();
 const enviar = (form) => form.dispatchEvent(new window.Event("submit", { cancelable: true }));
 const esperar = () => new Promise((r) => setTimeout(r, 0));

@@ -11,7 +11,7 @@
 import * as api from "../base/api.js";
 import { ErroApi } from "../base/api.js";
 import { carregarNaTela } from "../base/estados.js";
-import { el } from "../base/dom.js";
+import { el, secao } from "../base/dom.js";
 import { abrirFormulario, campo, hojeIso, selecao } from "../base/formulario.js";
 
 const API_PADRAO = {
@@ -282,9 +282,9 @@ export function mostrarAlerta(container, alertaId, { avisar = () => {}, hoje = h
         el(
           "div",
           { class: "stack" },
-          cartao("Alerta", a.titulo, detalhes(a)),
-          cartao("Encontros com falta", "A sequência que gerou o alerta; cada um abre a chamada", encontrosComFalta(a)),
-          cartao("Histórico do acompanhamento", "Da ação mais recente para a mais antiga", linhaDoTempo(a.acoes)),
+          secao("Alerta", a.titulo, detalhes(a)),
+          secao("Encontros com falta", "A sequência que gerou o alerta; cada um abre a chamada", encontrosComFalta(a)),
+          secao("Histórico do acompanhamento", "Da ação mais recente para a mais antiga", linhaDoTempo(a.acoes)),
         ),
         proximoPasso(a),
       ),

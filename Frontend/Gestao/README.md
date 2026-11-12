@@ -16,8 +16,7 @@ Gestao/
   index.html      # entrada (carrega app.js como módulo)
   sw.js           # service worker: guarda os arquivos do app para abrir sem rede no navegador
   app.js          # moldura, rotas e telas de demonstração vindas do protótipo
-  style.css       # design system MDCA + estilos da aplicação (bloco no fim)
-  assets/         # fontes locais (Bitter e General Sans)
+  style.css       # estilos da Gestão sobre o visual do Financeiro (T-00j)
   base/
     api.js        # cliente único da API: toda chamada HTTP passa por aqui
     estados.js    # estados carregando, erro e acesso restrito
@@ -131,3 +130,42 @@ cd Frontend/Gestao
 npm install
 npm test
 ```
+
+## Visual
+
+A Gestão usa o mesmo visual do Financeiro ("B · Neutro e funcional": Inter, branco,
+verde `#3f8a3a`, bordas finas). O `index.html` carrega, antes do `style.css`, os arquivos
+`../Financeiro/base/tokens.css`, `../Financeiro/base/componentes.css` e
+`../Financeiro/style.css`, só para leitura, como a página de Administração
+(`Frontend/Admin`). O `sw.js` guarda os três, para o registro em campo abrir sem internet.
+
+A estrutura das telas usa as classes do Financeiro (T-00k): barra lateral `.lateral` (marca,
+menu com `.lateral__item`, contador de alertas abertos no item Visão geral e a pessoa com
+"Sair" embaixo) e área `.principal`, sem barra superior. Adaptações da Gestão, montadas com
+as peças deles: o seletor de módulo (dois `.filtro`), os grupos do menu, o menu do perfil do
+protótipo e, no celular, a barra lateral como menu que abre por cima.
+
+O `style.css` não cria cor nem fonte própria: as variáveis que as telas já usavam
+(`--color-*`, `--pine`, `--line`…) apontam para as do Financeiro, e a seção do fim dá aos
+componentes da Gestão (botões, etiquetas, caixas, tabelas, campos, abas, avisos e
+diálogo) os tamanhos e o acabamento do Financeiro. O teste `tests/visual.test.js`
+confere isso. Plano completo: `plano-identidade-visual-gestao.md` (arquivo de contexto
+da Gestão), cards T-00j a T-00m.
+
+
+### Caixas e espaçamento (T-00l e T-00m)
+
+- **Caixa (`.card`) só para tabelas, formulários, diálogos e painéis.** Texto, dados, linha
+  do tempo e listas curtas vão numa **seção**: `secao(titulo, subtitulo, corpo, acao)` de
+  `base/dom.js` (no `app.js`, a função `secao` do protótipo). Nunca caixa dentro de caixa.
+- **O espaço entre blocos vem do contêiner, nunca da margem do bloco.** Blocos irmãos
+  (caixas, seções, avisos, abas, tabelas) ficam dentro de `.stack` (22 px entre blocos da
+  tela) ou `.pilha-justa` (12 px, dentro de uma caixa ou seção). A área da página (`.main`),
+  `.card-body` e `.secao__corpo` já dão esse espaço.
+- **Os testes conferem:** `tests/ajuda-layout.js` roda depois de cada teste de tela e em
+  todas as rotas do protótipo (`app.test.js`) e falha com caixa dentro de caixa ou blocos
+  sem contêiner; `tests/visual.test.js` falha com cor, fonte, tamanho de texto ou raio fora
+  do Financeiro, margem própria em caixas, avisos, abas e tabelas, ou `style="..."` fixo.
+- **Celular:** para conferir em 390 px, abra a tela dentro de um quadro (iframe) dessa
+  largura. A captura do Chrome sem janela não desce de ~500 px e corta a imagem, o que
+  parece conteúdo passando da borda sem ser.
