@@ -168,5 +168,8 @@ export const completarRascunho = (id, formData) => requisitar(`/rascunhos/${rota
 export const listarNotificacoes = () => requisitar("/notificacoes");
 export const marcarNotificacaoLida = (id) => requisitar(`/notificacoes/${rota(id)}/lida`, { method: "PATCH" });
 
-/** Histórico de ações (coordenação e direção). filtros: {texto, modulo, desde, ate, limite}. */
-export const listarAuditoria = (filtros = {}) => requisitar(`/auditoria${consulta(filtros)}`);
+/**
+ * Trilha de auditoria do Financeiro (coordenação e direção): GET /auditoria?modulo=financeiro.
+ * filtros: {desde, ate, pagina, tamanho}. Resposta: {itens, total, pagina, tamanho}.
+ */
+export const listarAuditoria = (filtros = {}) => requisitar(`/auditoria${consulta({ ...filtros, modulo: "financeiro" })}`);

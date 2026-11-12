@@ -1,46 +1,7 @@
 // Auditoria: regras sem DOM (testáveis no Node).
 
-export const MODULOS = [
-  ["financeiro", "Financeiro"],
-  ["gestao", "Gestão"],
-  ["plataforma", "Plataforma"],
-];
-
-// Ações conhecidas da trilha (log_auditoria); as outras aparecem com o código legível.
-const ACOES = {
-  login: "Entrou",
-  login_falhou: "Login recusado",
-  logout: "Saiu",
-  primeiro_acesso: "Primeiro acesso",
-  codigo_gerado: "Código de acesso gerado",
-  codigo_emitido: "Código de acesso emitido",
-  acesso_negado: "Acesso negado",
-  usuario_criado: "Usuário criado",
-  usuario_editado: "Usuário editado",
-  usuario_reativado: "Usuário reativado",
-  usuario_desativado: "Usuário desativado",
-  alerta_infrequencia: "Alerta de infrequência",
-  alerta_encerrado: "Alerta encerrado",
-  acao_busca_ativa: "Busca ativa registrada",
-  download_documento: "Download de documento",
-  download_evidencia: "Download de evidência",
-  autorizacao_revogada: "Autorização revogada",
-  duplicidade_confirmada: "Duplicidade confirmada",
-  conflito_de_horario: "Conflito de horário",
-  consulta_visao_integrada: "Consulta à visão integrada",
-};
-
-export function rotuloDaAcao(acao) {
-  if (!acao) return "—";
-  if (ACOES[acao]) return ACOES[acao];
-  const texto = String(acao).replace(/_/g, " ").trim();
-  return texto.charAt(0).toUpperCase() + texto.slice(1);
-}
-
-export function rotuloDoModulo(modulo) {
-  if (!modulo) return "—";
-  return MODULOS.find(([id]) => id === modulo)?.[1] || String(modulo);
-}
+/** Quantos eventos a tela pede por página ao GET /auditoria. */
+export const TAMANHO_DA_PAGINA = 50;
 
 const FORMATO_OCORRIDO = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "America/Sao_Paulo",
@@ -60,14 +21,35 @@ export function formatarOcorrido(iso) {
   return `${partes.day}/${partes.month}/${partes.year} ${partes.hour}:${partes.minute}`;
 }
 
-/** Filtros da tela → consulta do GET /auditoria; período invertido não vai para a API. */
-export function filtrosDaAuditoria({ texto = "", modulo = "", desde = "", ate = "" } = {}) {
+/** Período e página da tela → consulta do GET /auditoria; período invertido não vai para a API. */
+export function filtrosDaAuditoria({ desde = "", ate = "", pagina = 1 } = {}) {
   if (desde && ate && desde > ate) return { filtros: null, erro: "A data inicial não pode ser depois da final." };
-  const filtros = {};
-  const busca = String(texto).trim();
-  if (busca) filtros.texto = busca;
-  if (modulo) filtros.modulo = modulo;
+  const filtros = { pagina: Math.max(1, Math.trunc(Number(pagina)) || 1), tamanho: TAMANHO_DA_PAGINA };
   if (desde) filtros.desde = desde;
   if (ate) filtros.ate = ate;
   return { filtros, erro: null };
+}
+
+const semAcento = (texto) =>
+  String(texto ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+
+/** Busca na página já carregada: pessoa, ação ou descrição (sem diferenciar acento e maiúsculas). */
+export function filtrarNaPagina(itens, texto) {
+  const busca = semAcento(texto).trim();
+  if (!busca) return itens;
+  return itens.filter((e) => [e.quem, e.acao, e.alvo].some((campo) => semAcento(campo).includes(busca)));
+}
+
+/** "N eventos", "Página X de Y" e se há página anterior/próxima. */
+export function paginacao({ total = 0, pagina = 1, tamanho = TAMANHO_DA_PAGINA } = {}) {
+  const paginas = Math.max(1, Math.ceil(total / tamanho));
+  return {
+    total: `${total} ${total === 1 ? "evento" : "eventos"}`,
+    pagina: `Página ${Math.min(pagina, paginas)} de ${paginas}`,
+    temAnterior: pagina > 1,
+    temProxima: pagina < paginas,
+  };
 }

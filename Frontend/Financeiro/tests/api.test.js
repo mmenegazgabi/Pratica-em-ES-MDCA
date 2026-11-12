@@ -183,15 +183,16 @@ test("status do projeto, painel da direção, extrato e auditoria", async () => 
   await modulo.alterarStatusProjeto("p/1", "encerrado");
   await modulo.resumoDosProjetos();
   await modulo.listarExtrato(true);
-  await modulo.listarAuditoria({ texto: "aprov", modulo: "financeiro", desde: "2026-10-01", ate: "", limite: undefined });
+  await modulo.listarAuditoria({ desde: "2026-10-01", ate: "", pagina: 2, tamanho: 50, modulo: "gestao" });
   await modulo.listarAuditoria();
   assert.equal(chamadas[0].url, `${API_PADRAO}/projetos/p%2F1/status`);
   assert.equal(chamadas[0].method, "PATCH");
   assert.equal(chamadas[0].body, JSON.stringify({ status: "encerrado" }));
   assert.equal(chamadas[1].url, `${API_PADRAO}/dashboard/projetos`);
   assert.equal(chamadas[2].url, `${API_PADRAO}/extrato?em_aberto=true`);
-  assert.equal(chamadas[3].url, `${API_PADRAO}/auditoria?texto=aprov&modulo=financeiro&desde=2026-10-01`);
-  assert.equal(chamadas[4].url, `${API_PADRAO}/auditoria`);
+  // O módulo é sempre o Financeiro (a rota da API só tem ele).
+  assert.equal(chamadas[3].url, `${API_PADRAO}/auditoria?desde=2026-10-01&pagina=2&tamanho=50&modulo=financeiro`);
+  assert.equal(chamadas[4].url, `${API_PADRAO}/auditoria?modulo=financeiro`);
 });
 
 test("importarExtrato envia o CSV no campo arquivo, em multipart", async () => {

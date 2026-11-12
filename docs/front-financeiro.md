@@ -42,7 +42,7 @@ mais enviado. Quem só tem o papel educador é levado ao app do celular (`lancam
 | Detalhe do projeto (`#/projetos/<orçamento>`) | Orçado, gasto, disponível, gasto / limite por categoria, últimos lançamentos, **Editar orçamento** e **Encerrar/Reativar projeto** (com confirmação, `PATCH /projetos/{id}/status`) | Igual, sem Editar orçamento | não aparece |
 | Conciliação (`#/conciliacao`) | não aparece | não aparece | Extrato em aberto (`GET /extrato?em_aberto=true`) e aprovados lado a lado; marca um de cada e concilia (`PATCH /lancamentos/{id}/conciliar` com o `id` do item em `referencia_extrato`); **Importar extrato (CSV)** (`POST /extrato`). A Conciliação e a importação são do voluntário financeiro; a API também aceita a importação pela coordenação, mas o front não oferece |
 | Relatórios (`#/relatorios`) | Prestação de contas: projeto, período, prévia na tela e arquivo oficial da API em PDF ou Planilha (XLSX) (`GET /relatorios/prestacao-contas`) | Igual | não aparece |
-| Auditoria (`#/auditoria`) | Histórico de ações da plataforma (`GET /auditoria`): busca (espera 300 ms), módulo e período | Igual | não aparece |
+| Auditoria (`#/auditoria`) | Trilha do Financeiro (`GET /auditoria?modulo=financeiro`): período, páginas de 50 (Anterior/Próxima) e busca nesta página (espera 300 ms) | Igual | não aparece |
 
 O papel **Educador** vai direto para o app do celular (`lancamento/`). A gestão de
 pessoas e papéis fica na tela Administração da página inicial (`Frontend/Admin/`,
@@ -71,13 +71,17 @@ Detalhes das telas ligadas à API:
   ignorados." (repetidos = linhas que já estavam guardadas) ou o erro da API, que diz
   a linha ("Linha 3: valor inválido."). Arquivo acima de 1 MB nem é enviado. Enquanto importa, "Conciliar" fica
   bloqueado (e vice-versa). Se o
-  extrato não carregar, só a coluna dele mostra o erro. O extrato fica em memória no
-  backend (como os outros dados do Financeiro até a E3): reiniciar a API apaga o que
-  foi importado.
-- **Auditoria**: colunas Data/hora (horário de Brasília), Pessoa (nome, ou o id),
-  Módulo, Ação (códigos conhecidos com rótulo em português) e Descrição. Só a
-  resposta do pedido mais recente aparece; período invertido avisa sem chamar a API;
-  a busca pendente é cancelada ao sair da tela.
+  extrato não carregar, só a coluna dele mostra o erro. O extrato fica no banco
+  (tabela `extrato_itens`, junto dos lançamentos; veja `docs/persistencia-financeiro.md`),
+  e a importação e a conciliação vão para a auditoria do Financeiro.
+- **Auditoria**: usa o `GET /auditoria` do Financeiro (`modulo=financeiro` fixo, sem
+  filtro de módulo), com `desde`/`ate`, `pagina` e `tamanho=50`. Colunas Data/hora
+  (`quando`, horário de Brasília), Pessoa (`quem`), Ação (`acao`, o texto que a API já
+  manda) e Descrição (`alvo`); `detalhes` nunca aparece. "N eventos" vem do `total`, e
+  Anterior/Próxima trocam de página (mudar o período volta à primeira). A busca filtra
+  só a página carregada, por pessoa, ação ou descrição (sem chamar a API; espera
+  300 ms). Só a resposta do pedido mais recente aparece; período invertido avisa sem
+  chamar a API; a busca pendente é cancelada ao sair da tela.
 - **Início da direção**: o painel "Projetos" lista ativos primeiro e os encerrados
   marcados, com uma linha de total. Se `GET /dashboard/projetos` falhar, as pendências
   continuam e o painel mostra o aviso.

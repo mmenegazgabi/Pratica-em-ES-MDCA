@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 import { aprovadosEmAberto, diasEmAberto, mensagemDaImportacao, mesmoValor, valorDoExtrato, valoresDiferentes } from "../telas/conciliacao-dados.js";
 import { lancamentosDoPeriodo, nomePadraoDoRelatorio, resumoDoPeriodo, validarPeriodo } from "../telas/relatorios-dados.js";
-import { filtrosDaAuditoria, formatarOcorrido, rotuloDaAcao, rotuloDoModulo } from "../telas/auditoria-dados.js";
+import { TAMANHO_DA_PAGINA, filtrarNaPagina, filtrosDaAuditoria, formatarOcorrido, paginacao } from "../telas/auditoria-dados.js";
 import { categoriasDoOrcamento } from "../telas/projetos-dados.js";
 
 const AGORA = new Date("2026-10-27T15:00:00Z");
@@ -86,12 +86,14 @@ describe("relatórios", () => {
 });
 
 describe("auditoria", () => {
-  test("filtros: busca sem espaços, módulo e período; vazio fica de fora", () => {
-    assert.deepEqual(filtrosDaAuditoria({ texto: "  aprov ", modulo: "financeiro", desde: "2026-10-01", ate: "2026-10-31" }), {
-      filtros: { texto: "aprov", modulo: "financeiro", desde: "2026-10-01", ate: "2026-10-31" },
+  test("filtros: período e página, sempre 50 por página; vazio fica de fora", () => {
+    assert.deepEqual(filtrosDaAuditoria({ desde: "2026-10-01", ate: "2026-10-31", pagina: 2 }), {
+      filtros: { pagina: 2, tamanho: 50, desde: "2026-10-01", ate: "2026-10-31" },
       erro: null,
     });
-    assert.deepEqual(filtrosDaAuditoria({ texto: " ", modulo: "", desde: "", ate: "" }), { filtros: {}, erro: null });
+    assert.deepEqual(filtrosDaAuditoria({ desde: "", ate: "" }), { filtros: { pagina: 1, tamanho: 50 }, erro: null });
+    assert.deepEqual(filtrosDaAuditoria({ pagina: 0 }).filtros.pagina, 1);
+    assert.equal(TAMANHO_DA_PAGINA, 50);
   });
 
   test("filtros: período invertido não vai para a API", () => {
@@ -104,16 +106,25 @@ describe("auditoria", () => {
     assert.equal(formatarOcorrido(null), "—");
   });
 
-  test("ação e módulo legíveis", () => {
-    assert.equal(rotuloDaAcao("aprovar_lancamento"), "Aprovar lancamento");
-    assert.equal(rotuloDaAcao("usuario_criado"), "Usuário criado");
-    assert.equal(rotuloDaAcao("login"), "Entrou");
-    assert.equal(rotuloDaAcao(""), "—");
-    assert.equal(rotuloDoModulo("financeiro"), "Financeiro");
-    assert.equal(rotuloDoModulo("gestao"), "Gestão");
-    assert.equal(rotuloDoModulo("plataforma"), "Plataforma");
-    assert.equal(rotuloDoModulo("outro"), "outro");
-    assert.equal(rotuloDoModulo(null), "—");
+  test("busca na página: pessoa, ação ou descrição, sem acento nem maiúsculas", () => {
+    const itens = [
+      { quem: "Luana Ferraz", acao: "Aprovou despesa", alvo: "Materiais · R$ 180,00 · Leitura", detalhes: { segredo: "luana" } },
+      { quem: "vera", acao: "Importou extrato bancário", alvo: "2 itens novos" },
+      { quem: null, acao: "Acesso negado", alvo: null },
+    ];
+    assert.equal(filtrarNaPagina(itens, ""), itens);
+    assert.deepEqual(filtrarNaPagina(itens, "  LUANA "), [itens[0]]);
+    assert.deepEqual(filtrarNaPagina(itens, "bancario"), [itens[1]]);
+    assert.deepEqual(filtrarNaPagina(itens, "leitura"), [itens[0]]);
+    assert.deepEqual(filtrarNaPagina(itens, "negado"), [itens[2]]);
+    assert.deepEqual(filtrarNaPagina(itens, "segredo"), [], "detalhes não entram na busca");
+  });
+
+  test("paginação: total de eventos e limites", () => {
+    assert.deepEqual(paginacao({ total: 0, pagina: 1, tamanho: 50 }), { total: "0 eventos", pagina: "Página 1 de 1", temAnterior: false, temProxima: false });
+    assert.deepEqual(paginacao({ total: 1, pagina: 1, tamanho: 50 }), { total: "1 evento", pagina: "Página 1 de 1", temAnterior: false, temProxima: false });
+    assert.deepEqual(paginacao({ total: 120, pagina: 2, tamanho: 50 }), { total: "120 eventos", pagina: "Página 2 de 3", temAnterior: true, temProxima: true });
+    assert.deepEqual(paginacao({ total: 120, pagina: 3, tamanho: 50 }).temProxima, false);
   });
 });
 
