@@ -70,15 +70,25 @@ O Pages continua publicando `Frontend/`, conforme a main. O painel técnico
 herdado da infra fica em `Frontend/Shared/infra-smoke.html` para verificar a
 comunicação frontend/API; ele não substitui a página inicial da plataforma.
 
-## Migrations e login único (T-35)
+## Migrations
 
-O deploy não aplica migrations: elas rodam à mão, de `Backend/`, com a
-`DATABASE_URL` de produção (`Backend/.env` ou exportada):
-`.venv/bin/alembic -c Shared/alembic.ini upgrade head`. A do login
-(`b7d4e2a9c1f0`) precisa estar aplicada, e a primeira administradora criada,
-antes do merge que publica o front com login. A ordem completa está em
-[login.md](login.md#publicação). Sem a migration, as rotas `/auth` e `/admin`
-respondem 503 "Banco de dados indisponível".
+O deploy aplica as migrations sozinho. No job `deploy-backend`, antes de publicar no
+Cloud Run, o passo "Aplicar migrations no banco de produção" roda
+`alembic -c Shared/alembic.ini upgrade head` com o secret `PROD_DATABASE_URL` do
+repositório (Settings → Secrets and variables → Actions). Se a migration falhar, ou o
+secret não existir, o deploy para e o código novo não sobe. O log do job mostra a
+revisão antes e depois.
+
+Regras:
+
+- **Ninguém aplica migration à mão em produção**, nem a partir de uma branch: ela entra
+  pela main, junto com o código que precisa dela. Para testar, use um banco próprio ou
+  um branch do Neon.
+- Migration que **apaga ou converte dados** roda sozinha no merge: o PR precisa dizer o
+  que ela faz, e a revisão olha isso com atenção.
+- A migration precisa funcionar com o código que ainda está no ar (o deploy troca o
+  código só depois dela). Remover coluna ou tabela usada pelo código atual fica para um
+  segundo PR, depois que o código novo já está publicado.
 
 ## Deploy automático pela main
 
