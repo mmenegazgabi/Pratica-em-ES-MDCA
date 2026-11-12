@@ -105,5 +105,11 @@ export function criarRascunho(arquivo) {
 export const listarRascunhos = () => requisitar("/rascunhos");
 export const completarRascunho = (id, formData) => requisitar(`/rascunhos/${rota(id)}/completar`, { method: "POST", body: formData });
 
+// T-30/T-31 · US-07: orçado, realizado e saldo por projeto (só a Direção), com período e situação.
+export const resumoDosProjetos = (filtros = {}) => requisitar(`/dashboard/projetos${consulta(filtros)}`);
+
+// T-34 · US-08: trilha de auditoria do Financeiro (Coordenação e Direção), mais recentes primeiro.
+export const listarAuditoria = (filtros = {}) => requisitar(`/auditoria${consulta({ modulo: "financeiro", ...filtros })}`);
+
 export const listarNotificacoes = () => requisitar("/notificacoes");
 export const marcarNotificacaoLida = (id) => requisitar(`/notificacoes/${rota(id)}/lida`, { method: "PATCH" });

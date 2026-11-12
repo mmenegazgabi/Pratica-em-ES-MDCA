@@ -43,7 +43,7 @@ test("sem sessão da plataforma vai para a página inicial", () => {
 test("papel único entra direto no Início, com o nome do banco e o papel", async () => {
   sessaoDeTeste({ papeis: ["direcao"], nome: "Jane Almeida" });
   await irPara("#/inicio");
-  assert.deepEqual(rotulos(), ["Início", "Projetos", "Relatórios", "Auditoria"]);
+  assert.deepEqual(rotulos(), ["Início", "Painel", "Projetos", "Relatórios", "Auditoria"]);
   assert.equal(raiz.querySelector('[aria-current="page"]').textContent.replace(/\d+$/, ""), "Início");
   const usuario = raiz.querySelector(".lateral__usuario").textContent;
   assert.match(usuario, /Jane Almeida/);

@@ -1,4 +1,4 @@
-// Conciliação, Relatórios e Auditoria montados no jsdom com a API simulada.
+// Conciliação e Relatórios montados no jsdom com a API simulada (Auditoria: auditoria-tela.test.js).
 import test from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
@@ -7,7 +7,6 @@ const dom = new JSDOM('<!DOCTYPE html><body><div id="c"></div></body>', { url: "
 Object.assign(globalThis, { window: dom.window, document: dom.window.document, localStorage: dom.window.localStorage });
 const conciliacao = await import("../telas/conciliacao.js");
 const relatorios = await import("../telas/relatorios.js");
-const auditoria = await import("../telas/auditoria.js");
 
 const resposta = (status, corpo) => ({ ok: status < 400, status, headers: { get: () => "application/json" }, json: async () => corpo, text: async () => JSON.stringify(corpo) });
 const container = () => document.getElementById("c");
@@ -99,15 +98,4 @@ test("relatórios: prévia só com aprovados do período e aviso de não concili
   fim.dispatchEvent(new window.Event("change"));
   assert.match(container().textContent, /O fim do período não pode ser antes do início/);
   assert.equal([...container().querySelectorAll("button")].find((b) => b.textContent.includes("Gerar relatório")).disabled, true);
-});
-
-test("auditoria (coordenação e direção): histórico com busca", async () => {
-  await auditoria.mostrar(container());
-  assert.match(container().textContent, /Histórico de ações/);
-  const total = container().querySelectorAll("tbody tr").length;
-  assert.ok(total > 1);
-  const busca = container().querySelector('input[type="search"]');
-  busca.value = "concil";
-  busca.dispatchEvent(new window.Event("input"));
-  assert.equal(container().querySelectorAll("tbody tr").length, 1);
 });
