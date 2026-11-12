@@ -114,6 +114,26 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/check-main-head.sh
+      # O banco de produção só muda por aqui: a migration roda antes do código novo
+      # subir, e se ela falhar o deploy para. Ninguém aplica migration à mão.
+      - uses: actions/setup-python@v5
+        if: steps.latest-main.outputs.current == 'true'
+        with:
+          python-version: "3.12"
+      - name: Aplicar migrations no banco de produção
+        if: steps.latest-main.outputs.current == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Secret PROD_DATABASE_URL não configurado: o deploy não sobe sem as migrations."
+            exit 1
+          fi
+          pip install -r Backend/requirements.txt
+          cd Backend
+          echo "Antes:"; alembic -c Shared/alembic.ini current
+          alembic -c Shared/alembic.ini upgrade head
+          echo "Depois:"; alembic -c Shared/alembic.ini current
       - name: Autenticar no Google Cloud sem chave permanente
         if: steps.latest-main.outputs.current == 'true'
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3

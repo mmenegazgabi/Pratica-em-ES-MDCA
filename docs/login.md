@@ -126,7 +126,9 @@ uma sessão da plataforma. Por isso o banco e as contas vêm antes. O backend no
 compatível com o front antigo (o token de serviço continua valendo), então pode ir
 antes do merge.
 
-1. **Migration no banco de produção.** Não há migration automática no deploy. Em
+1. **Migration no banco de produção.** Hoje o deploy da main aplica as migrations
+   sozinho (veja [deploy-backend.md](deploy-backend.md#migrations)); este passo manual
+   ficou registrado como foi feito na publicação do login. Em
    `Backend/`, com a `DATABASE_URL` de produção (a de `Backend/.env`, que o Alembic lê
    quando a variável não está no ambiente, ou exportada no terminal):
    ```
