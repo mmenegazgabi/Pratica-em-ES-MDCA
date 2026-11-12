@@ -3,7 +3,7 @@
 // `carregarNaTela` é o caminho comum: mostra "Carregando…", chama a API e troca o
 // conteúdo pelo resultado ou pelo estado certo do erro, com como tentar de novo.
 
-import { API_PADRAO, ERROS, ErroApi, salvarAcesso, salvarServidor, salvarUsuario, urlDaApi, usuarioSalvo } from "./api.js";
+import { API_PADRAO, ERROS, ErroApi, salvarServidor, urlDaApi } from "./api.js";
 import { el } from "./dom.js";
 
 const campo = (id, rotulo, entrada, dica) =>
@@ -78,54 +78,8 @@ function semPermissao(erro) {
   );
 }
 
-// Pede o código (401) e/ou o usuário (400 sem X-Usuario-Id). Os dois campos aparecem
-// sempre; só o que causou o erro é obrigatório, e o código em branco mantém o salvo.
-function pedirCodigo(erro, tentarDeNovo) {
-  const pedeCodigo = erro.tipo === ERROS.NAO_AUTENTICADO;
-  const codigo = el("input", { id: "f-codigo-acesso", name: "codigo", type: "password", autocomplete: "off", autocapitalize: "off", spellcheck: "false", required: pedeCodigo });
-  const usuario = el("input", { id: "f-usuario", name: "usuario", type: "text", autocomplete: "username", autocapitalize: "off", spellcheck: "false", required: !pedeCodigo });
-  usuario.value = usuarioSalvo();
-  const servidor = entradaServidor();
-  const aviso = el("p", { class: "error-message", role: "alert", hidden: true });
-
-  function recusar(texto, campo) {
-    aviso.textContent = texto;
-    aviso.hidden = false;
-    campo.focus();
-  }
-
-  function enviar(evento) {
-    evento.preventDefault();
-    if (pedeCodigo && !codigo.value.trim()) return recusar("Informe o código de acesso.", codigo);
-    if (!pedeCodigo && !usuario.value.trim()) return recusar("Informe seu usuário.", usuario);
-    if (codigo.value.trim()) salvarAcesso(codigo.value, servidor.value);
-    else salvarServidor(servidor.value);
-    salvarUsuario(usuario.value);
-    tentarDeNovo();
-  }
-
-  return el(
-    "section",
-    { class: "card estado estado--restrito" },
-    el("div", { class: "card-head" }, el("div", {}, el("h2", {}, "Acesso restrito"), el("small", {}, erro.message))),
-    el(
-      "div",
-      { class: "card-body" },
-      el(
-        "form",
-        { class: "form-grid estado__formulario", novalidate: true, onsubmit: enviar },
-        campo("f-codigo-acesso", "Código de acesso", codigo, pedeCodigo ? "O mesmo código do Financeiro. Fica salvo só neste aparelho." : "Em branco, mantém o código já salvo."),
-        campo("f-usuario", "Seu usuário", usuario, "Identificador da sua conta na plataforma (ex.: jessica). Fica salvo só neste aparelho."),
-        servidorAvancado(servidor),
-        aviso,
-        el("div", { class: "field wide" }, el("button", { type: "submit", class: "btn primary" }, "Entrar e carregar")),
-      ),
-    ),
-  );
-}
-
-// Login único (T-35): a sessão já foi apagada por api.js; o caminho é entrar de novo
-// pela tela inicial da plataforma, não pedir código.
+// Login único (T-35): sem sessão, ou com a sessão recusada pela API (já apagada por
+// api.js), o caminho é entrar de novo pela página inicial da plataforma.
 function sessaoExpirada(erro) {
   return el(
     "section",
@@ -145,8 +99,7 @@ export const ehRestrito = (erro) =>
   [...PEDE_IDENTIFICACAO, ERROS.SEM_PERMISSAO, ERROS.SESSAO_EXPIRADA].includes(erro?.tipo);
 
 export function acessoRestrito(erro, tentarDeNovo) {
-  if (erro.tipo === ERROS.SESSAO_EXPIRADA) return sessaoExpirada(erro);
-  return PEDE_IDENTIFICACAO.includes(erro.tipo) ? pedirCodigo(erro, tentarDeNovo) : semPermissao(erro);
+  return [...PEDE_IDENTIFICACAO, ERROS.SESSAO_EXPIRADA].includes(erro.tipo) ? sessaoExpirada(erro) : semPermissao(erro);
 }
 
 /**

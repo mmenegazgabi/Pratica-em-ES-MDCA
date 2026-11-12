@@ -34,8 +34,9 @@ globalThis.fetch = async (url, opcoes = {}) => {
   const corpo = RESPOSTAS.find(([padrao]) => padrao.test(url))?.[1] ?? [];
   return new Response(JSON.stringify(corpo), { status: 200 });
 };
-localStorage.setItem("mdca.financeiro.token", "token-de-teste");
-localStorage.setItem("mdca.gestao.usuario", "ana");
+// Login único (T-35): a sessão da plataforma, gravada pela página inicial.
+const SESSAO = { token: "sessao-de-teste", expira_em: "2999-01-01T00:00:00Z", usuario: { id: "ana", nome: "Ana Martins", email: "ana@mdca.test", papeis: ["coordenacao"] } };
+localStorage.setItem("mdca.sessao", JSON.stringify(SESSAO));
 
 await import("../app.js");
 
@@ -80,27 +81,29 @@ test("Programas carrega pela API, sem o aviso de demonstração", async () => {
   await irPara("#/programas");
 
   assert.equal(chamadas.at(-1).url.endsWith("/gestao/programas"), true);
-  assert.equal(chamadas.at(-1).headers.Authorization, "Bearer token-de-teste");
+  assert.equal(chamadas.at(-1).headers.Authorization, "Bearer sessao-de-teste");
   assert.equal($("#tela-api tbody td").textContent, "Semear");
   assert.equal($(".demo-banner"), null);
   assert.equal($(".sidebar .nav a.active").textContent, "Programas e turmas");
 });
 
-test("Equipe e espaços de um programa do cadastro carrega pela API, com o usuário salvo", async () => {
+test("Equipe e espaços de um programa do cadastro carrega pela API, com a sessão do login", async () => {
   chamadas.length = 0;
   await irPara("#/programas/p-1/equipe");
 
   const urls = chamadas.map((c) => c.url.replace(/^https?:\/\/[^/]+/, ""));
   assert.ok(urls.includes("/gestao/programas/p-1/equipe?incluir_desligados=true"));
   assert.ok(urls.includes("/gestao/programas/p-1/espacos"));
-  assert.ok(chamadas.every((c) => c.headers["X-Usuario-Id"] === "ana"));
+  // Quem chama vem do token da sessão; não há mais código de acesso nem X-Usuario-Id.
+  assert.ok(chamadas.every((c) => c.headers.Authorization === "Bearer sessao-de-teste" && !("X-Usuario-Id" in c.headers)));
   assert.equal($("#tela-api tbody strong").textContent, "Ana Martins");
   assert.equal($("#main .subtitle").textContent, "Semear");
   assert.equal($(".demo-banner"), null);
 });
 
-test("o menu do usuário mostra o usuário usado na API", () => {
-  assert.match($(".api-user").textContent, /Usuário na API: ana/);
+test("o menu do usuário mostra a conta da sessão, sem formulário de usuário", () => {
+  assert.match($(".api-user").textContent, /Conectado como Ana Martins \(ana@mdca\.test\)/);
+  assert.equal(document.querySelector('[data-action="api-user"]'), null);
 });
 
 test("detalhe de programa fictício do protótipo continua na demonstração", async () => {

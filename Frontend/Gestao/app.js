@@ -16,7 +16,7 @@ import { mostrarAgenda, mostrarEncontro, mostrarRegistro, mostrarSincronizacao }
 import { mostrarAlerta, mostrarAlertas } from './telas/alertas.js';
 import { armazenamentoDoAparelho, criarFila } from './base/fila.js';
 import { apagarCopias } from './base/copia-local.js';
-import { encerrarSessao, enviarEvidencia, listarAlertas, listarProgramas, registrarAtividade, salvarUsuario, sessaoAtiva, usuarioSalvo } from './base/api.js';
+import { encerrarSessao, enviarEvidencia, listarAlertas, listarProgramas, registrarAtividade, sessaoAtiva } from './base/api.js';
 import { criarAvisos } from './base/avisos.js';
 import { abrirFormulario, campo } from './base/formulario.js';
 const $ = (s, root = document) => root.querySelector(s);
@@ -216,8 +216,7 @@ function mountPeopleApi(id,tab){const tela=$('#tela-api');if(!tela)return;if(!id
 function usersApiPage(){return head('Usuários e acessos','Contas, perfis e programas de cada pessoa usuária da plataforma.')+'<div id="tela-api"></div>'}
 function showProgramName(id){listarProgramas().then(ps=>{const p=ps?.find(x=>x.id===id),sub=$('#main .subtitle');if(p&&sub)sub.textContent=p.nome}).catch(()=>{})}
 // Login único (T-35): com sessão, mostra quem entrou; sem ela, o usuário informado à mão.
-function apiUserNote(){const s=sessaoAtiva();if(s)return '<div class="persona-note api-user">Conectado como <strong>'+esc(s.usuario.nome)+'</strong> ('+esc(s.usuario.email||s.usuario.id)+')</div>';return '<div class="persona-note api-user">Usuário na API: <strong>'+esc(usuarioSalvo()||'não informado')+'</strong> <button type="button" class="text-link" data-action="api-user">Trocar</button></div>'}
-function apiUserForm(){const entrada=document.createElement('input');entrada.type='text';entrada.autocomplete='username';entrada.value=usuarioSalvo();abrirFormulario({titulo:'Seu usuário na API',campos:[campo('f-usuario-api','Seu usuário',entrada,{largo:true,dica:'Identificador da sua conta na plataforma (ex.: jessica). Fica salvo só neste aparelho, até o login.'})],validar:()=>entrada.value.trim()?'':'Informe seu usuário.',enviar:async()=>salvarUsuario(entrada.value),aoConcluir:()=>{render();toast('Usuário da API: '+usuarioSalvo()+'.')}})}
+function apiUserNote(){const s=sessaoAtiva();return s?'<div class="persona-note api-user">Conectado como <strong>'+esc(s.usuario.nome)+'</strong> ('+esc(s.usuario.email||s.usuario.id)+')</div>':''}
 function programForm(id){const p=id?prog(id):{};if(!can('manage'))return denied();return head(id?'Editar programa':'Um novo caminho','Defina a base do programa e seu plano de ação.',link('Voltar','/programas'))+'<section class="card form-card">'+wrapForm('program-form',field('Nome do programa','name','text',p.name||'',null,true)+field('Nome curto','short','text',p.short||'')+field('Responsável','responsible','text',p.responsible||'Ana Martins')+field('Início da vigência','start','date',p.start||today)+field('Fim da vigência','end','date',p.end||'2026-12-31')+field('Público atendido','audience','text',p.audience||'',null,true)+field('Convênio ou parceria','agreement','text',p.agreement||'')+field('Vagas','vacancies','number',p.vacancies||20)+field('Objetivo','goal','textarea',p.goal||'',null,true)+field('Ação planejada','action','text',p.action||'',null,true)+field('Início da ação','actionStart','date',p.actionStart||p.start||today)+field('Fim da ação','actionEnd','date',p.actionEnd||p.end||'2026-12-31')+field('Resultado esperado','result','text',p.result||'')+field('Meta quantitativa','target','number',p.target||20)+field('Periodicidade de acompanhamento','frequency','select',p.frequency||'Mensal',['Mensal','Quinzenal','Trimestral'])+field('Faltas consecutivas para alerta','absenceLimit','number',p.absenceLimit||3,null,false,true,'Ao atingir o limite, a equipe técnica recebe um alerta de infrequência.')+field('Situação','status','select',p.status||'Ativo',['Ativo','Planejado','Encerrado']),'/programas','Salvar programa',hidden('id',id||''))+'</section>'}
 function programDetail(id,tab='resumo'){const p=prog(id);if(!p||!accessible(id))return denied();const items=[['Resumo','/programas/'+id,'resumo'],['Plano e metas','/programas/'+id+'/plano','plano'],['Equipe e espaços','/programas/'+id+'/equipe','equipe'],['Turmas','/programas/'+id+'/turmas','turmas']];if(can('finance'))items.push(['Visão integrada','/programas/'+id+'/integrada','integrada']);let body='';
  if(tab==='resumo')body='<div class="detail-grid">'+card('Sobre o programa','Identificador compartilhado: MDCA-'+id.toUpperCase(),'<p>'+esc(p.description)+'</p><dl class="details">'+[['Público',p.audience],['Responsável',p.responsible],['Vigência',date(p.start)+' a '+date(p.end)],['Convênio',p.agreement],['Vagas previstas',p.vacancies],['Situação',p.status]].map(([k,v])=>'<div><dt>'+k+'</dt><dd>'+esc(v)+'</dd></div>').join('')+'</dl>')+card('Execução do programa','Visão acumulada',programProgress(p)+info('Os dados do programa são compartilhados com o Financeiro pelo mesmo identificador.'))+'</div>';
@@ -433,7 +432,6 @@ document.addEventListener('click',e=>{
  switch(act){
  case 'close':closeDialog();break;
  case 'user-menu':toggleUserMenu();break;
- case 'api-user':toggleUserMenu(false);apiUserForm();break;
  case 'sair':encerrarSessao();apagarCopias();location.assign('../');break;
  case 'menu':$('.sidebar')?.classList.toggle('open');$('.mobile-scrim')?.classList.toggle('visible');break;
  case 'guide':go('/guia');break;
@@ -538,4 +536,8 @@ filaDeCampo.podarHistorico().catch(()=>{}).finally(syncField);
 if(globalThis.navigator?.serviceWorker&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 window.addEventListener('hashchange',()=>{if($('#dialog').open)closeDialog();render();window.scrollTo(0,0);$('#main h1')?.focus({preventScroll:true})});
 $('#dialog').addEventListener('click',e=>{if(e.target===$('#dialog')){const r=$('#dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialog()}});
-render();
+/* Login único (T-35): sem sessão, a entrada é pela página inicial da plataforma, como no Financeiro.
+   As prévias do mapa de telas (?mini=1) usam só os dados fictícios e não pedem login; sem
+   conexão, o app abre do aparelho para o registro em campo, que envia quando houver sessão. */
+const semSessao=!sessaoAtiva()&&!previewMode&&globalThis.navigator?.onLine!==false;
+if(semSessao)location.replace('../');else render();

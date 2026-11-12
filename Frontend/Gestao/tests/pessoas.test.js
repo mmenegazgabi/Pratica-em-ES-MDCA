@@ -103,6 +103,7 @@ const chamadas = (nome) => registro.filter(([n]) => n === nome).map(([, ...args]
 // --- Cliente da API -------------------------------------------------------------
 
 test("o cliente manda programa e busca só quando informados", async () => {
+  localStorage.setItem("mdca.sessao", JSON.stringify({ token: "sessao-de-teste", expira_em: "2999-01-01T00:00:00Z", usuario: { id: "ana", nome: "Ana Martins", papeis: [] } }));
   const urls = [];
   globalThis.fetch = async (url) => {
     urls.push(url);
@@ -116,6 +117,7 @@ test("o cliente manda programa e busca só quando informados", async () => {
 });
 
 test("erro com detail em objeto guarda a mensagem e os dados (ex.: duplicidade)", async () => {
+  localStorage.setItem("mdca.sessao", JSON.stringify({ token: "sessao-de-teste", expira_em: "2999-01-01T00:00:00Z", usuario: { id: "ana", nome: "Ana Martins", papeis: [] } }));
   globalThis.fetch = async () =>
     new Response(JSON.stringify({ detail: { codigo: "possivel_duplicidade", mensagem: "Possível duplicidade.", candidatos: [DUPLICADO] } }), { status: 409 });
 
