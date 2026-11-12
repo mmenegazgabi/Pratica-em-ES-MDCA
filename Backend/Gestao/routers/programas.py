@@ -5,11 +5,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Connection
 
-# Mesma autenticação das rotas do Financeiro: sessão do login único (T-35) ou
-# token de serviço, até existir o RBAC (T-33).
-from Acesso.identidade import Identidade
-from Financeiro.autenticacao import exigir_autenticacao
+# Acesso por programa (T-87): quem chama vem de ``exigir_usuario`` (código de acesso com
+# X-Usuario-Id, ou o token de sessão do login da T-35) e os papéis vêm do banco.
+from Financeiro.autenticacao import exigir_usuario
 from Gestao import programas
+from Gestao.acesso import (
+    Acesso,
+    exigir_cadastro_de_programa,
+    exigir_consulta_ao_programa,
+    exigir_gestao_do_programa,
+    programas_consultaveis,
+)
 from Gestao.banco import obter_conexao
 from Gestao.programas import ErroDeCadastro, Programa
 from Gestao.routers.plano_de_acao import router as plano_de_acao_router
@@ -94,21 +100,22 @@ def _http(erro: ErroDeCadastro) -> HTTPException:
     return HTTPException(status_code=erro.status, detail=erro.mensagem)
 
 
-# A autenticação vem antes da conexão: sem token, o banco nem é aberto.
+# O acesso vem antes de qualquer consulta: sem token, o banco nem é aberto.
 
 
 @router.get("/programas", response_model=List[ProgramaSaida])
 def listar(
-    _auth: Identidade = Depends(exigir_autenticacao),
+    usuario_id: str = Depends(exigir_usuario),
     conexao: Connection = Depends(obter_conexao),
 ) -> List[Programa]:
-    return programas.listar_programas(conexao)
+    """Só os programas que a pessoa pode consultar (direção e administração: todos)."""
+    return programas.listar_programas(conexao, programas_consultaveis(conexao, usuario_id))
 
 
 @router.post("/programas", response_model=ProgramaDetalhadoSaida, status_code=201)
 def cadastrar(
     dados: ProgramaEntrada,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _usuario: str = Depends(exigir_cadastro_de_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> programas.ProgramaDetalhado:
     try:
@@ -123,7 +130,7 @@ def cadastrar(
 def editar(
     programa_id: str,
     dados: ProgramaEntrada,
-    _auth: str = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_gestao_do_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> programas.ProgramaDetalhado:
     """Altera só os campos enviados; o programa resultante segue as regras do cadastro."""
@@ -138,7 +145,7 @@ def editar(
 @router.get("/programas/{programa_id}", response_model=ProgramaDetalhadoSaida)
 def consultar(
     programa_id: str,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_consulta_ao_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> programas.ProgramaDetalhado:
     try:
@@ -150,7 +157,7 @@ def consultar(
 @router.get("/programas/{programa_id}/convenios", response_model=List[ConvenioSaida])
 def listar_convenios(
     programa_id: str,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_consulta_ao_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> List[programas.Convenio]:
     try:
@@ -163,7 +170,7 @@ def listar_convenios(
 def cadastrar_convenio(
     programa_id: str,
     dados: ConvenioEntrada,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_gestao_do_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> programas.Convenio:
     try:
@@ -177,7 +184,7 @@ def cadastrar_convenio(
 @router.get("/programas/{programa_id}/vagas", response_model=List[VagasSaida])
 def listar_vagas(
     programa_id: str,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_consulta_ao_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> List[programas.Vaga]:
     try:
@@ -190,7 +197,7 @@ def listar_vagas(
 def cadastrar_vagas(
     programa_id: str,
     dados: VagasEntrada,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_gestao_do_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> programas.Vaga:
     try:

@@ -18,6 +18,13 @@ from sqlalchemy.exc import IntegrityError
 
 UNIQUE_VIOLATION = "23505"
 
+# A coordenação é dada na conta e vale para todos os programas (T-87); não é vínculo.
+PAPEIS_FORA_DE_VINCULO = {"coordenacao"}
+COORDENACAO_NAO_E_VINCULO = (
+    "A coordenação vale para todos os programas e é dada na conta, na Administração. "
+    "Escolha outro papel para o vínculo."
+)
+
 
 class ErroDeEquipe(Exception):
     """Erro de regra; ``status`` é a resposta HTTP correspondente."""
@@ -122,6 +129,8 @@ def vincular(
     ).first()
     if papel_existe is None:
         raise DadosInvalidos("Papel inválido.")
+    if papel_id in PAPEIS_FORA_DE_VINCULO:
+        raise DadosInvalidos(COORDENACAO_NAO_E_VINCULO)
 
     vinculo_id = str(uuid.uuid4())
     try:

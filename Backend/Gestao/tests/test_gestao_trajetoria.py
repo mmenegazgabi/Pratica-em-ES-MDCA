@@ -10,14 +10,15 @@ HOJE = date.today()
 
 @pytest.fixture
 def programa(banco):
-    """p-1 (Semear) com ana na coordenação; p-2 (Oficina) com bruno na coordenação."""
+    """ana na coordenação (na conta, vale para todos); p-2 (Oficina) com bruno como assistente social."""
     with banco.begin() as c:
         c.execute(sa.text("INSERT INTO projetos (id, nome) VALUES ('p-1', 'Semear'), ('p-2', 'Oficina')"))
         c.execute(sa.text("INSERT INTO usuarios (id, nome) VALUES ('ana', 'Ana'), ('bruno', 'Bruno')"))
+        c.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('ana', 'coordenacao')"))
         c.execute(
             sa.text(
                 "INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) VALUES "
-                "('v1', 'ana', 'p-1', 'coordenacao', '2025-01-01'), ('v2', 'bruno', 'p-2', 'coordenacao', '2025-01-01')"
+                "('v2', 'bruno', 'p-2', 'assistente_social', '2025-01-01')"
             )
         )
     return banco

@@ -13,7 +13,7 @@ const HOJE = new Date();
 const AMANHA = new Date(HOJE.getTime() + 86400000).toISOString().slice(0, 10);
 
 const EQUIPE = [
-  { id: "v-ana", usuario_id: "ana", nome: "Ana Martins", papel_id: "coordenacao", papel: "Coordenação", data_entrada: "2025-01-10", data_saida: null, ativo: true },
+  { id: "v-ana", usuario_id: "ana", nome: "Ana Martins", papel_id: "assistente_social", papel: "Assistente social", data_entrada: "2025-01-10", data_saida: null, ativo: true },
   { id: "v-bruno", usuario_id: "bruno", nome: "Bruno Lima", papel_id: "educador", papel: "Educador(a) social", data_entrada: "2025-04-01", data_saida: AMANHA, ativo: true },
   { id: "v-rafael", usuario_id: "rafael", nome: "Rafael Nunes", papel_id: "psicologo", papel: "Psicólogo(a)", data_entrada: "2025-02-01", data_saida: "2026-01-31", ativo: false },
 ];
@@ -99,7 +99,7 @@ test("lista a equipe com histórico e os espaços vindos da API", async () => {
   ]);
   const [equipe, espacos] = container.querySelectorAll("table");
   assert.deepEqual(linhas(equipe), [
-    ["Ana Martins ana", "Coordenação", "10/01/2025", "—", "Ativo", "—"],
+    ["Ana Martins ana", "Assistente social", "10/01/2025", "—", "Ativo", "—"],
     ["Bruno Lima bruno", "Educador(a) social", "01/04/2025", AMANHA.split("-").reverse().join("/"), `Ativo até ${AMANHA.split("-").reverse().join("/")}`, "—"],
     ["Rafael Nunes rafael", "Psicólogo(a)", "01/02/2025", "31/01/2026", "Desligado", "—"],
   ]);
@@ -223,7 +223,8 @@ test("vincular oferece só contas ativas e papéis de programa, e envia a escolh
   const pessoa = dialogo().querySelector('select[name="usuario_id"]');
   const papel = dialogo().querySelector('select[name="papel_id"]');
   assert.deepEqual([...pessoa.options].slice(1).map((o) => o.value), ["ana", "patricia"]);
-  assert.deepEqual([...papel.options].slice(1).map((o) => o.value), ["assistente_social", "coordenacao", "educador", "psicologo"]);
+  // A coordenação não é vínculo: é dada na conta e vale para todos os programas (T-87).
+  assert.deepEqual([...papel.options].slice(1).map((o) => o.value), ["assistente_social", "educador", "psicologo"]);
 
   pessoa.value = "patricia";
   papel.value = "assistente_social";

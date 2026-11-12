@@ -21,7 +21,7 @@ VISAO = "/gestao/programas/p-1/visao-integrada"
 def plataforma(app, banco, cabecalhos):
     """Programa p-1 (Semear) com uma meta, equipe e o Financeiro vazio, com armazenamento em memória.
 
-    - ana: coordenação em p-1       - jessica: educadora em p-1
+    - ana: coordenação (na conta)   - jessica: educadora em p-1
     - dora: direção da plataforma   - bruno: sem vínculo
     """
     app.dependency_overrides[obter_armazenamento] = ArmazenamentoEmMemoria
@@ -32,12 +32,11 @@ def plataforma(app, banco, cabecalhos):
         conexao.execute(
             sa.text("INSERT INTO usuarios (id, nome) VALUES ('ana', 'Ana'), ('jessica', 'Jéssica'), ('dora', 'Dora'), ('bruno', 'Bruno')")
         )
-        conexao.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('dora', 'direcao')"))
+        conexao.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('ana', 'coordenacao'), ('dora', 'direcao')"))
         conexao.execute(
             sa.text(
                 """
                 INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) VALUES
-                    ('v-ana', 'ana', 'p-1', 'coordenacao', '2025-01-10'),
                     ('v-jessica', 'jessica', 'p-1', 'educador', '2025-03-01')
                 """
             )
@@ -138,7 +137,7 @@ def test_orcamento_e_lancamento_aprovado_no_financeiro_aparecem_na_visao_integra
 
 
 def test_gestao_e_visao_integrada_usam_o_mesmo_identificador_do_programa(cliente, cabecalhos, plataforma):
-    programa = cliente.get("/gestao/programas/p-1", headers=cabecalhos).json()
+    programa = cliente.get("/gestao/programas/p-1", headers=gestao(cabecalhos, "ana")).json()
 
     assert visao(cliente, cabecalhos)["programa"]["identificador"] == programa["identificador"] == "SEMEAR"
 

@@ -38,7 +38,7 @@ PDF = b"%PDF-1.4\n" + b"lista de presenca" * 20
 def programa(banco):
     """p-1 com a turma t-1 (todos os dias) e três crianças matriculadas há um mês; p-2 com t-9.
 
-    - jessica: educadora em p-1 (responsável da t-1)   - ana: coordenação em p-1
+    - jessica: educadora em p-1 (responsável da t-1)   - ana: coordenação (na conta)
     - bruno: educador em p-2
     """
     inicio = HOJE - timedelta(days=30)
@@ -47,10 +47,11 @@ def programa(banco):
         c.execute(
             sa.text("INSERT INTO usuarios (id, nome) VALUES ('jessica', 'Jéssica Almeida'), ('ana', 'Ana Martins'), ('bruno', 'Bruno Lima')")
         )
+        c.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('ana', 'coordenacao')"))
         c.execute(
             sa.text(
                 "INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) VALUES "
-                "('v1', 'jessica', 'p-1', 'educador', :inicio), ('v2', 'ana', 'p-1', 'coordenacao', :inicio), "
+                "('v1', 'jessica', 'p-1', 'educador', :inicio), "
                 "('v3', 'bruno', 'p-2', 'educador', :inicio)"
             ),
             {"inicio": inicio},

@@ -13,10 +13,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Connection
 
-# Mesma autenticação das rotas do Financeiro: sessão do login único (T-35) ou
-# token de serviço, até existir o RBAC (T-33).
-from Acesso.identidade import Identidade
-from Financeiro.autenticacao import exigir_autenticacao
+# Acesso por programa (T-87): quem chama vem da sessão do login único (ou do token de
+# serviço com X-Usuario-Id, em testes) e os papéis vêm do banco.
+from Gestao.acesso import Acesso, exigir_consulta_ao_programa, exigir_gestao_do_programa
 from Gestao import plano_de_acao as plano
 from Gestao.banco import obter_conexao
 from Gestao.programas import ErroDeCadastro
@@ -119,13 +118,13 @@ def _http(erro: ErroDeCadastro) -> HTTPException:
     return HTTPException(status_code=erro.status, detail=erro.mensagem)
 
 
-# A autenticação vem antes da conexão: sem token, o banco nem é aberto.
+# O acesso vem antes de qualquer consulta: sem token, o banco nem é aberto.
 
 
 @router.get("/objetivos", response_model=List[ObjetivoSaida])
 def listar_objetivos(
     programa_id: str,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_consulta_ao_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> List[plano.Objetivo]:
     try:
@@ -138,7 +137,7 @@ def listar_objetivos(
 def cadastrar_objetivo(
     programa_id: str,
     dados: ObjetivoEntrada,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_gestao_do_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> plano.Objetivo:
     try:
@@ -152,7 +151,7 @@ def cadastrar_objetivo(
 @router.get("/acoes", response_model=List[AcaoSaida])
 def listar_acoes(
     programa_id: str,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_consulta_ao_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> List[plano.Acao]:
     try:
@@ -165,7 +164,7 @@ def listar_acoes(
 def cadastrar_acao(
     programa_id: str,
     dados: AcaoEntrada,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_gestao_do_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> plano.Acao:
     try:
@@ -179,7 +178,7 @@ def cadastrar_acao(
 @router.get("/metas", response_model=List[MetaSaida])
 def listar_metas(
     programa_id: str,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_consulta_ao_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> List[plano.Meta]:
     try:
@@ -192,7 +191,7 @@ def listar_metas(
 def cadastrar_meta(
     programa_id: str,
     dados: MetaEntrada,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_gestao_do_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> plano.Meta:
     try:
@@ -207,7 +206,7 @@ def cadastrar_meta(
 def listar_registros(
     programa_id: str,
     meta_id: str,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_consulta_ao_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> List[plano.RegistroMeta]:
     try:
@@ -221,7 +220,7 @@ def registrar_realizado(
     programa_id: str,
     meta_id: str,
     dados: RegistroEntrada,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_gestao_do_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> plano.RegistroMeta:
     try:
@@ -235,7 +234,7 @@ def registrar_realizado(
 @router.get("/painel", response_model=PainelSaida)
 def consultar_painel(
     programa_id: str,
-    _auth: Identidade = Depends(exigir_autenticacao),
+    _acesso: Acesso = Depends(exigir_consulta_ao_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> plano.Painel:
     """Planejado, realizado (soma dos registros) e percentual de cada meta."""

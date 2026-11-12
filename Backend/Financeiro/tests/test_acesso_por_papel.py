@@ -10,7 +10,7 @@ Programas: p-1 (Semear) e p-2 (Oficina). Pessoas:
 - luana: Coordenação (papel da plataforma)       - jane: Direção
 - vera: voluntária financeira                    - paula: psicóloga (sem papel do Financeiro)
 - marcos: educador com vínculo ativo em p-1      - ana: educadora com vínculo ativo em p-2
-- bruno: educador cujo vínculo com p-1 terminou  - rita: coordenação só pelo vínculo em p-2
+- bruno: educador cujo vínculo com p-1 terminou
 - tiago: educador em p-1, conta desativada
 
 Precisa do PostgreSQL descartável (``TEST_DATABASE_URL``), como os demais testes de banco.
@@ -47,7 +47,7 @@ def pessoas(banco_financeiro):
             sa.text("INSERT INTO usuarios (id, nome, email, senha_hash, ativo) VALUES (:id, :nome, :email, :h, :ativo)"),
             [
                 {"id": u, "nome": u.title(), "email": f"{u}@mdca.org.br", "h": hash_senha, "ativo": u != "tiago"}
-                for u in ("luana", "jane", "vera", "paula", "marcos", "ana", "bruno", "rita", "tiago")
+                for u in ("luana", "jane", "vera", "paula", "marcos", "ana", "bruno", "tiago")
             ],
         )
         c.execute(
@@ -68,7 +68,6 @@ def pessoas(banco_financeiro):
                 {"id": "v-1", "u": "marcos", "prog": "p-1", "papel": "educador", "saida": None},
                 {"id": "v-2", "u": "ana", "prog": "p-2", "papel": "educador", "saida": None},
                 {"id": "v-3", "u": "bruno", "prog": "p-1", "papel": "educador", "saida": ontem},
-                {"id": "v-4", "u": "rita", "prog": "p-2", "papel": "coordenacao", "saida": None},
                 {"id": "v-5", "u": "tiago", "prog": "p-1", "papel": "educador", "saida": None},
             ],
         )
@@ -178,7 +177,8 @@ def test_vinculo_encerrado_nao_da_acesso(orcamentos):
 # --- Coordenação vê tudo ------------------------------------------------------------
 
 
-@pytest.mark.parametrize("quem", ["luana", "rita"])
+# A coordenação é dada só na conta; o banco não aceita vínculo de coordenação (T-87).
+@pytest.mark.parametrize("quem", ["luana"])
 def test_coordenacao_ve_todos_os_programas(orcamentos, quem):
     projetos = client.get("/projetos", headers=sessao_de(quem)).json()
 

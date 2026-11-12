@@ -142,18 +142,31 @@ def sequencias_de_faltas(conexao: Connection, turma_id: str, pessoas: Sequence[s
 
 
 def _responsavel_do_programa(conexao: Connection, programa_id: str, hoje: date) -> Optional[str]:
-    return conexao.execute(
+    """Assistente social ativa no programa; sem ela, a coordenação (T-87: papel da conta,
+    vale para todos os programas), começando por quem tem o papel há mais tempo."""
+    assistente = conexao.execute(
         sa.text(
             """
             SELECT v.usuario_id FROM vinculos_equipe v JOIN usuarios u ON u.id = v.usuario_id
-            WHERE v.programa_id = :programa AND u.ativo
-              AND v.papel_id IN ('assistente_social', 'coordenacao')
+            WHERE v.programa_id = :programa AND u.ativo AND v.papel_id = 'assistente_social'
               AND v.data_entrada <= :hoje AND (v.data_saida IS NULL OR v.data_saida > :hoje)
-            ORDER BY (v.papel_id = 'assistente_social') DESC, v.data_entrada, v.id
+            ORDER BY v.data_entrada, v.id
             LIMIT 1
             """
         ),
         {"programa": programa_id, "hoje": hoje},
+    ).scalar_one_or_none()
+    if assistente is not None:
+        return assistente
+    return conexao.execute(
+        sa.text(
+            """
+            SELECT up.usuario_id FROM usuarios_papeis up JOIN usuarios u ON u.id = up.usuario_id
+            WHERE up.papel_id = 'coordenacao' AND u.ativo
+            ORDER BY up.atribuido_em, up.usuario_id
+            LIMIT 1
+            """
+        )
     ).scalar_one_or_none()
 
 
