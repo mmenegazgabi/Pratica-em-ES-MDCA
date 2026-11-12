@@ -38,12 +38,11 @@ def programa(banco):
                 {"id": "bruno", "nome": "Bruno Lima"},
             ],
         )
-        conexao.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('dora', 'direcao')"))
+        conexao.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('ana', 'coordenacao'), ('dora', 'direcao')"))
         conexao.execute(
             sa.text(
                 """
                 INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) VALUES
-                    ('v-ana', 'ana', 'p-1', 'coordenacao', '2025-01-10'),
                     ('v-jessica', 'jessica', 'p-1', 'educador', '2025-03-01')
                 """
             )

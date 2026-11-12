@@ -46,9 +46,10 @@ def programa(banco):
             sa.text("INSERT INTO usuarios (id, nome) VALUES (:id, :nome)"),
             [{"id": "ana", "nome": "Ana Martins"}, {"id": "jessica", "nome": "Jéssica Almeida"}],
         )
+        c.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('ana', 'coordenacao')"))
         c.execute(
             sa.text("INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) VALUES (:id, :u, 'p-1', :papel, '2025-01-01')"),
-            [{"id": "v1", "u": "ana", "papel": "coordenacao"}, {"id": "v2", "u": "jessica", "papel": "educador"}],
+            [{"id": "v2", "u": "jessica", "papel": "educador"}],
         )
         c.execute(sa.text("INSERT INTO espacos (id, programa_id, nome) VALUES ('e-1', 'p-1', 'Ateliê')"))
         c.execute(sa.text("INSERT INTO nucleos_familiares (id, nome) VALUES ('f-1', 'Oliveira')"))

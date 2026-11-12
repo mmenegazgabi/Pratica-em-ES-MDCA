@@ -18,9 +18,9 @@ def plataforma(banco):
     """Dois programas e pessoas com papéis variados.
 
     - admin: administração da plataforma   - dora: direção da plataforma
-    - ana: coordenação em p-1               - jessica: educadora em p-1 e p-2
-    - rafael: coordenava p-2, saiu ontem    - bruno: coordenação em p-2 até amanhã
-    - inativo: conta desativada que coordenava p-1
+    - ana: coordenação (na conta)           - jessica: educadora em p-1 e p-2
+    - rafael: educador em p-2, saiu ontem   - bruno: educador em p-2 até amanhã
+    - inativo: conta desativada com coordenação na conta
     """
     with banco.begin() as conexao:
         conexao.execute(
@@ -40,7 +40,12 @@ def plataforma(banco):
         )
         conexao.execute(
             sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES (:u, :p)"),
-            [{"u": "admin", "p": "administracao"}, {"u": "dora", "p": "direcao"}],
+            [
+                {"u": "admin", "p": "administracao"},
+                {"u": "dora", "p": "direcao"},
+                {"u": "ana", "p": "coordenacao"},
+                {"u": "inativo", "p": "coordenacao"},
+            ],
         )
         conexao.execute(
             sa.text(
@@ -50,12 +55,10 @@ def plataforma(banco):
                 """
             ),
             [
-                {"id": "v1", "u": "ana", "prog": "p-1", "papel": "coordenacao", "saida": None},
                 {"id": "v2", "u": "jessica", "prog": "p-1", "papel": "educador", "saida": None},
                 {"id": "v3", "u": "jessica", "prog": "p-2", "papel": "educador", "saida": None},
-                {"id": "v4", "u": "rafael", "prog": "p-2", "papel": "coordenacao", "saida": ONTEM},
-                {"id": "v5", "u": "bruno", "prog": "p-2", "papel": "coordenacao", "saida": AMANHA},
-                {"id": "v6", "u": "inativo", "prog": "p-1", "papel": "coordenacao", "saida": None},
+                {"id": "v4", "u": "rafael", "prog": "p-2", "papel": "educador", "saida": ONTEM},
+                {"id": "v5", "u": "bruno", "prog": "p-2", "papel": "educador", "saida": AMANHA},
             ],
         )
     return banco
@@ -85,8 +88,8 @@ def por_id(resposta):
 
 @pytest.mark.parametrize(
     "usuario",
-    ["admin", "ana", "bruno"],
-    ids=["administracao", "coordenacao", "coordenacao-com-saida-futura"],
+    ["admin", "ana"],
+    ids=["administracao", "coordenacao"],
 )
 def test_administracao_e_coordenacao_consultam_os_usuarios(cliente, cabecalhos, plataforma, usuario):
     resposta = cliente.get(USUARIOS, headers=como(cabecalhos, usuario))
@@ -98,7 +101,7 @@ def test_administracao_e_coordenacao_consultam_os_usuarios(cliente, cabecalhos, 
 @pytest.mark.parametrize(
     "usuario",
     ["jessica", "dora", "rafael", "inativo", "desconhecido"],
-    ids=["educadora", "direcao", "coordenacao-encerrada", "usuario-desativado", "usuario-inexistente"],
+    ids=["educadora", "direcao", "vinculo-encerrado", "usuario-desativado", "usuario-inexistente"],
 )
 def test_sem_permissao_recebe_403_e_a_tentativa_e_registrada(cliente, cabecalhos, plataforma, usuario):
     resposta = cliente.get(USUARIOS, headers=como(cabecalhos, usuario))

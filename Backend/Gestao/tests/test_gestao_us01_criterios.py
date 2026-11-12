@@ -33,8 +33,8 @@ SEM_ACESSO = "Seu perfil não tem acesso a este programa."
 def programa(banco):
     """Programa p-1 (Semear) e p-2 (Oficina).
 
-    - ana: coordenação em p-1               - jessica: educadora em p-1
-    - carla: coordenação em p-1 e educadora em p-2
+    - ana: coordenação (na conta)           - jessica: educadora em p-1
+    - carla: educadora em p-1 e em p-2
     - rafael: psicólogo, saiu de p-1 ontem  - bruno: educador só em p-2
     - patricia: sem vínculo                 - admin: administração da plataforma
     - dora: direção da plataforma           - lara (pe-lara): pessoa atendida em p-1
@@ -62,7 +62,7 @@ def programa(banco):
         conexao.execute(
             sa.text(
                 "INSERT INTO usuarios_papeis (usuario_id, papel_id) "
-                "VALUES ('admin', 'administracao'), ('dora', 'direcao')"
+                "VALUES ('admin', 'administracao'), ('dora', 'direcao'), ('ana', 'coordenacao')"
             )
         )
         conexao.execute(
@@ -73,9 +73,8 @@ def programa(banco):
                 """
             ),
             [
-                {"id": "v-ana", "u": "ana", "prog": "p-1", "papel": "coordenacao", "entrada": "2025-01-10", "saida": None},
                 {"id": "v-jessica", "u": "jessica", "prog": "p-1", "papel": "educador", "entrada": "2025-03-01", "saida": None},
-                {"id": "v-carla", "u": "carla", "prog": "p-1", "papel": "coordenacao", "entrada": "2025-02-01", "saida": None},
+                {"id": "v-carla", "u": "carla", "prog": "p-1", "papel": "educador", "entrada": "2025-02-01", "saida": None},
                 {"id": "v-carla-p2", "u": "carla", "prog": "p-2", "papel": "educador", "entrada": "2025-02-01", "saida": None},
                 {"id": "v-rafael", "u": "rafael", "prog": "p-1", "papel": "psicologo", "entrada": "2025-02-01", "saida": ONTEM},
                 {"id": "v-bruno", "u": "bruno", "prog": "p-2", "papel": "educador", "entrada": "2025-04-01", "saida": None},
@@ -131,7 +130,7 @@ def desligar(cliente, cabecalhos, vinculo_id, data_saida=HOJE, quem="ana"):
 def test_responsaveis_disponiveis_sao_so_os_vinculados_ativos_ao_programa(cliente, cabecalhos, programa):
     # Fora da lista: rafael (desligado), bruno (só em p-2), patricia (sem vínculo) e
     # admin/dora (papéis da plataforma, sem vínculo no programa).
-    assert responsaveis_disponiveis(cliente, cabecalhos) == ["ana", "carla", "jessica"]
+    assert responsaveis_disponiveis(cliente, cabecalhos) == ["carla", "jessica"]
 
 
 def test_profissional_recem_vinculado_passa_a_poder_ser_responsavel(cliente, cabecalhos, programa):
@@ -232,7 +231,7 @@ def test_desligado_e_bloqueado_em_todas_as_rotas_do_programa(cliente, cabecalhos
     assert resposta.status_code == 403
 
 
-def test_coordenacao_desligada_perde_consulta_e_gestao_do_programa(cliente, cabecalhos, programa):
+def test_profissional_desligado_perde_consulta_e_gestao_do_programa(cliente, cabecalhos, programa):
     desligar(cliente, cabecalhos, "v-carla")
 
     for metodo, rota, corpo in ROTAS_DE_CONSULTA + ROTAS_DE_GESTAO:
@@ -264,9 +263,10 @@ def test_desligado_nao_ve_pessoas_do_programa_na_lista_geral(cliente, cabecalhos
     assert depois.json() == []
 
 
-def test_coordenacao_desligada_perde_a_lista_de_usuarios(cliente, cabecalhos, programa):
+def test_sem_a_coordenacao_na_conta_perde_a_lista_de_usuarios(cliente, cabecalhos, programa):
     assert cliente.get(USUARIOS, headers=como(cabecalhos, "ana")).status_code == 200
-    desligar(cliente, cabecalhos, "v-ana", quem="admin")
+    with programa.begin() as conexao:
+        conexao.execute(sa.text("DELETE FROM usuarios_papeis WHERE usuario_id = 'ana'"))
 
     assert cliente.get(USUARIOS, headers=como(cabecalhos, "ana")).status_code == 403
 
@@ -290,7 +290,7 @@ def test_desligamento_preserva_o_historico_do_vinculo(cliente, cabecalhos, progr
     assert desligado in historico
     assert {v["id"] for v in historico} >= {"v-jessica", "v-rafael"}
     with programa.connect() as conexao:
-        assert conexao.execute(sa.text("SELECT count(*) FROM vinculos_equipe")).scalar_one() == 6
+        assert conexao.execute(sa.text("SELECT count(*) FROM vinculos_equipe")).scalar_one() == 5
         assert conexao.execute(sa.text("SELECT ativo FROM usuarios WHERE id = 'jessica'")).scalar_one() is True
 
 

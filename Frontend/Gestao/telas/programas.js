@@ -3,8 +3,13 @@
 //
 // O programa é o mesmo registro que o Financeiro usa em orçamentos e lançamentos; o
 // identificador é o código compartilhado entre os dois módulos. Os botões de cadastro e
-// edição só aparecem para quem gerencia, mas quem decide é a API: uma recusa (400, 409…)
-// aparece no próprio formulário.
+// edição só aparecem para quem gerencia, mas quem decide é a API: uma recusa (400, 403,
+// 409…) aparece no próprio formulário. Programa novo: coordenação e administração
+// (T-87).
+//
+// O Responsável é texto livre, mas sugere os nomes dos usuários ativos enquanto se digita
+// (T-87): quem não tem conta continua podendo ser escrito, e se a lista não carregar (403
+// para quem não pode ver os usuários, ou falha de rede) o campo funciona sem sugestões.
 
 import * as api from "../base/api.js";
 import { ErroApi } from "../base/api.js";
@@ -21,6 +26,7 @@ const API_PADRAO = {
   cadastrarConvenio: api.cadastrarConvenio,
   listarVagas: api.listarVagas,
   cadastrarVagas: api.cadastrarVagas,
+  listarUsuarios: api.listarUsuarios,
 };
 
 export const dataBr = (iso) => (iso ? String(iso).split("-").reverse().join("/") : "—");
@@ -114,13 +120,34 @@ function entrada(tipo, nome, valor, extra = {}) {
 }
 
 /** Formulário de página para cadastrar (sem `programa`) ou editar um programa. */
-export function formularioDePrograma({ programa = null, salvar, aoSalvar, cancelarPara = "#/programas" }) {
+/** Sugestões do Responsável: nomes dos usuários ativos, em ordem, sem repetição. */
+export function nomesParaSugestao(usuarios) {
+  const nomes = (usuarios || []).filter((u) => u.ativo !== false && u.nome).map((u) => u.nome.trim());
+  return [...new Set(nomes)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function sugerirResponsaveis(lista, listarUsuarios) {
+  // Sem esperar: o formulário já aparece e as sugestões chegam quando a API responder.
+  Promise.resolve()
+    .then(() => listarUsuarios())
+    .then((usuarios) => lista.replaceChildren(...nomesParaSugestao(usuarios).map((nome) => el("option", { value: nome }))))
+    .catch(() => {});
+}
+
+export function formularioDePrograma({
+  programa = null,
+  salvar,
+  aoSalvar,
+  cancelarPara = "#/programas",
+  listarUsuarios = API_PADRAO.listarUsuarios,
+}) {
   const p = programa || {};
+  const sugestoes = el("datalist", { id: "f-programa-responsaveis" });
   const campos = {
     nome: entrada("text", "nome", p.nome, { maxlength: 200, autocomplete: "off" }),
     identificador: entrada("text", "identificador", p.identificador, { maxlength: 50, autocomplete: "off", autocapitalize: "characters" }),
     publico: entrada("text", "publico", p.publico, { maxlength: 500 }),
-    responsavel: entrada("text", "responsavel", p.responsavel, { maxlength: 200 }),
+    responsavel: entrada("text", "responsavel", p.responsavel, { maxlength: 200, list: "f-programa-responsaveis", autocomplete: "off" }),
     vigencia_inicio: entrada("date", "vigencia_inicio", p.vigencia_inicio),
     vigencia_fim: entrada("date", "vigencia_fim", p.vigencia_fim),
     descricao: entrada("textarea", "descricao", p.descricao, { maxlength: 2000, rows: 3 }),
@@ -152,7 +179,7 @@ export function formularioDePrograma({ programa = null, salvar, aoSalvar, cancel
     }
   }
 
-  return el(
+  const formulario = el(
     "section",
     { class: "card form-card" },
     el(
@@ -170,7 +197,9 @@ export function formularioDePrograma({ programa = null, salvar, aoSalvar, cancel
             dica: "Código único compartilhado com o Financeiro (ex.: SCFV).",
           }),
           campo("f-programa-publico", "Público atendido", campos.publico, { largo: true }),
-          campo("f-programa-responsavel", "Responsável", campos.responsavel),
+          campo("f-programa-responsavel", "Responsável", campos.responsavel, {
+            dica: "Escolha um usuário da lista ou escreva o nome de quem não tem conta.",
+          }),
           el("div", { class: "field" }),
           campo("f-programa-inicio", "Início da vigência", campos.vigencia_inicio),
           campo("f-programa-fim", "Fim da vigência", campos.vigencia_fim),
@@ -183,14 +212,21 @@ export function formularioDePrograma({ programa = null, salvar, aoSalvar, cancel
         el("a", { class: "btn", href: cancelarPara }, "Cancelar"),
         enviarBotao,
       ),
+      sugestoes,
     ),
   );
+  sugerirResponsaveis(sugestoes, listarUsuarios);
+  return formulario;
 }
 
-export function mostrarCadastroDePrograma(container, { cadastrar = API_PADRAO.cadastrarPrograma, ir, avisar = () => {} } = {}) {
+export function mostrarCadastroDePrograma(
+  container,
+  { cadastrar = API_PADRAO.cadastrarPrograma, listarUsuarios = API_PADRAO.listarUsuarios, ir, avisar = () => {} } = {},
+) {
   container.replaceChildren(
     formularioDePrograma({
       salvar: cadastrar,
+      listarUsuarios,
       aoSalvar: (programa) => {
         avisar(`Programa ${programa.nome} cadastrado.`);
         ir(`/programas/${programa.id}`);
@@ -202,7 +238,13 @@ export function mostrarCadastroDePrograma(container, { cadastrar = API_PADRAO.ca
 export function mostrarEdicaoDePrograma(
   container,
   programaId,
-  { obter = API_PADRAO.obterPrograma, editar = API_PADRAO.editarPrograma, ir, avisar = () => {} } = {},
+  {
+    obter = API_PADRAO.obterPrograma,
+    editar = API_PADRAO.editarPrograma,
+    listarUsuarios = API_PADRAO.listarUsuarios,
+    ir,
+    avisar = () => {},
+  } = {},
 ) {
   return carregarNaTela(
     container,
@@ -211,6 +253,7 @@ export function mostrarEdicaoDePrograma(
       formularioDePrograma({
         programa,
         salvar: (dados) => editar(programaId, dados),
+        listarUsuarios,
         cancelarPara: linkPrograma(programaId),
         aoSalvar: (salvo) => {
           avisar("Alterações salvas.");

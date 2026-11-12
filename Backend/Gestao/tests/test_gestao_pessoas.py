@@ -22,7 +22,7 @@ def cadastro(banco):
 
     - admin: administração          - dora: direção
     - ana: coordenação em p-1        - patricia: assistente social em p-1
-    - jessica: educadora em p-1      - bruno: coordenação em p-2
+    - jessica: educadora em p-1      - bruno: assistente social em p-2
     - rafael: assistente social em p-1, saiu ontem
     - Lara Oliveira (pe-lara, 12/05/2013, p-1): núcleo Oliveira, responsável legal Marina Oliveira
     - Miguel Santos (pe-miguel, p-2): núcleo Santos, responsável legal Cláudia Santos
@@ -41,7 +41,7 @@ def cadastro(banco):
             ],
         )
         c.execute(
-            sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('admin', 'administracao'), ('dora', 'direcao')")
+            sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('admin', 'administracao'), ('dora', 'direcao'), ('ana', 'coordenacao')")
         )
         c.execute(
             sa.text(
@@ -49,10 +49,9 @@ def cadastro(banco):
                 "VALUES (:id, :u, :p, :papel, '2025-01-01', :saida)"
             ),
             [
-                {"id": "v1", "u": "ana", "p": "p-1", "papel": "coordenacao", "saida": None},
                 {"id": "v2", "u": "patricia", "p": "p-1", "papel": "assistente_social", "saida": None},
                 {"id": "v3", "u": "jessica", "p": "p-1", "papel": "educador", "saida": None},
-                {"id": "v4", "u": "bruno", "p": "p-2", "papel": "coordenacao", "saida": None},
+                {"id": "v4", "u": "bruno", "p": "p-2", "papel": "assistente_social", "saida": None},
                 {"id": "v5", "u": "rafael", "p": "p-1", "papel": "assistente_social", "saida": ONTEM},
             ],
         )
@@ -314,7 +313,7 @@ def test_lista_so_pessoas_dos_programas_em_que_atua(cliente, cabecalhos, cadastr
 
 
 def test_lista_de_um_programa_sem_acesso_403(cliente, cabecalhos, cadastro):
-    assert cliente.get(PESSOAS, params={"programa_id": "p-2"}, headers=como(cabecalhos, "ana")).status_code == 403
+    assert cliente.get(PESSOAS, params={"programa_id": "p-2"}, headers=como(cabecalhos, "patricia")).status_code == 403
 
 
 @pytest.mark.parametrize("busca", ["LARA", "olivei", "marina"], ids=["nome", "nucleo", "responsavel"])
@@ -329,7 +328,8 @@ def test_nucleos_visiveis_so_dos_programas_em_que_atua(cliente, cabecalhos, cada
     nomes = lambda u: [n["nome"] for n in cliente.get(NUCLEOS, headers=como(cabecalhos, u)).json()]  # noqa: E731
 
     assert nomes("admin") == ["Oliveira", "Santos"]
-    assert nomes("ana") == ["Oliveira"]
+    assert nomes("ana") == ["Oliveira", "Santos"]  # coordenação: todos os programas
+    assert nomes("patricia") == ["Oliveira"]
     assert nomes("dora") == []
 
 

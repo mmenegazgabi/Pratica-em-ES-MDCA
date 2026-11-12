@@ -22,7 +22,7 @@ TURMA = {
 def programa(banco):
     """p-1 (Semear, espaço e-1) e p-2 (Oficina, espaço e-2).
 
-    - ana: coordenação em p-1        - jessica: educadora em p-1
+    - ana: coordenação (na conta)    - jessica: educadora em p-1
     - rafael: saiu de p-1 ontem      - dora: direção   - admin: administração
     - Pessoas de p-1: Lara, Davi, Maria, Joana; de p-2: Pedro
     """
@@ -32,11 +32,10 @@ def programa(banco):
             sa.text("INSERT INTO usuarios (id, nome) VALUES (:id, :nome)"),
             [{"id": u, "nome": n} for u, n in [("ana", "Ana Martins"), ("jessica", "Jéssica Almeida"), ("rafael", "Rafael Nunes"), ("dora", "Dora"), ("admin", "Administração")]],
         )
-        c.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('dora', 'direcao'), ('admin', 'administracao')"))
+        c.execute(sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES ('ana', 'coordenacao'), ('dora', 'direcao'), ('admin', 'administracao')"))
         c.execute(
             sa.text(
                 "INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada, data_saida) VALUES "
-                "('v1', 'ana', 'p-1', 'coordenacao', '2025-01-01', NULL), "
                 "('v2', 'jessica', 'p-1', 'educador', '2025-01-01', NULL), "
                 "('v3', 'rafael', 'p-1', 'psicologo', '2025-01-01', :ontem)"
             ),

@@ -12,7 +12,8 @@ import { abrirFormulario, campo, hojeIso, selecao } from "../base/formulario.js"
 
 // Papéis que fazem sentido dentro de um programa; direção, administração e o
 // voluntariado financeiro são papéis da plataforma.
-export const PAPEIS_DE_PROGRAMA = ["coordenacao", "educador", "assistente_social", "psicologo"];
+// A coordenação não entra: ela é dada na conta e vale para todos os programas (T-87).
+export const PAPEIS_DE_PROGRAMA = ["educador", "assistente_social", "psicologo"];
 
 const API_PADRAO = {
   listarEquipe: api.listarEquipe,

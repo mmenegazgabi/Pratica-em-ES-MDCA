@@ -17,7 +17,7 @@ ESPACOS = "/gestao/programas/p-1/espacos"
 def programa(banco):
     """Programa p-1 (Semear) com equipe, e p-2 (Oficina) com outra pessoa.
 
-    - ana: coordenação em p-1         - jessica: educadora em p-1
+    - ana: coordenação (na conta)     - jessica: educadora em p-1
     - rafael: psicólogo, saiu de p-1 ontem
     - bruno: educador só em p-2       - dora: direção da plataforma
     - admin: administração            - inativo: usuário desativado
@@ -41,7 +41,7 @@ def programa(banco):
         )
         conexao.execute(
             sa.text("INSERT INTO usuarios_papeis (usuario_id, papel_id) VALUES (:u, :p)"),
-            [{"u": "dora", "p": "direcao"}, {"u": "admin", "p": "administracao"}],
+            [{"u": "dora", "p": "direcao"}, {"u": "admin", "p": "administracao"}, {"u": "ana", "p": "coordenacao"}],
         )
         conexao.execute(
             sa.text(
@@ -51,7 +51,6 @@ def programa(banco):
                 """
             ),
             [
-                {"id": "v-ana", "u": "ana", "prog": "p-1", "papel": "coordenacao", "entrada": "2025-01-10", "saida": None},
                 {"id": "v-jessica", "u": "jessica", "prog": "p-1", "papel": "educador", "entrada": "2025-03-01", "saida": None},
                 {"id": "v-rafael", "u": "rafael", "prog": "p-1", "papel": "psicologo", "entrada": "2025-02-01", "saida": ONTEM},
                 {"id": "v-bruno", "u": "bruno", "prog": "p-2", "papel": "educador", "entrada": "2025-04-01", "saida": None},
@@ -84,11 +83,11 @@ def test_profissional_vinculado_aparece_entre_os_responsaveis_disponiveis(client
     assert resposta.status_code == 200
     equipe = resposta.json()
     # Quem saiu (rafael) não pode mais ser escolhido como responsável de turma.
+    # A coordenação (ana) não aparece: ela é dada na conta, não é vínculo (T-87).
     assert [(v["usuario_id"], v["papel_id"], v["ativo"]) for v in equipe] == [
-        ("ana", "coordenacao", True),
         ("jessica", "educador", True),
     ]
-    assert equipe[1] == {
+    assert equipe[0] == {
         "id": "v-jessica",
         "usuario_id": "jessica",
         "nome": "Jéssica Almeida",
@@ -164,18 +163,35 @@ def test_quem_so_consulta_nao_altera_a_equipe_e_a_tentativa_e_registrada(cliente
     assert negacao["detalhes"]["operacao"] == "gerenciar"
 
 
-def test_coordenacao_de_outro_programa_nao_gerencia_este(cliente, cabecalhos, programa):
-    with programa.begin() as conexao:
-        conexao.execute(
-            sa.text(
-                "INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) "
-                "VALUES ('v-bruno-coord', 'bruno', 'p-2', 'coordenacao', '2025-04-01')"
+def test_coordenacao_da_conta_gerencia_qualquer_programa(cliente, cabecalhos, programa):
+    """A coordenação é dada na conta e vale para todos os programas (T-87)."""
+    resposta = cliente.post(
+        "/gestao/programas/p-2/espacos", json={"nome": "Ateliê"}, headers=como(cabecalhos, "ana")
+    )
+
+    assert resposta.status_code == 201
+
+
+def test_coordenacao_nao_e_papel_de_vinculo(cliente, cabecalhos, programa):
+    resposta = cliente.post(
+        EQUIPE,
+        json={"usuario_id": "patricia", "papel_id": "coordenacao", "data_entrada": "2026-03-01"},
+        headers=como(cabecalhos, "admin"),
+    )
+
+    assert resposta.status_code == 400
+    assert "dada na conta" in resposta.json()["detail"]
+
+
+def test_o_banco_tambem_recusa_vinculo_de_coordenacao(programa):
+    with pytest.raises(sa.exc.IntegrityError, match="ck_vinculos_equipe_sem_coordenacao"):
+        with programa.begin() as conexao:
+            conexao.execute(
+                sa.text(
+                    "INSERT INTO vinculos_equipe (id, usuario_id, programa_id, papel_id, data_entrada) "
+                    "VALUES ('v-x', 'bruno', 'p-2', 'coordenacao', '2025-04-01')"
+                )
             )
-        )
-
-    resposta = cliente.post(ESPACOS, json={"nome": "Ateliê"}, headers=como(cabecalhos, "bruno"))
-
-    assert resposta.status_code == 403
 
 
 def test_programa_inexistente_404_sem_registro(cliente, cabecalhos, programa):
@@ -264,7 +280,7 @@ def test_vinculo_com_dados_invalidos(cliente, cabecalhos, programa, dados, statu
     assert resposta.status_code == status
     with programa.connect() as conexao:
         total = conexao.execute(sa.text("SELECT count(*) FROM vinculos_equipe")).scalar_one()
-    assert total == 4
+    assert total == 3
 
 
 def test_vinculo_sem_data_de_entrada_422(cliente, cabecalhos, programa):
