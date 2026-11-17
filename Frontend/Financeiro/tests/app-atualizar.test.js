@@ -27,7 +27,8 @@ globalThis.fetch = async (url) => {
 
 const esperar = () => new Promise((r) => setTimeout(r, 30));
 const pessoa = (papeis) => ({ id: "u-luana", nome: "Luana Ferraz", email: "luana@mdca.org.br", papeis: papeis.map((id) => ({ id, nome: id })) });
-const rotulos = (raiz) => [...raiz.querySelectorAll(".lateral__item")].map((a) => a.textContent.replace(/\d+$/, ""));
+const rotulos = (raiz) => [...raiz.querySelectorAll('.lateral__item[href^="#/"]')].map((a) => a.textContent.replace(/\d+$/, ""));
+// Só as abas do Financeiro: no menu único as da Gestão vêm junto, com link para ../Gestao/.
 
 let raiz;
 let destinos;
@@ -59,7 +60,7 @@ test("papel tirado depois do login some do menu", async () => {
   sessaoDeTeste({ papeis: ["direcao", "coordenacao"], papel: "coordenacao" });
   eu = [200, pessoa(["direcao"])];
   await abrir();
-  assert.deepEqual(rotulos(raiz), ["Início", "Painel", "Projetos", "Relatórios", "Auditoria"]);
+  assert.deepEqual(rotulos(raiz), ["Resumo financeiro", "Painel", "Projetos", "Prestação de contas", "Auditoria financeira"]);
   assert.match(raiz.querySelector(".lateral__usuario").textContent, /Diretoria/);
 });
 
@@ -76,7 +77,7 @@ test("sem rede segue com a sessão guardada", async () => {
   await abrir();
   assert.equal(chamadasEu, 1);
   assert.deepEqual(destinos, []);
-  assert.deepEqual(rotulos(raiz), ["Início", "Lançamentos", "Projetos", "Relatórios", "Auditoria"]);
+  assert.deepEqual(rotulos(raiz), ["Resumo financeiro", "Lançamentos", "Projetos", "Prestação de contas", "Auditoria financeira"]);
   assert.notEqual(localStorage.getItem("mdca.sessao"), null);
 });
 

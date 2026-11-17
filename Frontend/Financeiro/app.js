@@ -7,6 +7,7 @@ import { contadorDefinido, reaplicarContador } from "./base/contador.js";
 import { atualizarContadorDePendencias } from "./telas/inicio.js";
 import { PAPEIS, escolherPapel, itensDeMenu, lerSessao, papeisDoFinanceiro } from "./base/sessao.js";
 import { atualizarUsuario, lerSessao as lerSessaoDaPlataforma, sair as sairDaPlataforma } from "../Shared/plataforma.js";
+import { menuUnificado, sincronizarPapel } from "../Shared/menu-unificado.js";
 
 const INICIO_DA_PLATAFORMA = "../";
 
@@ -30,21 +31,37 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
     redirecionar(INICIO_DA_PLATAFORMA);
   }
 
-  function barraLateral(sessao, tela, variosPapeis) {
+  function itemDoMenu({ href, rotulo, icone: nomeDoIcone, ativo, contador }) {
+    return el(
+      "a",
+      { class: "lateral__item", href, "aria-current": ativo ? "page" : false },
+      icone(nomeDoIcone),
+      rotulo,
+      contador ? el("span", { class: "lateral__contador", "data-contador": true, hidden: true }, "0") : null,
+    );
+  }
+
+  /** Abas do menu: as dos dois módulos juntas (menu único) quando o papel existe também na Gestão. */
+  function abasDoMenu(plataforma, sessao, tela) {
+    const unico = menuUnificado(plataforma, sessao.papel, { modulo: "financeiro", atual: tela });
+    if (unico) {
+      sincronizarPapel(sessao.papel, { para: "gestao" });
+      return { unico: true, itens: unico.map((i) => itemDoMenu({ ...i, icone: i.icone.financeiro, contador: i.href === "#/inicio" })) };
+    }
     const ativo = tela === "projeto" ? "projetos" : tela;
     const itens = itensDeMenu(sessao.papel).map((item) =>
-      el(
-        "a",
-        { class: "lateral__item", href: item.rota, "aria-current": item.id === ativo ? "page" : false },
-        icone(item.icone),
-        item.rotulo,
-        item.id === "inicio" ? el("span", { class: "lateral__contador", "data-contador": true, hidden: true }, "0") : null,
-      ),
+      itemDoMenu({ href: item.rota, rotulo: item.rotulo, icone: item.icone, ativo: item.id === ativo, contador: item.id === "inicio" }),
     );
+    return { unico: false, itens };
+  }
+
+  function barraLateral(plataforma, sessao, tela, variosPapeis) {
+    const { unico, itens } = abasDoMenu(plataforma, sessao, tela);
     return el(
       "aside",
-      { class: "lateral" },
-      el("div", { class: "lateral__marca" }, logo(), el("span", {}, "Finanças")),
+      // Menu único: mesma largura da barra da Gestão, para o menu não pular ao trocar de módulo.
+      { class: unico ? "lateral lateral--unica" : "lateral" },
+      el("div", { class: "lateral__marca" }, logo()),
       el("nav", { class: "lateral__menu", "aria-label": "Seções" }, itens),
       el(
         "div",
@@ -126,7 +143,7 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
     if (tela === "papel" || !rotaPermitida(tela, sessao.papel)) return navegar("#/inicio");
 
     const container = el("main", { class: "principal" }, el("p", { class: "carregando", role: "status" }, "Carregando…"));
-    limpar(raiz).append(barraLateral(sessao, tela, variosPapeis), container);
+    limpar(raiz).append(barraLateral(plataforma, sessao, tela, variosPapeis), container);
     reaplicarContador();
     if (!contadorDefinido() && tela !== "inicio" && tela !== "lancamentos") atualizarContadorDePendencias(sessao.papel);
     return carregarTela(container, tela, parametros, sessao, minhaVez);

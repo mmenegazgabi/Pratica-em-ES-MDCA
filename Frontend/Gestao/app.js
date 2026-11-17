@@ -19,6 +19,7 @@ import { apagarCopias } from './base/copia-local.js';
 import { encerrarSessao, enviarEvidencia, listarAlertas, listarProgramas, registrarAtividade, sessaoAtiva } from './base/api.js';
 import { criarAvisos } from './base/avisos.js';
 import { abrirFormulario, campo } from './base/formulario.js';
+import { menuUnificado, papelDaPlataforma, sincronizarPapel } from '../Shared/menu-unificado.js';
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -182,13 +183,18 @@ function mobilePreviewPage(){
 const sectionTitle=s=>navItems.find(x=>x[0]===s)?.[1]||({plataforma:'Início · módulos',projetos:'Programas',mobile:'Prévia para celular',auditoria:'Trilha de auditoria',importacao:'Importação e piloto',guia:'Guia do protótipo',integracao:'Visão integrada',sincronizacao:'Fila de sincronização',mapa:'Mapa de telas','acesso-negado':'Acesso restrito',usuarios:'Usuários e acessos'}[s])||'Gestão';
 /* Estrutura das telas igual à do Financeiro (T-00k): barra lateral .lateral e área .principal,
    com as classes de ../Financeiro/style.css. Adaptações da Gestão, montadas com as peças
-   do Financeiro: seletor de módulo (.filtro), grupos do menu e o menu do perfil embaixo. */
+   do Financeiro: grupos do menu (ou o menu único, com as abas dos dois módulos) e o menu do perfil embaixo. */
 const ICONES_DO_MENU={inicio:'home',programas:'program',turmas:'program',projetos:'program',pessoas:'people',atividades:'calendar',sincronizacao:'calendar',alertas:'bell',atendimentos:'bell',rede:'bell',aprendizagem:'book',indicadores:'chart',relatorios:'chart',integracao:'grid',usuarios:'settings',auditoria:'shield',importacao:'upload'};
-function navigationMenu(section){const count=openAlerts().length;return menuDoPapel(role,section).map(({grupo,itens})=>'<div class="lateral__grupo">'+esc(grupo)+'</div>'+itens.map(i=>'<a href="#/'+i.secao+'" class="lateral__item"'+(i.ativo?' aria-current="page"':'')+'>'+icon(ICONES_DO_MENU[i.secao]||'file')+'<span>'+esc(i.rotulo)+'</span>'+(i.secao==='inicio'?'<span class="lateral__contador" title="Alertas em aberto"'+(count?'':' hidden')+'>'+count+'</span>':'')+'</a>').join('')).join('')}
+function itemDoMenu(href,rotulo,icone,ativo,count){return '<a href="'+esc(href)+'" class="lateral__item"'+(ativo?' aria-current="page"':'')+'>'+icon(icone)+'<span>'+esc(rotulo)+'</span>'+(href==='#/inicio'?'<span class="lateral__contador" title="Alertas em aberto"'+(count?'':' hidden')+'>'+count+'</span>':'')+'</a>'}
+/* Menu único: com um papel que também existe no Financeiro, as abas dos dois módulos ficam
+   numa lista só, e o papel em uso aqui passa a valer lá (Shared/menu-unificado.js). */
+/* Com login, Usuários e acessos abre a página de Administração (cadastro de contas e papéis),
+   que fica fora dos módulos; não há mais tela de escolha de módulo para chegar até ela. */
+function hrefDoItem(secao){return secao==='usuarios'&&sessaoDoLogin?'../Admin/':'#/'+secao}
+function navigationMenu(section){const count=openAlerts().length;const papel=sessaoDoLogin?papelDaPlataforma(role):null;const unico=papel?menuUnificado(sessaoDoLogin,papel,{modulo:'gestao',atual:section}):null;if(unico){sincronizarPapel(papel,{para:'financeiro'});return unico.map(i=>itemDoMenu(i.href,i.rotulo,i.icone.gestao,i.ativo,count)).join('')}return menuDoPapel(role,section).map(({grupo,itens})=>'<div class="lateral__grupo">'+esc(grupo)+'</div>'+itens.map(i=>itemDoMenu(hrefDoItem(i.secao),i.rotulo,ICONES_DO_MENU[i.secao]||'file',i.ativo,count)).join('')).join('')}
 function shell(content,section,demo=true){
  const current=sectionTitle(section);
- const lateral='<aside class="lateral" id="lateral"><a href="../" class="lateral__marca" aria-label="MDCA · voltar à página inicial da plataforma">'+logo+'<span>Gestão</span></a>'
-  +'<div class="lateral__modulos" aria-label="Módulos da plataforma"><a class="filtro filtro--ativo" aria-current="true" href="#/inicio">Gestão</a><a class="filtro" href="../Financeiro/">Finanças</a></div>'
+ const lateral='<aside class="lateral" id="lateral"><a href="../" class="lateral__marca" aria-label="MDCA · voltar à página inicial da plataforma">'+logo+'</a>'
   +'<nav class="lateral__menu" aria-label="Menu principal">'+navigationMenu(section)+'</nav>'
   +'<div class="lateral__usuario profile-menu"><button type="button" class="lateral__pessoa profile" data-action="user-menu" aria-haspopup="true" aria-expanded="false" aria-label="Abrir menu do usuário"><span class="lateral__avatar">'+esc(initials(user().name))+'</span><span class="lateral__nome">'+esc(user().name)+'<small>'+esc(user().label)+'</small></span></button>'
   +'<div class="user-menu" role="menu" hidden>'+personaMenu()+apiUserNote()+'</div>'

@@ -2,6 +2,7 @@
 .app { display: flex; min-height: 100vh; font-size: 12px; }
 
 .lateral { width: 170px; flex: none; box-sizing: border-box; background: var(--fundo-suave); border-right: 1px solid var(--borda); padding: 16px 12px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.lateral--unica { width: 224px; } /* menu único: a largura da barra da Gestão */
 .lateral__marca { margin: 0 6px 20px; display: flex; flex-direction: column; gap: 6px; }
 .lateral__marca .logo { display: block; max-width: 100%; height: auto; }
 .lateral__marca span { color: var(--verde); font-weight: 600; font-size: 13px; }

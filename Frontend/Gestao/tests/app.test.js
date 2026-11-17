@@ -52,12 +52,12 @@ async function irPara(hash) {
   await esperar();
 }
 
-test("abre na Visão geral com o menu lateral do protótipo e o aviso de demonstração", () => {
+test("abre na Visão geral com o menu único (Gestão e Financeiro) e o aviso de demonstração", () => {
   assert.equal($("#main h1").textContent.startsWith("Bom dia"), true);
-  assert.deepEqual(
-    [...document.querySelectorAll(".lateral .lateral__grupo")].map((g) => g.textContent),
-    ["Programas e público", "Execução e atendimento", "Resultados", "Auditoria e implantação"],
-  );
+  // Coordenação também é papel do Financeiro: as abas dos dois módulos vêm numa lista só.
+  assert.equal(document.querySelectorAll(".lateral .lateral__grupo").length, 0);
+  assert.equal(menu()[0], "Visão geral");
+  assert.ok(menu().includes("Resumo financeiro"));
   assert.ok($(".demo-banner"));
   // A única chamada da Visão geral é a dos alertas abertos, para os avisos da equipe (T-90).
   assert.deepEqual(chamadas.map((c) => c.url.replace(/^https?:\/\/[^/]+/, "")), ["/gestao/alertas?situacao=aberto"]);
@@ -229,10 +229,9 @@ test("nenhuma tela do protótipo tem caixa dentro de caixa nem blocos encostados
   await irPara("#/inicio");
 });
 
-test("seletor de módulo leva ao Financeiro e o logo ao menu inicial", () => {
-  const financas = [...document.querySelectorAll(".lateral__modulos a")].find((a) => a.textContent === "Finanças");
-
-  assert.equal(financas.getAttribute("href"), "../Financeiro/");
+test("sem seletor de módulo: o Financeiro está no próprio menu, e o logo leva ao menu inicial", () => {
+  assert.equal($(".lateral__modulos"), null);
+  assert.equal($('.lateral__item[href="../Financeiro/#/projetos"]')?.textContent, "Projetos");
   assert.equal($(".lateral .lateral__marca").getAttribute("href"), "../");
 });
 

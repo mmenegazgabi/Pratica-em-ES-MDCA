@@ -6,7 +6,7 @@
 // Rede primeiro: com conexão, sempre a versão publicada mais recente (e o cache é
 // atualizado); sem conexão, a última versão guardada.
 
-const VERSAO = "mdca-gestao-v1";
+const VERSAO = "mdca-gestao-v2";
 
 // O teste tests/pwa.test.js confere que todo arquivo .js do app está nesta lista.
 // (Script clássico, sem import/export: nem todo navegador aceita service worker módulo.)
@@ -15,6 +15,10 @@ const ARQUIVOS = [
   "../Financeiro/base/tokens.css",
   "../Financeiro/base/componentes.css",
   "../Financeiro/style.css",
+  // Menu único (abas da Gestão e do Financeiro juntas): importado pelo app.js.
+  "../Shared/menu-unificado.js",
+  "../Shared/plataforma.js",
+  "../Financeiro/base/sessao.js",
   "./",
   "index.html",
   "style.css",
