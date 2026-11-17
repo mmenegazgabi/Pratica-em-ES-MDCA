@@ -1,6 +1,9 @@
-// Página inicial (Frontend/index.html): Entrar, Primeiro acesso, Esqueci minha senha e,
-// depois de entrar, a escolha de módulo. Textos digitados pela pessoa ou vindos da API
-// entram sempre por textContent.
+// Página inicial (Frontend/index.html): Entrar, Primeiro acesso e Esqueci minha senha.
+// Depois de entrar, quem tem um papel só vai direto para o módulo dele; quem tem mais de
+// um escolhe em "Entrar como" com qual papel usar a plataforma (o logo dos módulos volta
+// para cá, para trocar). Quem tem papel nos dois módulos navega entre eles pelo menu
+// único. Conta sem papel nenhum fica aqui, com um aviso. Textos digitados pela pessoa ou vindos da API entram sempre
+// por textContent.
 
 import {
   atualizarUsuario,
@@ -12,10 +15,34 @@ import {
   temPapel,
   urlDaApi,
 } from "./plataforma.js";
+import { PERFIL_DO_PAPEL, salvarPapel } from "../Gestao/base/papeis.js";
+import { PAPEIS as PAPEIS_DO_FINANCEIRO, escolherPapel } from "../Financeiro/base/sessao.js";
 
 const EMAIL_VALIDO = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-export function iniciar(documento = document) {
+// Papéis da plataforma, do mais amplo ao mais restrito: [papel, rótulo, módulo de entrada].
+const VISOES = [
+  ["administracao", "Administração", "Gestao/"],
+  ["coordenacao", "Coordenação", "Gestao/"],
+  ["direcao", "Direção", "Gestao/"],
+  ["educador", "Educador", "Gestao/"],
+  ["psicologo", "Psicólogo", "Gestao/"],
+  ["assistente_social", "Assistente social", "Gestao/"],
+  ["voluntario_financeiro", "Voluntário financeiro", "Financeiro/"],
+];
+
+/** Visões (papéis) que a pessoa pode usar, na ordem de VISOES. */
+export function visoesDaSessao(sessao) {
+  return VISOES.filter(([papel]) => temPapel(sessao, papel)).map(([papel, rotulo, destino]) => ({ papel, rotulo, destino }));
+}
+
+/** Grava o papel escolhido nos módulos que o têm, para cada um abrir com ele. */
+function usarPapel(papel) {
+  if (PERFIL_DO_PAPEL[papel]) salvarPapel(PERFIL_DO_PAPEL[papel]);
+  if (PAPEIS_DO_FINANCEIRO[papel]) escolherPapel(papel);
+}
+
+export function iniciar(documento = document, { redirecionar = (destino) => window.location.assign(destino) } = {}) {
   const $ = (id) => documento.getElementById(id);
   const formularios = { entrar: $("formEntrar"), primeiro: $("formPrimeiro"), esqueci: $("esqueci") };
 
@@ -53,12 +80,40 @@ export function iniciar(documento = document) {
     }
   }
 
-  function mostrarModulos(sessao) {
+  function entrarComo({ papel, destino }) {
+    usarPapel(papel);
+    redirecionar(destino);
+  }
+
+  /**
+   * Com um papel só, vai direto para o módulo dele (devolve true). Com mais de um, mostra
+   * "Entrar como"; sem nenhum, o aviso.
+   */
+  function entrarNoModulo(sessao) {
+    const visoes = visoesDaSessao(sessao);
+    if (visoes.length === 1) {
+      entrarComo(visoes[0]);
+      return true;
+    }
+    mostrarPagina(sessao, visoes);
+    return false;
+  }
+
+  function mostrarPagina(sessao, visoes) {
     const nome = String(sessao.usuario?.nome || "").trim();
     $("saudacao").textContent = nome ? `Olá, ${nome}` : "Olá";
-    const admin = temPapel(sessao, "administracao");
-    $("navAdmin").hidden = !admin;
-    $("cartaoAdmin").hidden = !admin;
+    $("semAcesso").hidden = visoes.length > 0;
+    $("visoes").hidden = !visoes.length;
+    $("listaDeVisoes").replaceChildren(
+      ...visoes.map((visao) => {
+        const botao = documento.createElement("button");
+        botao.type = "button";
+        botao.className = "visao";
+        botao.textContent = visao.rotulo;
+        botao.addEventListener("click", () => entrarComo(visao));
+        return botao;
+      }),
+    );
     $("login").hidden = true;
     $("app").hidden = false;
     documento.title = "Sistema MDCA";
@@ -98,7 +153,7 @@ export function iniciar(documento = document) {
     );
     if (!resultado.ok) return mostrarErro("loginErro", resultado.mensagem);
     $("loginSenha").value = "";
-    mostrarModulos(resultado.sessao);
+    entrarNoModulo(resultado.sessao);
   });
 
   // — Primeiro acesso —
@@ -123,7 +178,7 @@ export function iniciar(documento = document) {
     $("primeiroSenha").value = "";
     $("primeiroRepetir").value = "";
     $("primeiroCodigo").value = "";
-    mostrarModulos(resultado.sessao);
+    entrarNoModulo(resultado.sessao);
   });
 
   // — trocas de formulário —
@@ -158,11 +213,12 @@ export function iniciar(documento = document) {
 
   const sessao = lerSessao();
   if (sessao) {
-    mostrarModulos(sessao);
-    // A administração pode ter dado ou tirado papéis desde o login: confere em /auth/eu.
+    // Com papel, vai direto; o módulo confere a pessoa em /auth/eu ao abrir.
+    if (entrarNoModulo(sessao)) return;
+    // Sem papel: a administração pode ter dado um desde o login, confere em /auth/eu.
     return atualizarUsuario().then((atual) => {
       if ($("app").hidden) return; // a pessoa já saiu enquanto isso
-      if (atual) return mostrarModulos(atual);
+      if (atual) return entrarNoModulo(atual);
       mostrarLogin();
       mostrarFormulario("entrar", false);
     });

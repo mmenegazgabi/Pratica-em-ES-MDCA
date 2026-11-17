@@ -31,7 +31,8 @@ async function irPara(hash) {
   else window.location.hash = hash;
   await esperar();
 }
-const rotulos = () => [...raiz.querySelectorAll(".lateral__item")].map((a) => a.textContent.replace(/\d+$/, ""));
+const rotulos = () => [...raiz.querySelectorAll('.lateral__item[href^="#/"]')].map((a) => a.textContent.replace(/\d+$/, ""));
+// Só as abas do Financeiro: no menu único as da Gestão vêm junto, com link para ../Gestao/.
 const botoes = () => [...raiz.querySelectorAll("button")].map((b) => b.textContent);
 const botao = (texto) => [...raiz.querySelectorAll("button")].find((b) => b.textContent === texto);
 
@@ -43,8 +44,8 @@ test("sem sessão da plataforma vai para a página inicial", () => {
 test("papel único entra direto no Início, com o nome do banco e o papel", async () => {
   sessaoDeTeste({ papeis: ["direcao"], nome: "Jane Almeida" });
   await irPara("#/inicio");
-  assert.deepEqual(rotulos(), ["Início", "Painel", "Projetos", "Relatórios", "Auditoria"]);
-  assert.equal(raiz.querySelector('[aria-current="page"]').textContent.replace(/\d+$/, ""), "Início");
+  assert.deepEqual(rotulos(), ["Resumo financeiro", "Painel", "Projetos", "Prestação de contas", "Auditoria financeira"]);
+  assert.equal(raiz.querySelector('[aria-current="page"]').textContent.replace(/\d+$/, ""), "Resumo financeiro");
   const usuario = raiz.querySelector(".lateral__usuario").textContent;
   assert.match(usuario, /Jane Almeida/);
   assert.match(usuario, /Diretoria/);
@@ -61,7 +62,7 @@ test("Projetos carrega a tela", async () => {
 test("rota fora do menu volta ao Início", async () => {
   await irPara("#/lancamentos");
   assert.equal(window.location.hash, "#/inicio");
-  assert.equal(raiz.querySelector('[aria-current="page"]').textContent.replace(/\d+$/, ""), "Início");
+  assert.equal(raiz.querySelector('[aria-current="page"]').textContent.replace(/\d+$/, ""), "Resumo financeiro");
 });
 
 test("a barra lateral traz o logo do MDCA", () => {
@@ -107,7 +108,7 @@ test("Trocar papel abre 'Entrar como' e a nova escolha vale", async () => {
   await esperar();
   assert.equal(window.location.hash, "#/inicio");
   assert.equal(localStorage.getItem("mdca.financeiro.papel"), "coordenacao");
-  assert.deepEqual(rotulos(), ["Início", "Lançamentos", "Projetos", "Relatórios", "Auditoria"]);
+  assert.deepEqual(rotulos(), ["Resumo financeiro", "Lançamentos", "Projetos", "Prestação de contas", "Auditoria financeira"]);
 });
 
 test("papel salvo que a pessoa perdeu é ignorado", async () => {

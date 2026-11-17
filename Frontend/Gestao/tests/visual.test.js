@@ -88,3 +88,9 @@ test("a parte nova do CSS só usa tamanhos de texto e raios que o Financeiro usa
 test("foco visível no verde do Financeiro ao navegar pelo teclado", () => {
   assert.match(css, /:focus-visible \{ outline: 2px solid var\(--verde\)/);
 });
+
+test("o menu do usuário, no rodapé da barra lateral, abre para cima e não sai da tela", () => {
+  const regra = css.match(/\.lateral__usuario \.user-menu\s*\{([^}]*)\}/)?.[1] || "";
+  assert.match(regra, /top:\s*auto/);
+  assert.match(regra, /bottom:\s*calc\(100% \+ \d+px\)/);
+});
