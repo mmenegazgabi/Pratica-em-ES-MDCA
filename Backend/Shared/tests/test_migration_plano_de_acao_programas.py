@@ -26,6 +26,8 @@ CHECK_VIOLATION = "23514"
 # Revision right before this migration (T-38); a relative "-1" would break once
 # newer migrations are added.
 REV_VINCULOS_EQUIPE = "3fb5b9b4c7fa"
+# Esta migration; vagas e convênios saem numa migration posterior (f2b4d6e8a1c3).
+REV_PLANO_DE_ACAO = "5c2e8d41a7b3"
 TABELAS = {"convenios", "objetivos", "acoes", "metas", "registros_meta", "vagas"}
 COLUNAS_NOVAS_PROGRAMA = {
     "identificador",
@@ -70,7 +72,7 @@ def migrated_db():
 
     config = _alembic_config()
     command.downgrade(config, "base")
-    command.upgrade(config, "head")
+    command.upgrade(config, REV_PLANO_DE_ACAO)
 
     engine = sa.create_engine(_sqlalchemy_url(TEST_DATABASE_URL))
     try:
@@ -381,5 +383,5 @@ def test_downgrade_remove_so_o_que_a_migration_criou_e_upgrade_recria(migrated_d
     assert not COLUNAS_NOVAS_PROGRAMA & {c["name"] for c in inspetor.get_columns("projetos")}
     assert {"projetos", "espacos", "vinculos_equipe"} <= set(inspetor.get_table_names())
 
-    command.upgrade(config, "head")
+    command.upgrade(config, REV_PLANO_DE_ACAO)
     assert TABELAS <= set(sa.inspect(engine).get_table_names())

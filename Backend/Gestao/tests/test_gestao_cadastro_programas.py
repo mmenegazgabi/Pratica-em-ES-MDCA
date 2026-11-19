@@ -1,4 +1,4 @@
-"""T-44 · US-02: cadastro e consulta de programas, convênios e vagas."""
+"""T-44 · US-02: cadastro e consulta de programas."""
 
 import pytest
 import sqlalchemy as sa
@@ -125,10 +125,9 @@ def test_data_mal_formatada_continua_422(cliente, cabecalhos, banco):
 
 
 def test_programa_inexistente_404(cliente, cabecalhos, banco):
-    for rota in ("", "/convenios", "/vagas"):
-        resposta = cliente.get(f"/gestao/programas/nao-existe{rota}", headers=cabecalhos)
-        assert resposta.status_code == 404, rota
-        assert resposta.json()["detail"] == "Programa não encontrado."
+    resposta = cliente.get("/gestao/programas/nao-existe", headers=cabecalhos)
+    assert resposta.status_code == 404
+    assert resposta.json()["detail"] == "Programa não encontrado."
 
 
 def test_programa_antigo_so_com_nome_aparece_na_consulta(cliente, cabecalhos, banco):
@@ -142,79 +141,14 @@ def test_programa_antigo_so_com_nome_aparece_na_consulta(cliente, cabecalhos, ba
     assert resposta.json()["nome"] == "Semear"
 
 
-def test_cadastra_e_lista_convenios_do_programa(cliente, cabecalhos, banco):
-    programa_id = cadastrar(cliente, cabecalhos).json()["id"]
-    url = f"/gestao/programas/{programa_id}/convenios"
-
-    criado = cliente.post(
-        url,
-        json={
-            "nome": "Convênio municipal 2026",
-            "concedente": "Prefeitura de Porto Alegre",
-            "vigencia_inicio": "2026-01-01",
-            "vigencia_fim": "2026-12-31",
-        },
-        headers=cabecalhos,
-    )
-    so_nome = cliente.post(url, json={"nome": "Apoio Instituto Semear"}, headers=cabecalhos)
-
-    assert criado.status_code == 201
-    assert so_nome.status_code == 201
-    assert [c["nome"] for c in cliente.get(url, headers=cabecalhos).json()] == [
-        "Apoio Instituto Semear",
-        "Convênio municipal 2026",
-    ]
-
-
-@pytest.mark.parametrize(
-    "corpo, mensagem",
-    [
-        ({}, "Convênio sem nome."),
-        (
-            {"nome": "Convênio", "vigencia_inicio": "2026-12-31", "vigencia_fim": "2026-01-01"},
-            "O fim da vigência do convênio não pode ser anterior ao início.",
-        ),
-    ],
-)
-def test_convenio_invalido_400(cliente, cabecalhos, banco, corpo, mensagem):
+def test_vagas_ofertadas_e_convenios_nao_existem_mais(cliente, cabecalhos, banco):
+    """Saíram do programa: a capacidade fica só nas turmas (migration f2b4d6e8a1c3)."""
     programa_id = cadastrar(cliente, cabecalhos).json()["id"]
 
-    resposta = cliente.post(f"/gestao/programas/{programa_id}/convenios", json=corpo, headers=cabecalhos)
-
-    assert resposta.status_code == 400
-    assert resposta.json()["detail"] == mensagem
-
-
-def test_cadastra_e_lista_vagas_do_programa(cliente, cabecalhos, banco):
-    programa_id = cadastrar(cliente, cabecalhos).json()["id"]
-    url = f"/gestao/programas/{programa_id}/vagas"
-
-    cliente.post(url, json={"descricao": "Tarde · 11 a 15 anos", "quantidade": 40}, headers=cabecalhos)
-    cliente.post(url, json={"descricao": "Manhã · 6 a 10 anos", "quantidade": 40}, headers=cabecalhos)
-
-    assert [(v["descricao"], v["quantidade"]) for v in cliente.get(url, headers=cabecalhos).json()] == [
-        ("Manhã · 6 a 10 anos", 40),
-        ("Tarde · 11 a 15 anos", 40),
-    ]
-
-
-@pytest.mark.parametrize(
-    "corpo, status, mensagem",
-    [
-        ({}, 400, "Vagas sem descrição e quantidade."),
-        ({"descricao": "Manhã", "quantidade": 0}, 400, "A quantidade de vagas deve ser maior que zero."),
-        ({"descricao": "manhã", "quantidade": 10}, 409, "Já existem vagas com essa descrição neste programa."),
-    ],
-)
-def test_vagas_invalidas_ou_repetidas(cliente, cabecalhos, banco, corpo, status, mensagem):
-    programa_id = cadastrar(cliente, cabecalhos).json()["id"]
-    url = f"/gestao/programas/{programa_id}/vagas"
-    cliente.post(url, json={"descricao": "Manhã", "quantidade": 20}, headers=cabecalhos)
-
-    resposta = cliente.post(url, json=corpo, headers=cabecalhos)
-
-    assert resposta.status_code == status
-    assert resposta.json()["detail"] == mensagem
+    for rota in ("convenios", "vagas"):
+        url = f"/gestao/programas/{programa_id}/{rota}"
+        assert cliente.get(url, headers=cabecalhos).status_code == 404, rota
+        assert cliente.post(url, json={"nome": "x", "descricao": "x", "quantidade": 1}, headers=cabecalhos).status_code in (404, 405), rota
 
 
 def test_cadastro_sem_autenticacao_401(cliente):

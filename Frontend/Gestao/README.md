@@ -35,7 +35,7 @@ Gestao/
 |---|---|---|
 | Programas (lista, com identificador e vigência) | `GET /gestao/programas` | ligada (T-00g; colunas da T-45) |
 | Novo programa (`#/programas/novo`) e Editar programa (`#/programas/{id}/editar`) | `POST /gestao/programas`, `PATCH /gestao/programas/{id}` | ligada (T-45) |
-| Programa: resumo, convênios e vagas (`#/programas/{id}`) | `GET /gestao/programas/{id}`, `…/convenios`, `…/vagas` | ligada (T-45) |
+| Programa: resumo (`#/programas/{id}`) | `GET /gestao/programas/{id}` | ligada (T-45) |
 | Plano e metas (`#/programas/{id}/plano`) | `…/objetivos`, `…/acoes`, `…/metas`, `…/metas/{meta}/registros`, `…/painel` | ligada (T-45) |
 | Equipe e espaços do programa (`#/programas/{id}/equipe`) | `…/equipe`, `…/equipe/{vinculo}/desligamento`, `…/espacos`, `/gestao/usuarios`, `/gestao/papeis` | ligada (T-40) |
 | Usuários e acessos (administração) | `GET /gestao/usuarios` | ligada, só consulta (T-40) |

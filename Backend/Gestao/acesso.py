@@ -6,7 +6,7 @@ este). Os papéis vêm do banco, não de cabeçalho:
 
 - papéis da plataforma (``usuarios_papeis``): direção consulta todos os programas;
   coordenação e administração consultam e gerenciam todos (equipe, espaços, dados do
-  programa, convênios, vagas e plano de ação, inclusive o registro do realizado);
+  programa e plano de ação, inclusive o registro do realizado);
 - papéis no programa (``vinculos_equipe`` ativos): qualquer vínculo ativo consulta o
   programa.
 

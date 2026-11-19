@@ -12,7 +12,7 @@ Gestao/
   acesso.py       # quem pode consultar e gerenciar cada programa (provisório até a T-33);
                   # regras documentadas em docs/permissoes-gestao.md
   auditoria.py    # registro de eventos na trilha única (log_auditoria)
-  programas.py    # programas, convênios e vagas (regras e consultas, um arquivo por assunto)
+  programas.py    # programas (regras e consultas, um arquivo por assunto)
   plano_de_acao.py  # objetivos, ações, metas, registros do realizado e painel
   equipe.py       # equipe e espaços de cada programa
   usuarios.py     # usuários e papéis da plataforma (só consulta)
@@ -51,8 +51,6 @@ limitada aos programas em que está vinculada.
 | `POST /gestao/programas` | Cadastra um programa: `nome`, `identificador`, `publico`, `responsavel`, `vigencia_inicio`, `vigencia_fim` e `descricao` opcional | Coordenação e administração (US-02) |
 | `GET /gestao/programas/{id}` | Dados completos do programa | Consultar |
 | `PATCH /gestao/programas/{id}` | Edita os dados do programa: só os campos enviados mudam, e o resultado segue as regras do cadastro (um programa antigo, só com nome, precisa ganhar os obrigatórios) | Alterar |
-| `GET`/`POST …/{id}/convenios` | Convênios e parcerias: `nome`, `concedente` e vigência opcionais | Consultar / alterar |
-| `GET`/`POST …/{id}/vagas` | Vagas ofertadas: `descricao` e `quantidade` | Consultar / alterar |
 | `GET`/`POST …/{id}/objetivos` | Objetivos do plano de ação: `descricao` | Consultar / alterar |
 | `GET`/`POST …/{id}/acoes` | Ações de um objetivo: `objetivo_id`, `descricao`, `periodo_inicio`, `periodo_fim`, `resultado_esperado` e `periodicidade` | Consultar / alterar |
 | `GET`/`POST …/{id}/metas` | Metas de uma ação: `acao_id`, `descricao`, `valor_planejado` e `unidade` opcional | Consultar / alterar |
@@ -67,8 +65,7 @@ Regras:
 - O período de cada ação precisa caber na vigência do programa.
 - `periodicidade`: `semanal`, `quinzenal`, `mensal`, `bimestral`, `trimestral`,
   `semestral` ou `anual`.
-- Identificador repetido (sem diferenciar maiúsculas) e vagas com a mesma descrição no
-  programa respondem **409**. Programa ou meta inexistente: **404**.
+- Identificador repetido (sem diferenciar maiúsculas) responde **409**. Programa ou meta inexistente: **404**.
 - O acesso segue a seção "Acesso às rotas de programa": quem não pode recebe **403**, e a
   tentativa fica em `log_auditoria`. Programa inexistente continua **404**.
 

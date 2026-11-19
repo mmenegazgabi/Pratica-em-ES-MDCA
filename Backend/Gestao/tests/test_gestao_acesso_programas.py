@@ -5,7 +5,7 @@ existe como vínculo de programa.
 
 - consultar o programa, o plano e o painel: equipe ativa do programa, direção, coordenação e
   administração;
-- alterar o programa, convênios, vagas e plano de ação (inclusive o realizado): coordenação e
+- alterar o programa e o plano de ação (inclusive o realizado): coordenação e
   administração;
 - cadastrar um programa novo: coordenação e administração (US-02);
 - a lista de programas mostra só os que a pessoa pode consultar.
@@ -98,8 +98,6 @@ def negacoes(banco):
 P1 = "/gestao/programas/p-1"
 CONSULTAS = [
     P1,
-    f"{P1}/convenios",
-    f"{P1}/vagas",
     f"{P1}/objetivos",
     f"{P1}/acoes",
     f"{P1}/metas",
@@ -108,8 +106,6 @@ CONSULTAS = [
 ]
 ALTERACOES = [
     ("patch", P1, {"descricao": "Nova descrição"}),
-    ("post", f"{P1}/convenios", {"nome": "Convênio municipal"}),
-    ("post", f"{P1}/vagas", {"descricao": "Turma da manhã", "quantidade": 20}),
     ("post", f"{P1}/objetivos", {"descricao": "Outro objetivo"}),
     ("post", f"{P1}/acoes", {**ACAO, "objetivo_id": "o-1"}),
     ("post", f"{P1}/metas", {"acao_id": "a-1", "descricao": "Encontros", "valor_planejado": 10}),
