@@ -216,7 +216,7 @@ export const criarEspaco = (programaId, dados) =>
 export const listarUsuarios = () => requisitar("/gestao/usuarios");
 export const listarPapeis = () => requisitar("/gestao/papeis");
 
-// Programas, convênios, vagas e plano de ação (API da T-44; edição da T-45).
+// Programas e plano de ação (API da T-44; edição da T-45).
 export const obterPrograma = (programaId) => requisitar(programa(programaId));
 
 /** dados: { nome, identificador, publico, responsavel, vigencia_inicio, vigencia_fim, descricao? } */
@@ -224,17 +224,6 @@ export const cadastrarPrograma = (dados) => requisitar("/gestao/programas", { me
 
 /** Só os campos enviados mudam; o programa resultante segue as regras do cadastro. */
 export const editarPrograma = (programaId, dados) => requisitar(programa(programaId), { metodo: "PATCH", dados });
-
-export const listarConvenios = (programaId) => requisitar(`${programa(programaId)}/convenios`);
-
-/** dados: { nome, concedente?, vigencia_inicio?, vigencia_fim? } */
-export const cadastrarConvenio = (programaId, dados) =>
-  requisitar(`${programa(programaId)}/convenios`, { metodo: "POST", dados });
-
-export const listarVagas = (programaId) => requisitar(`${programa(programaId)}/vagas`);
-
-/** dados: { descricao, quantidade } */
-export const cadastrarVagas = (programaId, dados) => requisitar(`${programa(programaId)}/vagas`, { metodo: "POST", dados });
 
 export const listarObjetivos = (programaId) => requisitar(`${programa(programaId)}/objetivos`);
 

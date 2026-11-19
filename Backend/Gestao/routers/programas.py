@@ -66,36 +66,6 @@ class ProgramaDetalhadoSaida(BaseModel):
     limite_faltas: int
 
 
-class ConvenioEntrada(BaseModel):
-    nome: Optional[str] = Field(default=None, max_length=300)
-    concedente: Optional[str] = Field(default=None, max_length=300)
-    vigencia_inicio: Optional[date] = None
-    vigencia_fim: Optional[date] = None
-
-
-class ConvenioSaida(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    nome: str
-    concedente: Optional[str]
-    vigencia_inicio: Optional[date]
-    vigencia_fim: Optional[date]
-
-
-class VagasEntrada(BaseModel):
-    descricao: Optional[str] = Field(default=None, max_length=300)
-    quantidade: Optional[int] = None
-
-
-class VagasSaida(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    descricao: str
-    quantidade: int
-
-
 def _http(erro: ErroDeCadastro) -> HTTPException:
     return HTTPException(status_code=erro.status, detail=erro.mensagem)
 
@@ -152,60 +122,6 @@ def consultar(
         return programas.buscar_programa(conexao, programa_id)
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
-
-
-@router.get("/programas/{programa_id}/convenios", response_model=List[ConvenioSaida])
-def listar_convenios(
-    programa_id: str,
-    _acesso: Acesso = Depends(exigir_consulta_ao_programa),
-    conexao: Connection = Depends(obter_conexao),
-) -> List[programas.Convenio]:
-    try:
-        return programas.listar_convenios(conexao, programa_id)
-    except ErroDeCadastro as erro:
-        raise _http(erro) from erro
-
-
-@router.post("/programas/{programa_id}/convenios", response_model=ConvenioSaida, status_code=201)
-def cadastrar_convenio(
-    programa_id: str,
-    dados: ConvenioEntrada,
-    _acesso: Acesso = Depends(exigir_gestao_do_programa),
-    conexao: Connection = Depends(obter_conexao),
-) -> programas.Convenio:
-    try:
-        convenio = programas.cadastrar_convenio(conexao, programa_id, **dados.model_dump())
-    except ErroDeCadastro as erro:
-        raise _http(erro) from erro
-    conexao.commit()
-    return convenio
-
-
-@router.get("/programas/{programa_id}/vagas", response_model=List[VagasSaida])
-def listar_vagas(
-    programa_id: str,
-    _acesso: Acesso = Depends(exigir_consulta_ao_programa),
-    conexao: Connection = Depends(obter_conexao),
-) -> List[programas.Vaga]:
-    try:
-        return programas.listar_vagas(conexao, programa_id)
-    except ErroDeCadastro as erro:
-        raise _http(erro) from erro
-
-
-@router.post("/programas/{programa_id}/vagas", response_model=VagasSaida, status_code=201)
-def cadastrar_vagas(
-    programa_id: str,
-    dados: VagasEntrada,
-    _acesso: Acesso = Depends(exigir_gestao_do_programa),
-    conexao: Connection = Depends(obter_conexao),
-) -> programas.Vaga:
-    try:
-        vaga = programas.cadastrar_vagas(conexao, programa_id, **dados.model_dump())
-    except ErroDeCadastro as erro:
-        raise _http(erro) from erro
-    conexao.commit()
-    return vaga
 
 
 # Objetivos, ações, metas, registros e painel: /gestao/programas/{programa_id}/...

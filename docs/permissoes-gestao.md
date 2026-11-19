@@ -135,12 +135,12 @@ encerramento só aparecem para quem acompanha os alertas do programa.
 
 | Ação | Coordenação | Educador | Assist. social | Psicólogo | Direção | Administração |
 |---|---|---|---|---|---|---|
-| Listar e consultar programas, convênios, vagas, plano e painel | Todos | Programa | Programa | Programa | Todos | Todos |
+| Listar e consultar programas, plano e painel | Todos | Programa | Programa | Programa | Todos | Todos |
 | Cadastrar um programa novo | Sim | — | — | — | — | Sim |
-| Editar o programa, cadastrar convênios, vagas, objetivos, ações, metas e o realizado | Todos | — | — | — | — | Todos |
+| Editar o programa, cadastrar objetivos, ações, metas e o realizado | Todos | — | — | — | — | Todos |
 
-Rotas: `/gestao/programas`, `/gestao/programas/{id}` e as sub-rotas de convênios,
-vagas e plano de ação (T-87). A lista de programas mostra só os que a pessoa pode
+Rotas: `/gestao/programas`, `/gestao/programas/{id}` e as sub-rotas do plano de ação
+(T-87). Vagas ofertadas e convênios saíram do programa; a capacidade fica nas turmas. A lista de programas mostra só os que a pessoa pode
 consultar. Cadastrar um programa novo fica com a coordenação e a administração,
 porque ainda não há programa para estar vinculado.
 

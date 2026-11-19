@@ -1,5 +1,5 @@
 // Programas do cadastro canônico (ARQ-02), ligados à API da T-44 (T-45 · US-02):
-// lista, cadastro, edição e detalhe com convênios e vagas.
+// lista, cadastro, edição e detalhe.
 //
 // O programa é o mesmo registro que o Financeiro usa em orçamentos e lançamentos; o
 // identificador é o código compartilhado entre os dois módulos. Os botões de cadastro e
@@ -15,17 +15,13 @@ import * as api from "../base/api.js";
 import { ErroApi } from "../base/api.js";
 import { carregarNaTela } from "../base/estados.js";
 import { el, secao } from "../base/dom.js";
-import { abrirFormulario, campo } from "../base/formulario.js";
+import { campo } from "../base/formulario.js";
 
 const API_PADRAO = {
   listarProgramas: api.listarProgramas,
   obterPrograma: api.obterPrograma,
   cadastrarPrograma: api.cadastrarPrograma,
   editarPrograma: api.editarPrograma,
-  listarConvenios: api.listarConvenios,
-  cadastrarConvenio: api.cadastrarConvenio,
-  listarVagas: api.listarVagas,
-  cadastrarVagas: api.cadastrarVagas,
   listarUsuarios: api.listarUsuarios,
 };
 
@@ -56,7 +52,6 @@ function cartao(titulo, subtitulo, corpo, acao = null) {
 }
 
 const vazio = (titulo, texto) => el("div", { class: "empty" }, el("h2", {}, titulo), el("p", {}, texto));
-const botao = (texto, onclick) => el("button", { type: "button", class: "btn", onclick }, texto);
 
 // --- Lista ----------------------------------------------------------------------
 
@@ -263,7 +258,7 @@ export function mostrarEdicaoDePrograma(
   );
 }
 
-// --- Detalhe: dados, convênios e vagas --------------------------------------------
+// --- Detalhe: dados do programa ---------------------------------------------------
 
 function sobre(p) {
   const itens = [
@@ -281,104 +276,12 @@ function sobre(p) {
   );
 }
 
-function convenios(lista, adicionar) {
-  const corpo = lista.length
-    ? tabela(
-        ["Convênio ou parceria", "Concedente", "Vigência"],
-        lista.map((c) => el("tr", {}, el("td", {}, c.nome), el("td", {}, c.concedente || "—"), el("td", {}, vigencia(c.vigencia_inicio, c.vigencia_fim)))),
-      )
-    : vazio("Nenhum convênio cadastrado", "Convênios e parcerias que financiam ou apoiam o programa aparecem aqui.");
-  return cartao("Convênios e parcerias", null, corpo, adicionar ? botao("+ Adicionar convênio", adicionar) : null);
-}
-
-function vagas(lista, adicionar) {
-  const total = lista.reduce((soma, v) => soma + v.quantidade, 0);
-  const corpo = lista.length
-    ? tabela(["Vagas", "Quantidade"], lista.map((v) => el("tr", {}, el("td", {}, v.descricao), el("td", {}, String(v.quantidade)))))
-    : vazio("Nenhuma vaga cadastrada", "As vagas ofertadas pelo programa aparecem aqui.");
-  return cartao("Vagas ofertadas", lista.length ? `${total} no total` : null, corpo, adicionar ? botao("+ Adicionar vagas", adicionar) : null);
-}
-
-export function mostrarPrograma(container, programaId, { podeGerenciar = false, avisar = () => {}, ...substitutos } = {}) {
+export function mostrarPrograma(container, programaId, { podeGerenciar: _podeGerenciar, avisar: _avisar, ...substitutos } = {}) {
   const chamadas = { ...API_PADRAO, ...substitutos };
-
-  const recarregar = () =>
-    carregarNaTela(
-      container,
-      () =>
-        Promise.all([
-          chamadas.obterPrograma(programaId),
-          chamadas.listarConvenios(programaId),
-          chamadas.listarVagas(programaId),
-        ]),
-      ([programa, listaDeConvenios, listaDeVagas]) =>
-        el(
-          "div",
-          { class: "stack" },
-          secao("Sobre o programa", programa.nome, sobre(programa)),
-          el(
-            "div",
-            { class: "detail-grid" },
-            convenios(listaDeConvenios, podeGerenciar ? adicionarConvenio : null),
-            vagas(listaDeVagas, podeGerenciar ? adicionarVagas : null),
-          ),
-        ),
-    );
-
-  function adicionarConvenio() {
-    const nome = el("input", { type: "text", maxlength: 300, required: true });
-    const concedente = el("input", { type: "text", maxlength: 300 });
-    const inicio = el("input", { type: "date" });
-    const fim = el("input", { type: "date" });
-    abrirFormulario({
-      titulo: "Adicionar convênio ou parceria",
-      campos: [
-        campo("f-convenio-nome", "Nome", nome, { largo: true }),
-        campo("f-convenio-concedente", "Concedente (opcional)", concedente, { largo: true }),
-        campo("f-convenio-inicio", "Início da vigência (opcional)", inicio),
-        campo("f-convenio-fim", "Fim da vigência (opcional)", fim),
-      ],
-      validar: () => {
-        if (!nome.value.trim()) return "Informe o nome do convênio.";
-        if (inicio.value && fim.value && fim.value < inicio.value) return "O fim da vigência não pode ser anterior ao início.";
-        return "";
-      },
-      enviar: () =>
-        chamadas.cadastrarConvenio(programaId, {
-          nome: nome.value.trim(),
-          concedente: concedente.value.trim() || null,
-          vigencia_inicio: inicio.value || null,
-          vigencia_fim: fim.value || null,
-        }),
-      aoConcluir: (c) => {
-        avisar(`Convênio ${c.nome} cadastrado.`);
-        recarregar();
-      },
-    });
-  }
-
-  function adicionarVagas() {
-    const descricao = el("input", { type: "text", maxlength: 300, required: true });
-    const quantidade = el("input", { type: "number", min: 1, step: 1, required: true });
-    abrirFormulario({
-      titulo: "Adicionar vagas",
-      campos: [
-        campo("f-vagas-descricao", "Descrição", descricao, { largo: true, dica: "Ex.: Turma da manhã, 6 a 11 anos." }),
-        campo("f-vagas-quantidade", "Quantidade", quantidade),
-      ],
-      validar: () => {
-        if (!descricao.value.trim()) return "Informe a descrição das vagas.";
-        if (!(Number(quantidade.value) > 0)) return "Informe uma quantidade maior que zero.";
-        return "";
-      },
-      enviar: () =>
-        chamadas.cadastrarVagas(programaId, { descricao: descricao.value.trim(), quantidade: Number(quantidade.value) }),
-      aoConcluir: () => {
-        avisar("Vagas cadastradas.");
-        recarregar();
-      },
-    });
-  }
-
-  return recarregar();
+  // Vagas ofertadas e convênios saíram do programa: a capacidade fica nas turmas.
+  return carregarNaTela(
+    container,
+    () => chamadas.obterPrograma(programaId),
+    (programa) => el("div", { class: "stack" }, secao("Sobre o programa", programa.nome, sobre(programa))),
+  );
 }

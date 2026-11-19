@@ -198,60 +198,22 @@ test("edição abre com os dados atuais e envia as alterações", async () => {
 // --- Detalhe --------------------------------------------------------------------
 
 function detalhe(extra = {}) {
-  const anotar = (nome, resposta) => async (...args) => {
-    registro.push([nome, ...args]);
-    return resposta;
-  };
   return {
-    obterPrograma: anotar("obterPrograma", PROGRAMA),
-    listarConvenios: anotar("listarConvenios", [
-      { id: "c-1", nome: "Termo de fomento", concedente: "Prefeitura", vigencia_inicio: "2026-01-01", vigencia_fim: "2026-12-31" },
-    ]),
-    listarVagas: anotar("listarVagas", [
-      { id: "v-1", descricao: "Manhã", quantidade: 20 },
-      { id: "v-2", descricao: "Tarde", quantidade: 15 },
-    ]),
-    cadastrarConvenio: anotar("cadastrarConvenio", { id: "c-2", nome: "Parceria" }),
-    cadastrarVagas: anotar("cadastrarVagas", { id: "v-3", descricao: "Noite", quantidade: 10 }),
-    avisar: (t) => avisos.push(t),
+    obterPrograma: async (...args) => {
+      registro.push(["obterPrograma", ...args]);
+      return PROGRAMA;
+    },
     ...extra,
   };
 }
 
-test("detalhe mostra os dados, os convênios e as vagas do programa", async () => {
-  await mostrarPrograma(container, "p-1", detalhe());
+test("detalhe mostra os dados do programa, sem vagas ofertadas nem convênios", async () => {
+  await mostrarPrograma(container, "p-1", detalhe({ podeGerenciar: true }));
 
   assert.match(texto(), /SEMEAR/);
   assert.match(texto(), /02\/02\/2026 a 18\/12\/2026/);
-  assert.match(texto(), /Termo de fomentoPrefeitura/);
-  assert.match(texto(), /35 no total/);
+  assert.doesNotMatch(texto(), /Convênios|Vagas ofertadas/);
   assert.equal(botao("+ Adicionar convênio", container), undefined);
-});
-
-test("quem gerencia adiciona convênio pelo diálogo e a tela recarrega", async () => {
-  await mostrarPrograma(container, "p-1", detalhe({ podeGerenciar: true }));
-
-  botao("+ Adicionar convênio", container).click();
-  dialogo().querySelector("#f-convenio-nome").value = "Parceria";
-  await enviar(dialogo().querySelector("form"));
-
-  assert.deepEqual(registro.find(([nome]) => nome === "cadastrarConvenio"), [
-    "cadastrarConvenio",
-    "p-1",
-    { nome: "Parceria", concedente: null, vigencia_inicio: null, vigencia_fim: null },
-  ]);
-  assert.deepEqual(avisos, ["Convênio Parceria cadastrado."]);
-  assert.equal(registro.filter(([nome]) => nome === "obterPrograma").length, 2);
-});
-
-test("vagas sem quantidade maior que zero não chamam a API", async () => {
-  await mostrarPrograma(container, "p-1", detalhe({ podeGerenciar: true }));
-
-  botao("+ Adicionar vagas", container).click();
-  dialogo().querySelector("#f-vagas-descricao").value = "Noite";
-  dialogo().querySelector("#f-vagas-quantidade").value = "0";
-  await enviar(dialogo().querySelector("form"));
-
-  assert.equal(registro.some(([nome]) => nome === "cadastrarVagas"), false);
-  assert.match(texto(dialogo()), /quantidade maior que zero/);
+  assert.equal(botao("+ Adicionar vagas", container), undefined);
+  assert.deepEqual(registro.map(([nome]) => nome), ["obterPrograma"]);
 });

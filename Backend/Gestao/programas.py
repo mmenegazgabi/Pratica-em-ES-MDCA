@@ -1,5 +1,4 @@
-"""Programas/Projetos do cadastro canônico (tabela ``projetos``, ARQ-02), com convênios
-e vagas (US-02, tabelas da T-45).
+"""Programas/Projetos do cadastro canônico (tabela ``projetos``, ARQ-02) da US-02.
 
 O programa é o mesmo registro que o Financeiro referencia em orçamentos e lançamentos;
 o ``identificador`` é o código compartilhado entre os dois módulos. Programas antigos,
@@ -70,22 +69,6 @@ class ProgramaDetalhado:
     status: str
     # Faltas consecutivas que geram alerta de infrequência (US-06).
     limite_faltas: int = LIMITE_FALTAS_PADRAO
-
-
-@dataclass(frozen=True)
-class Convenio:
-    id: str
-    nome: str
-    concedente: Optional[str]
-    vigencia_inicio: Optional[date]
-    vigencia_fim: Optional[date]
-
-
-@dataclass(frozen=True)
-class Vaga:
-    id: str
-    descricao: str
-    quantidade: int
 
 
 def texto(valor: Optional[str]) -> Optional[str]:
@@ -266,102 +249,3 @@ def editar_programa(conexao: Connection, programa_id: str, alteracoes: dict) -> 
             raise Conflito("Já existe um programa com esse identificador.") from erro
         raise
     return buscar_programa(conexao, programa_id)
-
-
-def listar_convenios(conexao: Connection, programa_id: str) -> List[Convenio]:
-    buscar_programa(conexao, programa_id)
-    linhas = conexao.execute(
-        sa.text(
-            """
-            SELECT id, nome, concedente, vigencia_inicio, vigencia_fim
-            FROM convenios WHERE programa_id = :programa
-            ORDER BY lower(nome), id
-            """
-        ),
-        {"programa": programa_id},
-    )
-    return [Convenio(**linha._mapping) for linha in linhas]
-
-
-def cadastrar_convenio(
-    conexao: Connection,
-    programa_id: str,
-    *,
-    nome: Optional[str],
-    concedente: Optional[str] = None,
-    vigencia_inicio: Optional[date] = None,
-    vigencia_fim: Optional[date] = None,
-) -> Convenio:
-    buscar_programa(conexao, programa_id)
-    convenio = Convenio(
-        id=str(uuid.uuid4()),
-        nome=texto(nome),
-        concedente=texto(concedente),
-        vigencia_inicio=vigencia_inicio,
-        vigencia_fim=vigencia_fim,
-    )
-    if not convenio.nome:
-        raise faltando(["nome"], "Convênio")
-    if vigencia_inicio and vigencia_fim and vigencia_fim < vigencia_inicio:
-        raise DadosInvalidos("O fim da vigência do convênio não pode ser anterior ao início.")
-    conexao.execute(
-        sa.text(
-            """
-            INSERT INTO convenios (id, programa_id, nome, concedente, vigencia_inicio, vigencia_fim)
-            VALUES (:id, :programa, :nome, :concedente, :inicio, :fim)
-            """
-        ),
-        {
-            "id": convenio.id,
-            "programa": programa_id,
-            "nome": convenio.nome,
-            "concedente": convenio.concedente,
-            "inicio": vigencia_inicio,
-            "fim": vigencia_fim,
-        },
-    )
-    return convenio
-
-
-def listar_vagas(conexao: Connection, programa_id: str) -> List[Vaga]:
-    buscar_programa(conexao, programa_id)
-    linhas = conexao.execute(
-        sa.text(
-            "SELECT id, descricao, quantidade FROM vagas WHERE programa_id = :programa "
-            "ORDER BY lower(descricao), id"
-        ),
-        {"programa": programa_id},
-    )
-    return [Vaga(**linha._mapping) for linha in linhas]
-
-
-def cadastrar_vagas(
-    conexao: Connection, programa_id: str, *, descricao: Optional[str], quantidade: Optional[int]
-) -> Vaga:
-    buscar_programa(conexao, programa_id)
-    descricao = texto(descricao)
-    ausentes = [r for r, v in (("descrição", descricao), ("quantidade", quantidade)) if v is None]
-    if ausentes:
-        raise faltando(ausentes, "Vagas")
-    if quantidade <= 0:
-        raise DadosInvalidos("A quantidade de vagas deve ser maior que zero.")
-    vaga = Vaga(id=str(uuid.uuid4()), descricao=descricao, quantidade=quantidade)
-    try:
-        with conexao.begin_nested():
-            conexao.execute(
-                sa.text(
-                    "INSERT INTO vagas (id, programa_id, descricao, quantidade) "
-                    "VALUES (:id, :programa, :descricao, :quantidade)"
-                ),
-                {
-                    "id": vaga.id,
-                    "programa": programa_id,
-                    "descricao": vaga.descricao,
-                    "quantidade": vaga.quantidade,
-                },
-            )
-    except IntegrityError as erro:
-        if _eh_duplicidade(erro):
-            raise Conflito("Já existem vagas com essa descrição neste programa.") from erro
-        raise
-    return vaga
