@@ -144,8 +144,26 @@ test("programa do cadastro real abre pela API, com as abas Resumo, Plano e metas
   assert.equal($("#main h1").textContent, "Plano e metas");
   assert.deepEqual(
     [...document.querySelectorAll("#main .tabs a")].map((a) => a.getAttribute("href")),
-    ["#/programas/p-1", "#/programas/p-1/plano", "#/programas/p-1/equipe", "#/turmas/p-1", "#/programas/p-1/integrada"],
+    ["#/programas/p-1", "#/programas/p-1/plano", "#/programas/p-1/equipe", "#/programas/p-1/turmas", "#/programas/p-1/integrada"],
   );
+});
+
+test("a aba Turmas de um programa real fica dentro do programa, com as mesmas abas e sem trocar de programa", async () => {
+  chamadas.length = 0;
+  await irPara("#/programas/p-1/turmas");
+  await esperar();
+
+  assert.equal($(".demo-banner"), null);
+  assert.equal($("#main h1").textContent, "Turmas");
+  assert.deepEqual(
+    [...document.querySelectorAll("#main .tabs a")].map((a) => a.getAttribute("href")),
+    ["#/programas/p-1", "#/programas/p-1/plano", "#/programas/p-1/equipe", "#/programas/p-1/turmas", "#/programas/p-1/integrada"],
+  );
+  assert.equal($("#main .tabs a.active").getAttribute("href"), "#/programas/p-1/turmas");
+  // O programa já está definido pela página: o seletor fica escondido.
+  assert.equal($('#tela-api select[name="programa"]').value, "p-1");
+  assert.ok($('#tela-api select[name="programa"]').closest("[hidden]"));
+  assert.ok(chamadas.some((c) => c.url.includes("/gestao/programas/p-1/turmas")));
 });
 
 test("a aba Visão integrada de um programa real abre a tela da API já nesse programa", async () => {

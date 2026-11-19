@@ -103,7 +103,8 @@ function linhaDaTurma(programaId, t) {
 }
 
 /** Turmas do programa escolhido; o filtro de programa decide qual lista carregar. */
-export function mostrarTurmas(container, { programaInicial = "", podeGerenciar = false, ...substitutos } = {}) {
+/** Lista de turmas por programa. Com ``programaFixo`` (aba Turmas dentro do programa), o seletor fica escondido. */
+export function mostrarTurmas(container, { programaInicial = "", programaFixo = false, podeGerenciar = false, ...substitutos } = {}) {
   const chamadas = { ...API_PADRAO, ...substitutos };
   const lista = el("div", {});
   const programa = el("select", { name: "programa", class: "filter-control", "aria-label": "Programa" });
@@ -130,7 +131,9 @@ export function mostrarTurmas(container, { programaInicial = "", podeGerenciar =
     programa.replaceChildren(...programas.map((p) => el("option", { value: p.id }, p.nome)));
     programa.value = programas.some((p) => p.id === programaInicial) ? programaInicial : programas[0]?.id || "";
     queueMicrotask(carregar);
-    return el("div", { class: "stack" }, el("div", { class: "toolbar" }, el("div", { class: "filters" }, programa), novo), lista);
+    const filtros = el("div", { class: "filters" }, programa);
+    filtros.hidden = programaFixo && programa.value === programaInicial;
+    return el("div", { class: "stack" }, el("div", { class: "toolbar" }, filtros, novo), lista);
   });
 }
 
