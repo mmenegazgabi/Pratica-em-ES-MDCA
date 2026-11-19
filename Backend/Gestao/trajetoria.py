@@ -27,6 +27,7 @@ import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
 from Gestao.alertas import TIPOS_DE_ACAO
+from Gestao.pessoas import nome_da_familia
 
 CADASTRO = "cadastro"
 RESPONSAVEL = "responsavel"
@@ -90,7 +91,7 @@ def trajetoria(
             data=cadastro.criado_em,
             tipo=CADASTRO,
             titulo=f"Cadastro no programa {cadastro.programa}",
-            descricao=f"Núcleo familiar {cadastro.nucleo}.",
+            descricao=f"{nome_da_familia(cadastro.nucleo)}.",
         )
     )
     fuso = cadastro.criado_em.tzinfo

@@ -36,7 +36,7 @@ const LARA = {
 };
 const TRAJETORIA = [
   { data: "2026-03-02T10:00:00Z", tipo: "documento", titulo: "Documento registrado: Certidão de nascimento", descricao: "certidao.pdf" },
-  { data: "2026-03-01T09:00:00Z", tipo: "cadastro", titulo: "Cadastro no programa Semear", descricao: "Núcleo familiar Oliveira." },
+  { data: "2026-03-01T09:00:00Z", tipo: "cadastro", titulo: "Cadastro no programa Semear", descricao: "Família Oliveira." },
 ];
 const DUPLICADO = { id: "pe-lara", nome: "Lara Oliveira", data_nascimento: "2013-05-12", programa_id: "p-1", programa: "Semear", responsaveis: ["Marina Oliveira"], motivos: ["nascimento", "responsavel"] };
 
@@ -147,13 +147,13 @@ test("idade em anos completos e regra do responsável legal", () => {
 
 // --- Lista -----------------------------------------------------------------------
 
-test("lista as pessoas da API com programa, núcleo e situação da imagem", async () => {
+test("lista as pessoas da API com programa, família e situação da imagem", async () => {
   const resumo = { ...LARA, responsaveis: ["Marina Oliveira"] };
   await mostrarPessoas(container, api({ listarPessoas: async () => [resumo] }));
   await esperar();
 
   const linha = container.querySelector("tbody tr");
-  assert.match(texto(linha), /Lara Oliveira.*Nascimento: 12\/05\/2013.*Semear.*Oliveira.*Marina Oliveira.*Autorização vigente/);
+  assert.match(texto(linha), /Lara Oliveira.*Nascimento: 12\/05\/2013.*Semear.*Família Oliveira.*Marina Oliveira.*Autorização vigente/);
   assert.equal(linha.querySelector("a").getAttribute("href"), "#/pessoas/pe-lara");
   assert.deepEqual([...campo("programa").options].map((o) => o.textContent), ["Todos os programas", "Semear", "Oficina"]);
 });
@@ -205,7 +205,7 @@ test("cadastro de adulto em quatro etapas grava a pessoa, os documentos e a auto
 
   assert.match(texto(), /Revisão/);
   assert.deepEqual(chamadas("verificarDuplicidade"), [[{ programa_id: "p-1", nome: "Pedro Souza", data_nascimento: "1990-04-02", responsaveis: [] }]]);
-  assert.match(texto(), /Pedro Souza.*02\/04\/1990 \(36 anos\).*Semear.*Souza \(novo\).*Nenhum.*CPF.*Autorizado de 09\/11\/2026 a 08\/11\/2027/);
+  assert.match(texto(), /Pedro Souza.*02\/04\/1990 \(36 anos\).*Semear.*Família Souza \(nova\).*Nenhum.*CPF.*Autorizado de 09\/11\/2026 a 08\/11\/2027/);
   assert.doesNotMatch(texto(), /Possível duplicidade/);
 
   await enviar();
@@ -331,9 +331,9 @@ test("a trajetória mostra a linha do tempo vinda da API", async () => {
   await mostrarPessoa(container, "pe-lara", { hoje: HOJE, ...api() });
 
   assert.deepEqual(chamadas("obterTrajetoria"), [["pe-lara"]]);
-  assert.match(texto(container.querySelector(".pessoa-cabecalho")), /Lara Oliveira.*13 anos.*Semear.*núcleo Oliveira.*Ativa.*Autorização vigente/);
+  assert.match(texto(container.querySelector(".pessoa-cabecalho")), /Lara Oliveira.*13 anos.*Semear · Família Oliveira.*Ativa.*Autorização vigente/);
   const itens = [...container.querySelectorAll(".timeline-item")].map((i) => texto(i));
-  assert.deepEqual(itens, ["02/03/2026Documento registrado: Certidão de nascimentocertidao.pdf", "01/03/2026Cadastro no programa SemearNúcleo familiar Oliveira."]);
+  assert.deepEqual(itens, ["02/03/2026Documento registrado: Certidão de nascimentocertidao.pdf", "01/03/2026Cadastro no programa SemearFamília Oliveira."]);
   assert.equal(container.querySelector(".tab.active").textContent, "Trajetória");
 });
 
@@ -343,9 +343,9 @@ test("trajetória vazia mostra o estado vazio", async () => {
   assert.match(texto(), /A trajetória começa aqui/);
 });
 
-test("aba Família mostra núcleo e responsáveis; incluir só para quem cadastra", async () => {
+test("aba Família mostra a família e os responsáveis; incluir só para quem cadastra", async () => {
   await mostrarPessoa(container, "pe-lara", { aba: "familia", ...api() });
-  assert.match(texto(), /Núcleo familiar Oliveira.*51 99999-0000.*Marina Oliveira.*Mãe.*Responsável legal/);
+  assert.match(texto(), /Família Oliveira.*51 99999-0000.*Marina Oliveira.*Mãe.*Responsável legal/);
   assert.equal(botao("Incluir responsável"), undefined);
 
   await mostrarPessoa(container, "pe-lara", { aba: "familia", podeCadastrar: true, ...api() });
@@ -419,10 +419,29 @@ test("na trajetória, a falta leva ao encontro com a chamada (T-89)", async () =
   const { linhaDoTempo } = await import("../telas/pessoas.js");
   const linha = linhaDoTempo([
     { data: "2026-10-05T03:00:00Z", tipo: "frequencia", titulo: "Falta na turma Oficina de arte", descricao: "Ausente no encontro.", programa_id: "p-1", atividade_id: "a-1" },
-    { data: "2026-03-01T10:00:00Z", tipo: "cadastro", titulo: "Cadastro no programa Semear", descricao: "Núcleo familiar Oliveira.", programa_id: null, atividade_id: null },
+    { data: "2026-03-01T10:00:00Z", tipo: "cadastro", titulo: "Cadastro no programa Semear", descricao: "Família Oliveira.", programa_id: null, atividade_id: null },
   ]);
 
   const [falta, cadastro] = linha.querySelectorAll(".timeline-item");
   assert.equal(falta.querySelector("h3 a").getAttribute("href"), "#/atividades/p-1/encontro/a-1");
   assert.equal(cadastro.querySelector("h3 a"), null);
+});
+
+
+test("o núcleo familiar aparece como Família, sem repetir a palavra", async () => {
+  const { nomeDaFamilia } = await import("../telas/pessoas.js");
+  assert.equal(nomeDaFamilia("Oliveira"), "Família Oliveira");
+  assert.equal(nomeDaFamilia("Família Ferreira"), "Família Ferreira");
+  assert.equal(nomeDaFamilia("familia costa"), "familia costa");
+  assert.equal(nomeDaFamilia(""), "");
+});
+
+test("no cadastro, o campo se chama Família e a opção nova é Nova família", async () => {
+  await abrirCadastro();
+  await dadosPessoais();
+
+  assert.match(texto(container.querySelector('label[for="pessoa-nucleo"]')), /^Família/);
+  assert.equal(campo("nucleo_id").options[0].textContent, "Nova família");
+  assert.match(texto(container.querySelector('label[for="pessoa-nucleo-nome"]')), /Nome da nova família/);
+  assert.doesNotMatch(texto(), /[Nn]úcleo/);
 });

@@ -171,8 +171,8 @@ def test_quem_faz_18_anos_hoje_ja_e_maior(cliente, cabecalhos, cadastro):
     "extra, mensagem",
     [
         ({"data_nascimento": AMANHA.isoformat()}, "A data de nascimento não pode estar no futuro."),
-        ({"nucleo_familiar_nome": None}, "Informe o núcleo familiar."),
-        ({"nucleo_familiar_nome": None, "nucleo_familiar_id": "f-x"}, "Núcleo familiar não encontrado."),
+        ({"nucleo_familiar_nome": None}, "Informe a família."),
+        ({"nucleo_familiar_nome": None, "nucleo_familiar_id": "f-x"}, "Família não encontrada."),
         ({"responsaveis": [{"id": "r-x", "responsavel_legal": True}]}, "Responsável não encontrado."),
         ({"responsaveis": [{"parentesco": "Mãe", "responsavel_legal": True}]}, "Informe o nome de cada responsável."),
     ],
@@ -596,3 +596,14 @@ def test_sem_r2_configurado_503(cliente, cabecalhos, cadastro, monkeypatch):
         monkeypatch.delenv(nome, raising=False)
 
     assert enviar_documento(cliente, cabecalhos).status_code == 503
+
+
+@pytest.mark.parametrize(
+    "nome, esperado",
+    [("Oliveira", "Família Oliveira"), ("Família Ferreira", "Família Ferreira"), ("família  costa", "família  costa"), ("", "")],
+)
+def test_nome_da_familia_para_exibir(nome, esperado):
+    """Na tela, o núcleo familiar aparece como "Família …", sem repetir a palavra."""
+    from Gestao.pessoas import nome_da_familia
+
+    assert nome_da_familia(nome) == esperado

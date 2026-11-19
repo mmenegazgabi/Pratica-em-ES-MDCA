@@ -56,7 +56,7 @@ def test_logo_depois_do_cadastro_a_trajetoria_mostra_a_entrada_no_programa(clien
     eventos = trajetoria(cliente, cabecalhos, pessoa_id)
 
     assert [(e["tipo"], e["titulo"], e["descricao"]) for e in eventos] == [
-        ("cadastro", "Cadastro no programa Semear", "Núcleo familiar Oliveira.")
+        ("cadastro", "Cadastro no programa Semear", "Família Oliveira.")
     ]
 
 
