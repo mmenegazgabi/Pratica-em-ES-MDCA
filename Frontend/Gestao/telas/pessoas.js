@@ -50,6 +50,15 @@ const MOTIVOS = { nascimento: "mesma data de nascimento", responsavel: "mesmo re
 
 // --- Apoio ---------------------------------------------------------------------------
 
+/** Como o núcleo familiar aparece na tela: "Oliveira" → "Família Oliveira", sem repetir
+ * a palavra para quem já escreveu "Família …". Na API o nome segue como foi digitado. */
+export function nomeDaFamilia(nome) {
+  const texto = String(nome || "");
+  const primeira = texto.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().split(/\s+/)[0];
+  if (!texto.trim() || primeira === "familia") return texto;
+  return `Família ${texto.trim()}`;
+}
+
 export const dataBr = (iso) => (iso ? String(iso).slice(0, 10).split("-").reverse().join("/") : "—");
 
 /** Idade em anos completos na data `hoje` (AAAA-MM-DD). */
@@ -107,7 +116,7 @@ function linhaDaPessoa(p) {
     {},
     el("td", {}, el("a", { class: "activity-title", href: `#/pessoas/${encodeURIComponent(p.id)}` }, p.nome), el("small", {}, `Nascimento: ${dataBr(p.data_nascimento)}`)),
     el("td", {}, badge(p.programa, "gray")),
-    el("td", {}, p.nucleo_familiar.nome, el("small", {}, p.responsaveis.join(", ") || "Sem responsável informado")),
+    el("td", {}, nomeDaFamilia(p.nucleo_familiar.nome), el("small", {}, p.responsaveis.join(", ") || "Sem responsável informado")),
     el("td", {}, imagem(p.autorizacao_imagem)),
   );
 }
@@ -122,7 +131,7 @@ export function tabelaDePessoas(pessoas, { filtrado = false } = {}) {
         : vazio("Nenhuma pessoa cadastrada", "As pessoas atendidas pelos programas em que você atua aparecem aqui."),
     );
   }
-  return el("section", { class: "card" }, tabela(["Pessoa atendida", "Programa", "Núcleo familiar", "Uso de imagem"], pessoas.map(linhaDaPessoa)));
+  return el("section", { class: "card" }, tabela(["Pessoa atendida", "Programa", "Família", "Uso de imagem"], pessoas.map(linhaDaPessoa)));
 }
 
 /** Lista com busca por nome e filtro de programa; cada busca é uma consulta à API. */
@@ -229,7 +238,7 @@ export function validarEtapa(r, passo, hoje = hojeIso()) {
     if (!r.programa_id) return "Escolha o programa.";
   }
   if (passo === 2) {
-    if (!r.nucleo_id && !r.nucleo_nome.trim()) return "Informe o núcleo familiar.";
+    if (!r.nucleo_id && !r.nucleo_nome.trim()) return "Informe a família.";
     if (r.responsaveis.some((x) => !x.nome.trim())) return "Informe o nome de cada responsável (ou remova a linha vazia).";
     if (precisaDeResponsavelLegal(r.data_nascimento, r.responsaveis, hoje)) {
       return "Pessoa com menos de 18 anos precisa de ao menos um responsável legal.";
@@ -251,7 +260,7 @@ export function mostrarCadastroDePessoa(container, { programaInicial = "", aoCon
   const r = novoRascunho(programaInicial, hoje);
   let programas = [];
   let nucleos = [];
-  // O assistente desenha aqui dentro, depois que programas e núcleos carregam.
+  // O assistente desenha aqui dentro, depois que programas e famílias carregam.
   const alvo = el("div", {});
 
   const erro = el("div", { class: "error-message", role: "alert", hidden: true });
@@ -288,12 +297,12 @@ export function mostrarCadastroDePessoa(container, { programaInicial = "", aoCon
     const nucleo = el(
       "select",
       { name: "nucleo_id" },
-      el("option", { value: "" }, "Novo núcleo familiar"),
-      nucleos.map((n) => el("option", { value: n.id }, n.nome)),
+      el("option", { value: "" }, "Nova família"),
+      nucleos.map((n) => el("option", { value: n.id }, nomeDaFamilia(n.nome))),
     );
     nucleo.value = r.nucleo_id;
     const nomeDoNucleo = entrada("nucleo_nome", "text", r.nucleo_nome || r.nome.trim().split(/\s+/).at(-1) || "");
-    const campoNome = campo("pessoa-nucleo-nome", "Nome do novo núcleo", nomeDoNucleo, { dica: "Por exemplo, o sobrenome da família." });
+    const campoNome = campo("pessoa-nucleo-nome", "Nome da nova família", nomeDoNucleo, { dica: "Por exemplo, o sobrenome: Oliveira." });
     const alternar = () => (campoNome.hidden = Boolean(nucleo.value));
     nucleo.addEventListener("change", alternar);
     alternar();
@@ -333,7 +342,7 @@ export function mostrarCadastroDePessoa(container, { programaInicial = "", aoCon
     return {
       ler,
       campos: [
-        campo("pessoa-nucleo", "Núcleo familiar", nucleo, { dica: nucleos.length ? "Escolha um núcleo já cadastrado ou crie um novo." : "" }),
+        campo("pessoa-nucleo", "Família", nucleo, { dica: nucleos.length ? "Irmãos ficam na mesma família: escolha uma já cadastrada ou crie uma nova." : "" }),
         campoNome,
         el(
           "div",
@@ -455,14 +464,14 @@ export function mostrarCadastroDePessoa(container, { programaInicial = "", aoCon
         );
       }
       const programa = programas.find((p) => p.id === r.programa_id)?.nome || r.programa_id;
-      const nucleo = r.nucleo_id ? nucleos.find((n) => n.id === r.nucleo_id)?.nome : `${r.nucleo_nome.trim()} (novo)`;
+      const nucleo = r.nucleo_id ? nomeDaFamilia(nucleos.find((n) => n.id === r.nucleo_id)?.nome) : `${nomeDaFamilia(r.nucleo_nome.trim())} (nova)`;
       blocos.push(
         aviso("Confira os dados antes de concluir o cadastro."),
         detalhes([
           ["Pessoa", r.nome.trim()],
           ["Nascimento", `${dataBr(r.data_nascimento)} (${idade(r.data_nascimento, hoje)} anos)`],
           ["Programa", programa],
-          ["Núcleo familiar", nucleo],
+          ["Família", nucleo],
           ["Responsáveis", r.responsaveis.map((x) => x.nome.trim() + (x.responsavel_legal ? " (responsável legal)" : "")).join(", ") || "Nenhum"],
           ["Documentos", r.documentos.map((d) => d.tipo).join(", ") || "Nenhum"],
           ["Uso de imagem", r.autorizacao.registrar ? `Autorizado de ${dataBr(r.autorizacao.valida_de)} a ${dataBr(r.autorizacao.valida_ate)}` : "Sem autorização"],
@@ -622,7 +631,7 @@ function cabecalho(p) {
       "div",
       {},
       el("h2", {}, p.nome),
-      el("p", { class: "muted" }, `${p.idade} anos · nascimento ${dataBr(p.data_nascimento)} · ${p.programa} · núcleo ${p.nucleo_familiar.nome}`),
+      el("p", { class: "muted" }, `${p.idade} anos · nascimento ${dataBr(p.data_nascimento)} · ${p.programa} · ${nomeDaFamilia(p.nucleo_familiar.nome)}`),
       el("div", { class: "badges" }, badge(p.situacao === "ativo" ? "Ativa" : p.situacao, p.situacao === "ativo" ? "green" : "gray"), " ", imagem(p.autorizacao_imagem)),
     ),
   );
@@ -729,7 +738,7 @@ export function mostrarPessoa(container, pessoaId, { aba = "trajetoria", podeCad
       return el(
         "div",
         { class: "stack" },
-        secao(`Núcleo familiar ${p.nucleo_familiar.nome}`, "", detalhes([["Telefone de contato", p.telefone], ["Observação cadastral", p.observacao]])),
+        secao(nomeDaFamilia(p.nucleo_familiar.nome), "", detalhes([["Telefone de contato", p.telefone], ["Observação cadastral", p.observacao]])),
         cartao(
           "Responsáveis",
           "",

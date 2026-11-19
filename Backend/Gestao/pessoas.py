@@ -38,6 +38,18 @@ def normalizar_nome(nome: str) -> str:
     return " ".join(sem_acento.casefold().split())
 
 
+def nome_da_familia(nome: str) -> str:
+    """Como o núcleo familiar aparece na tela: 'Oliveira' → 'Família Oliveira'.
+
+    Quem já escreveu "Família …" no cadastro não ganha a palavra repetida. No banco e na
+    API o nome continua como foi digitado (``nucleos_familiares.nome``).
+    """
+    nome = nome or ""
+    if not nome.strip() or normalizar_nome(nome).split()[0] == "familia":
+        return nome
+    return f"Família {nome.strip()}"
+
+
 def idade(nascimento: date, hoje: date) -> int:
     anos = hoje.year - nascimento.year
     return anos - ((hoje.month, hoje.day) < (nascimento.month, nascimento.day))
@@ -252,11 +264,11 @@ def _validar(conexao: Connection, dados: NovaPessoa, hoje: date) -> None:
     if dados.data_nascimento > hoje:
         raise DadosInvalidos("A data de nascimento não pode estar no futuro.")
     if not dados.nucleo_familiar_id and not _texto(dados.nucleo_familiar_nome):
-        raise DadosInvalidos("Informe o núcleo familiar.")
+        raise DadosInvalidos("Informe a família.")
     if dados.nucleo_familiar_id and conexao.execute(
         sa.text("SELECT 1 FROM nucleos_familiares WHERE id = :id"), {"id": dados.nucleo_familiar_id}
     ).first() is None:
-        raise DadosInvalidos("Núcleo familiar não encontrado.")
+        raise DadosInvalidos("Família não encontrada.")
     _validar_responsaveis(conexao, dados.responsaveis)
     if idade(dados.data_nascimento, hoje) < MAIORIDADE and not any(r.responsavel_legal for r in dados.responsaveis):
         raise DadosInvalidos(
