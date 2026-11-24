@@ -27,6 +27,7 @@ import { el, limpar } from "../base/dom.js";
 import { formatarData, formatarMoeda, tempoRelativo } from "../base/formatar.js";
 import { icone } from "../base/icones.js";
 import { lerSessao, papeisDoFinanceiro, usarPapelFixo } from "../base/sessao.js";
+import { MENSAGENS as MENSAGENS_DA_CAMERA, abrirWebcam, podeUsarWebcam, temCameraDoAparelho } from "./camera.js";
 import { lerSessao as lerSessaoDaPlataforma, sair as sairDaPlataforma, temPapel } from "../../Shared/plataforma.js";
 import {
   agruparDespesas,
@@ -222,7 +223,7 @@ async function telaDespesas(_id, minhaVez) {
 
   montar(
     el("h1", { class: "titulo" }, "Minhas despesas"),
-    el("button", { type: "button", id: "botao-fotografar", class: "botao botao--grande", onclick: () => entradaCamera.click() }, icone("camera"), "Fotografar comprovante"),
+    el("button", { type: "button", id: "botao-fotografar", class: "botao botao--grande", onclick: () => pedirFoto({ camera: entradaCamera, arquivo: entradaGaleria, receber: salvarFoto }) }, icone("camera"), "Fotografar comprovante"),
     el("button", { type: "button", class: "botao-link", onclick: () => entradaGaleria.click() }, icone("galeria"), "Escolher da galeria ou arquivo"),
     ajuste.length ? secao(`Precisa de ajuste (${ajuste.length})`, lista(ajuste.map(itemDespesa), "lista--alerta"), null, "secao-ajuste") : null,
     aCompletar.length ? secao(`A completar (${aCompletar.length})`, lista(aCompletar.map((r) => itemDeRascunho(r, minhaVez))), null, "secao-completar") : null,
@@ -270,6 +271,27 @@ function itemDeRascunho(rascunho, minhaVez) {
 
 // --- Câmera: foto vira rascunho --------------------------------------------
 
+/**
+ * "Fotografar": no celular, a câmera do aparelho (`camera`, input com capture); no
+ * computador, a webcam na própria página. Sem câmera ou sem permissão, avisa e abre o
+ * seletor de arquivo (`arquivo`). `receber(arquivo)` recebe a foto já escolhida.
+ */
+function pedirFoto({ camera, arquivo, receber }) {
+  if (temCameraDoAparelho(window)) return camera.click();
+  if (!podeUsarWebcam(window)) {
+    avisar(MENSAGENS_DA_CAMERA.semCamera);
+    return arquivo.click();
+  }
+  abrirWebcam({
+    janela: window,
+    aoUsar: async (foto) => {
+      const pronto = await prepararArquivo(foto);
+      if (pronto) receber(pronto);
+    },
+    aoEscolherArquivo: () => arquivo.click(),
+  });
+}
+
 async function reduzirFoto(original) {
   if (!deveComprimir(original)) return original;
   try {
@@ -288,11 +310,8 @@ async function reduzirFoto(original) {
   }
 }
 
-/** Lê o arquivo escolhido num <input type=file>, já reduzido; inválido → avisa e devolve null. */
-async function lerArquivoEscolhido(entrada) {
-  const original = entrada.files?.[0];
-  entrada.value = ""; // permite escolher o mesmo arquivo de novo
-  if (!original) return null;
+/** Arquivo já reduzido; inválido → avisa e devolve null. */
+async function prepararArquivo(original) {
   const arquivo = await reduzirFoto(original);
   const erro = erroDoComprovante(arquivo);
   if (erro) {
@@ -302,9 +321,21 @@ async function lerArquivoEscolhido(entrada) {
   return arquivo;
 }
 
+/** Lê o arquivo escolhido num <input type=file>, já reduzido; inválido → avisa e devolve null. */
+async function lerArquivoEscolhido(entrada) {
+  const original = entrada.files?.[0];
+  entrada.value = ""; // permite escolher o mesmo arquivo de novo
+  if (!original) return null;
+  return prepararArquivo(original);
+}
+
 async function fotografar(evento) {
   const arquivo = await lerArquivoEscolhido(evento.target);
-  if (!arquivo) return;
+  if (arquivo) await salvarFoto(arquivo);
+}
+
+/** A foto (ou PDF) vira um rascunho em "A completar". */
+async function salvarFoto(arquivo) {
   avisar("Salvando a foto…");
   const { status, corpo } = await criarRascunho(arquivo);
   if (status === 201) {
@@ -334,10 +365,17 @@ function formularioDespesa(config, minhaVez) {
   const aviso = el("p", { id: "aviso-geral", class: "aviso", role: "alert", hidden: true });
 
   const foto = previa(comprovanteUrl, minhaVez);
-  const entradaFoto = el("input", { id: "campo-foto", class: "arquivo-oculto", type: "file", accept: "image/*,application/pdf", capture: "environment", tabindex: "-1", "aria-hidden": "true" });
-  entradaFoto.addEventListener("change", async () => {
-    const arquivo = await lerArquivoEscolhido(entradaFoto);
-    if (!arquivo) return;
+  // Trocar o comprovante: foto pela câmera (só imagem, como na tela inicial) ou arquivo (imagem ou PDF).
+  const entradaFoto = el("input", { id: "campo-foto", class: "arquivo-oculto", type: "file", accept: "image/*", capture: "environment", tabindex: "-1", "aria-hidden": "true" });
+  const entradaArquivo = el("input", { id: "campo-arquivo", class: "arquivo-oculto", type: "file", accept: "image/*,application/pdf", tabindex: "-1", "aria-hidden": "true" });
+  for (const entrada of [entradaFoto, entradaArquivo]) {
+    entrada.addEventListener("change", async () => {
+      const arquivo = await lerArquivoEscolhido(entrada);
+      if (arquivo) trocarComprovante(arquivo);
+    });
+  }
+
+  function trocarComprovante(arquivo) {
     arquivoNovo = arquivo;
     limpar(foto);
     if (arquivo.type.startsWith("image/")) {
@@ -348,7 +386,7 @@ function formularioDespesa(config, minhaVez) {
       foto.append(el("span", { class: "previa__pdf" }, "PDF"));
     }
     limparErro("comprovante");
-  });
+  }
 
   const valor = el("input", { id: "campo-valor", class: "entrada entrada--valor num", type: "text", inputmode: "decimal", autocomplete: "off", placeholder: "R$ 0,00" });
   valor.value = inicial.valor || "";
@@ -449,13 +487,17 @@ function formularioDespesa(config, minhaVez) {
       "form",
       { id: "form-despesa", class: "formulario", novalidate: true, onsubmit: aoEnviar },
       aviso,
-      el(
-        "div",
-        { class: "foto" },
-        foto,
-        trocarFoto ? el("button", { type: "button", class: "foto__trocar", onclick: () => entradaFoto.click() }, "Trocar foto") : null,
-        trocarFoto ? entradaFoto : null,
-      ),
+      el("div", { class: "foto" }, foto),
+      trocarFoto
+        ? el(
+            "div",
+            { class: "foto__acoes" },
+            el("button", { type: "button", id: "botao-tirar-foto", class: "botao botao--sec", onclick: () => pedirFoto({ camera: entradaFoto, arquivo: entradaArquivo, receber: trocarComprovante }) }, icone("camera"), "Tirar outra foto"),
+            el("button", { type: "button", id: "botao-escolher-arquivo", class: "botao botao--sec", onclick: () => entradaArquivo.click() }, icone("galeria"), "Escolher arquivo"),
+            entradaFoto,
+            entradaArquivo,
+          )
+        : null,
       erros.comprovante,
       campo("Valor", valor, erros.valor),
       campo("Projeto", projeto, erros.projeto),

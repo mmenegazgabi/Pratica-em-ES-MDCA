@@ -23,9 +23,16 @@ Despesas, Avisos, Perfil.
 2. **Minhas despesas** (`#/`). Botão "Fotografar comprovante" e, de cima para baixo:
    **Precisa de ajuste** (rejeitadas), **A completar** (fotos sem dados, com
    miniatura e horário) e **Enviadas** (as 5 mais recentes; "Ver todas" mostra o resto).
-3. **Câmera.** "Fotografar comprovante" abre direto a câmera traseira
-   (`capture="environment"`); "Escolher da galeria ou arquivo" abre a galeria
-   (foto ou PDF). Fotos grandes são reduzidas no celular (maior lado com 1600 px,
+3. **Câmera.** "Fotografar comprovante" abre a câmera (`lancamento/camera.js`):
+   - no celular e no tablet (tela de toque), a câmera traseira do aparelho
+     (`capture="environment"`, `accept="image/*"`: com PDF no `accept`, vários
+     navegadores ignoram o `capture` e abrem o seletor de arquivos);
+   - no computador, a webcam na própria página, com prévia, "Tirar foto", "Usar foto"
+     e "Tirar outra";
+   - sem permissão ou sem câmera, um aviso e "Escolher arquivo"; navegador sem acesso
+     à webcam abre o seletor de arquivo direto, com o aviso.
+
+   "Escolher da galeria ou arquivo" abre a galeria ou os arquivos (foto ou PDF). Fotos grandes são reduzidas no celular (maior lado com 1600 px,
    JPEG) e vão para `POST /rascunhos`. Aparece o aviso "Foto salva em "A completar""
    com "Completar agora".
 4. **Completar despesa** (`#/completar/<rascunho>`). Uma tela: foto, valor, projeto,
@@ -35,7 +42,7 @@ Despesas, Avisos, Perfil.
 5. **Despesa** (`#/despesa/<lançamento>`). Valor, status, foto e descrição. Se foi
    rejeitada, o motivo da coordenação aparece em destaque com "Corrigir e reenviar",
    que abre o mesmo formulário já preenchido (`#/corrigir/<lançamento>`, com
-   "Trocar foto") e chama `PATCH /lancamentos/{id}/reenviar`.
+   "Tirar outra foto" e "Escolher arquivo") e chama `PATCH /lancamentos/{id}/reenviar`.
 6. **Avisos** (`#/avisos`). `GET /notificacoes`; ao abrir, as novas são marcadas
    como lidas.
 7. **Perfil** (`#/perfil`). Nome e e-mail da sessão e "Sair" (encerra a sessão da

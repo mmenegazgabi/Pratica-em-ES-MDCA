@@ -149,6 +149,45 @@ function botaoComTexto(tela, texto) {
   return [...tela.window.document.querySelectorAll("button")].find((b) => b.textContent === texto);
 }
 
+/** Faz o computador ou o celular: `toque` simula tela de toque (câmera do aparelho). */
+function simularAparelho(tela, { toque }) {
+  tela.window.matchMedia = (consulta) => ({ matches: toque && consulta === "(pointer: coarse)", media: consulta });
+}
+
+/** Conta os cliques num <input type=file> (o jsdom não abre seletor nenhum). */
+function contarCliques(entrada) {
+  const contagem = { cliques: 0 };
+  entrada.click = () => (contagem.cliques += 1);
+  return contagem;
+}
+
+/**
+ * Webcam simulada: `getUserMedia` resolve com uma trilha (ou rejeita com `erro`), e o
+ * canvas devolve um JPEG. Sem `webcam`, o navegador não tem getUserMedia.
+ */
+function simularWebcam(tela, { erro = null, semWebcam = false } = {}) {
+  const trilha = { paradas: 0, stop() { this.paradas += 1; } };
+  const pedidos = [];
+  const mediaDevices = semWebcam
+    ? undefined
+    : {
+        getUserMedia: async (restricoes) => {
+          pedidos.push(restricoes);
+          if (erro) throw Object.assign(new Error(erro), { name: erro });
+          return { getTracks: () => [trilha] };
+        },
+      };
+  Object.defineProperty(tela.window.navigator, "mediaDevices", { value: mediaDevices, configurable: true });
+  tela.window.HTMLMediaElement.prototype.play = () => Promise.resolve();
+  tela.window.HTMLCanvasElement.prototype.getContext = () => ({ drawImage() {} });
+  tela.window.HTMLCanvasElement.prototype.toBlob = function (pronto, tipo) {
+    pronto(new Blob([new Uint8Array(3000)], { type: tipo }));
+  };
+  return { trilha, pedidos };
+}
+
+const visivel = (no) => Boolean(no) && !no.hidden;
+
 async function enviarFormulario(tela, id) {
   tela.$(id).dispatchEvent(new tela.window.Event("submit", { bubbles: true, cancelable: true }));
   await new Promise((ok) => setTimeout(ok, 20));
@@ -236,7 +275,7 @@ describe("fotografar e completar", { skip: SEM_JSDOM }, () => {
     const tela = await abrirTela();
     await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
     assert.equal(tela.$("campo-camera").getAttribute("capture"), "environment");
-    assert.equal(tela.$("campo-camera").getAttribute("accept"), "image/*,application/pdf");
+    assert.equal(tela.$("campo-camera").getAttribute("accept"), "image/*");
 
     const foto = new File([new Uint8Array(2048)], "nota.jpg", { type: "image/jpeg" });
     Object.defineProperty(tela.$("campo-camera"), "files", { value: [foto], configurable: true });
@@ -365,7 +404,7 @@ describe("despesa rejeitada", { skip: SEM_JSDOM }, () => {
     assert.equal(envio.corpo.has("comprovante"), false);
   });
 
-  test("ao corrigir, 'Trocar foto' manda a foto nova junto", async () => {
+  test("ao corrigir, a foto nova tirada pela câmera vai junto", async () => {
     const tela = await abrirTela({ hash: "#/corrigir/l2" });
     await esperar(() => tela.$("form-despesa"), "formulário de correção");
     const foto = new File([new Uint8Array(100)], "nova.jpg", { type: "image/jpeg" });
@@ -376,6 +415,183 @@ describe("despesa rejeitada", { skip: SEM_JSDOM }, () => {
     await enviarFormulario(tela, "form-despesa");
     await esperar(() => tela.de("PATCH", "/lancamentos/l2/reenviar").length === 1, "reenvio");
     assert.equal(tela.de("PATCH", "/lancamentos/l2/reenviar")[0].corpo.get("comprovante").name, "nova.jpg");
+  });
+});
+
+// --- Câmera: celular, computador e sem permissão -----------------------------
+
+describe("câmera e arquivo do comprovante", { skip: SEM_JSDOM }, () => {
+  test("no celular, 'Fotografar comprovante' abre a câmera do aparelho (só imagem)", async () => {
+    const tela = await abrirTela();
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
+    simularAparelho(tela, { toque: true });
+    const camera = contarCliques(tela.$("campo-camera"));
+    const galeria = contarCliques(tela.$("campo-galeria"));
+
+    tela.$("botao-fotografar").click();
+    assert.equal(camera.cliques, 1);
+    assert.equal(galeria.cliques, 0);
+    assert.equal(tela.$("camera"), null); // nada de webcam na página
+    assert.equal(tela.$("campo-camera").getAttribute("accept"), "image/*");
+    assert.equal(tela.$("campo-camera").getAttribute("capture"), "environment");
+  });
+
+  test("'Escolher da galeria ou arquivo' aceita imagem e PDF, sem câmera", async () => {
+    const tela = await abrirTela();
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
+    const galeria = contarCliques(tela.$("campo-galeria"));
+    botaoComTexto(tela, "Escolher da galeria ou arquivo").click();
+    assert.equal(galeria.cliques, 1);
+    assert.equal(tela.$("campo-galeria").getAttribute("accept"), "image/*,application/pdf");
+    assert.equal(tela.$("campo-galeria").hasAttribute("capture"), false);
+
+    const pdf = new File([new Uint8Array(500)], "nota.pdf", { type: "application/pdf" });
+    Object.defineProperty(tela.$("campo-galeria"), "files", { value: [pdf], configurable: true });
+    tela.$("campo-galeria").dispatchEvent(new tela.window.Event("change"));
+    await esperar(() => tela.de("POST", "/rascunhos").length === 1, "rascunho com o PDF");
+    assert.equal(tela.de("POST", "/rascunhos")[0].corpo.get("comprovante").name, "nota.pdf");
+  });
+
+  test("no computador, a webcam abre na página com prévia; 'Usar foto' salva em 'A completar'", async () => {
+    const tela = await abrirTela();
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
+    simularAparelho(tela, { toque: false });
+    const { trilha, pedidos } = simularWebcam(tela);
+    const camera = contarCliques(tela.$("campo-camera"));
+
+    tela.$("botao-fotografar").click();
+    assert.equal(camera.cliques, 0); // no computador o capture não faria nada
+    await esperar(() => visivel(tela.$("camera-tirar")), "botão Tirar foto");
+    assert.equal(tela.$("camera").getAttribute("role"), "dialog");
+    assert.equal(pedidos[0].audio, false);
+    assert.ok(pedidos[0].video);
+
+    tela.$("camera-tirar").click();
+    await esperar(() => visivel(tela.$("camera-usar")), "prévia da foto");
+    assert.equal(visivel(tela.$("camera-foto")), true);
+    assert.equal(visivel(tela.$("camera-video")), false);
+    assert.equal(visivel(tela.$("camera-outra")), true);
+
+    tela.$("camera-usar").click();
+    await esperar(() => tela.de("POST", "/rascunhos").length === 1, "rascunho com a foto");
+    const enviada = tela.de("POST", "/rascunhos")[0].corpo.get("comprovante");
+    assert.match(enviada.name, /^comprovante-\d{8}-\d{6}\.jpg$/);
+    assert.equal(enviada.type, "image/jpeg");
+    assert.equal(tela.$("camera"), null);
+    assert.equal(trilha.paradas, 1); // a câmera é devolvida ao sistema
+    await esperar(() => /A completar/.test(tela.$("aviso-flutuante").textContent), "aviso da foto");
+  });
+
+  test("'Tirar outra' volta para a imagem da câmera e 'Cancelar' fecha sem enviar", async () => {
+    const tela = await abrirTela();
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
+    simularAparelho(tela, { toque: false });
+    const { trilha } = simularWebcam(tela);
+
+    tela.$("botao-fotografar").click();
+    await esperar(() => visivel(tela.$("camera-tirar")), "botão Tirar foto");
+    tela.$("camera-tirar").click();
+    await esperar(() => visivel(tela.$("camera-outra")), "prévia da foto");
+    tela.$("camera-outra").click();
+    assert.equal(visivel(tela.$("camera-video")), true);
+    assert.equal(visivel(tela.$("camera-tirar")), true);
+    assert.equal(visivel(tela.$("camera-usar")), false);
+
+    tela.$("camera-cancelar").click();
+    assert.equal(tela.$("camera"), null);
+    assert.equal(trilha.paradas, 1);
+    assert.equal(tela.de("POST", "/rascunhos").length, 0);
+  });
+
+  test("sem permissão para a câmera: aviso e 'Escolher arquivo' abre o seletor", async () => {
+    const tela = await abrirTela();
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
+    simularAparelho(tela, { toque: false });
+    simularWebcam(tela, { erro: "NotAllowedError" });
+    const galeria = contarCliques(tela.$("campo-galeria"));
+
+    tela.$("botao-fotografar").click();
+    await esperar(() => visivel(tela.$("camera-aviso")), "aviso de permissão");
+    assert.match(tela.$("camera-aviso").textContent, /Sem permissão para usar a câmera/);
+    assert.equal(visivel(tela.$("camera-tirar")), false);
+
+    tela.$("camera-arquivo").click();
+    assert.equal(galeria.cliques, 1);
+    assert.equal(tela.$("camera"), null);
+  });
+
+  test("computador sem câmera: avisa que não há câmera", async () => {
+    const tela = await abrirTela();
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
+    simularAparelho(tela, { toque: false });
+    simularWebcam(tela, { erro: "NotFoundError" });
+    tela.$("botao-fotografar").click();
+    await esperar(() => visivel(tela.$("camera-aviso")), "aviso sem câmera");
+    assert.match(tela.$("camera-aviso").textContent, /Nenhuma câmera encontrada/);
+    assert.equal(visivel(tela.$("camera-arquivo")), true);
+  });
+
+  test("navegador sem acesso à webcam: aviso e seletor de arquivo direto", async () => {
+    const tela = await abrirTela();
+    await esperar(() => tela.$("secao-enviadas"), "Minhas despesas");
+    simularAparelho(tela, { toque: false });
+    simularWebcam(tela, { semWebcam: true });
+    const galeria = contarCliques(tela.$("campo-galeria"));
+
+    tela.$("botao-fotografar").click();
+    assert.equal(galeria.cliques, 1);
+    assert.equal(tela.$("camera"), null);
+    assert.match(tela.$("aviso-flutuante").textContent, /Nenhuma câmera encontrada/);
+  });
+
+  test("corrigir tem as duas opções: câmera (só imagem) e arquivo (imagem ou PDF)", async () => {
+    const tela = await abrirTela({ hash: "#/corrigir/l2" });
+    await esperar(() => tela.$("form-despesa"), "formulário de correção");
+    assert.equal(tela.$("botao-tirar-foto").textContent, "Tirar outra foto");
+    assert.equal(tela.$("botao-escolher-arquivo").textContent, "Escolher arquivo");
+    assert.equal(tela.$("campo-foto").getAttribute("accept"), "image/*");
+    assert.equal(tela.$("campo-foto").getAttribute("capture"), "environment");
+    assert.equal(tela.$("campo-arquivo").getAttribute("accept"), "image/*,application/pdf");
+    assert.equal(tela.$("campo-arquivo").hasAttribute("capture"), false);
+
+    simularAparelho(tela, { toque: true });
+    const foto = contarCliques(tela.$("campo-foto"));
+    const arquivo = contarCliques(tela.$("campo-arquivo"));
+    tela.$("botao-tirar-foto").click();
+    tela.$("botao-escolher-arquivo").click();
+    assert.equal(foto.cliques, 1);
+    assert.equal(arquivo.cliques, 1);
+  });
+
+  test("ao corrigir, o PDF escolhido em 'Escolher arquivo' vai junto no reenvio", async () => {
+    const tela = await abrirTela({ hash: "#/corrigir/l2" });
+    await esperar(() => tela.$("form-despesa"), "formulário de correção");
+    const pdf = new File([new Uint8Array(300)], "nota-nova.pdf", { type: "application/pdf" });
+    Object.defineProperty(tela.$("campo-arquivo"), "files", { value: [pdf], configurable: true });
+    tela.$("campo-arquivo").dispatchEvent(new tela.window.Event("change"));
+    await esperar(() => /PDF/.test(tela.window.document.querySelector(".foto").textContent), "prévia do PDF");
+
+    await enviarFormulario(tela, "form-despesa");
+    await esperar(() => tela.de("PATCH", "/lancamentos/l2/reenviar").length === 1, "reenvio");
+    assert.equal(tela.de("PATCH", "/lancamentos/l2/reenviar")[0].corpo.get("comprovante").name, "nota-nova.pdf");
+  });
+
+  test("ao corrigir no computador, a foto da webcam vai junto no reenvio", async () => {
+    const tela = await abrirTela({ hash: "#/corrigir/l2" });
+    await esperar(() => tela.$("form-despesa"), "formulário de correção");
+    simularAparelho(tela, { toque: false });
+    simularWebcam(tela);
+
+    tela.$("botao-tirar-foto").click();
+    await esperar(() => visivel(tela.$("camera-tirar")), "botão Tirar foto");
+    tela.$("camera-tirar").click();
+    await esperar(() => visivel(tela.$("camera-usar")), "prévia da foto");
+    tela.$("camera-usar").click();
+    await esperar(() => tela.window.document.querySelector(".foto img[alt='Comprovante novo']"), "prévia da foto nova");
+
+    await enviarFormulario(tela, "form-despesa");
+    await esperar(() => tela.de("PATCH", "/lancamentos/l2/reenviar").length === 1, "reenvio");
+    assert.match(tela.de("PATCH", "/lancamentos/l2/reenviar")[0].corpo.get("comprovante").name, /^comprovante-.*\.jpg$/);
   });
 });
 

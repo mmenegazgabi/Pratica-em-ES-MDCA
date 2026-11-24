@@ -22,8 +22,11 @@
 
   <div id="aviso-flutuante" class="aviso-flutuante" role="status" hidden></div>
 
-  <!-- capture abre direto a câmera traseira; o outro abre galeria/arquivos -->
-  <input id="campo-camera" class="arquivo-oculto" type="file" accept="image/*,application/pdf" capture="environment" tabindex="-1" aria-hidden="true">
+  <!-- capture abre direto a câmera traseira do celular; só imagem, porque com PDF no
+       accept vários navegadores ignoram o capture e abrem o seletor de arquivos.
+       O outro abre galeria/arquivos (foto ou PDF). No computador, a webcam abre na
+       página (camera.js). -->
+  <input id="campo-camera" class="arquivo-oculto" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
   <input id="campo-galeria" class="arquivo-oculto" type="file" accept="image/*,application/pdf" tabindex="-1" aria-hidden="true">
 
   <script type="module" src="./lancamento.js"></script>
