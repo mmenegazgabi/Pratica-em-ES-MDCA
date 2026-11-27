@@ -26,7 +26,7 @@ test("administrador vê todos os itens, inclusive Usuários e acessos", () => {
     "Indicadores e relatórios",
     "Visão integrada",
     "Usuários e acessos",
-    "Trilha de auditoria",
+    "Auditoria",
     "Importação e piloto",
   ]);
 });
@@ -46,8 +46,13 @@ test("educadora vê só programas, pessoas, atividades e indicadores", () => {
   assert.deepEqual(grupos("educator"), ["Programas e público", "Execução e atendimento", "Resultados"]);
 });
 
-test("diretoria consulta resultados, sem cadastros de pessoas nem atendimento técnico", () => {
-  assert.deepEqual(rotulos("director"), ["Visão geral", "Programas e turmas", "Atividades e frequência", "Aprendizagem", "Indicadores e relatórios", "Visão integrada"]);
+test("diretoria consulta resultados e a auditoria, sem cadastros de pessoas nem atendimento técnico", () => {
+  assert.deepEqual(rotulos("director"), ["Visão geral", "Programas e turmas", "Atividades e frequência", "Aprendizagem", "Indicadores e relatórios", "Visão integrada", "Auditoria"]);
+});
+
+test("Auditoria: coordenação, direção, psicologia e administração; os demais não", () => {
+  for (const papel of ["coord", "director", "psych", "admin"]) assert.equal(rotaPermitida(papel, "auditoria"), true, papel);
+  for (const papel of ["educator", "social"]) assert.equal(rotaPermitida(papel, "auditoria"), false, papel);
 });
 
 test("psicólogo abre Acompanhamento técnico direto em Atendimentos", () => {

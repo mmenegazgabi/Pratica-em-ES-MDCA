@@ -17,6 +17,8 @@ const ARQUIVOS = [
   "../Financeiro/style.css",
   // Menu único (abas da Gestão e do Financeiro juntas): importado pelo app.js.
   "../Shared/menu-unificado.js",
+  // Auditoria única: regras da tela (telas/auditoria.js).
+  "../Shared/auditoria-dados.js",
   "../Shared/plataforma.js",
   "../Financeiro/base/sessao.js",
   "./",
@@ -32,6 +34,7 @@ const ARQUIVOS = [
   "base/formulario.js",
   "base/papeis.js",
   "telas/alertas.js",
+  "telas/auditoria.js",
   "telas/atividades.js",
   "telas/equipe.js",
   "telas/indicadores.js",

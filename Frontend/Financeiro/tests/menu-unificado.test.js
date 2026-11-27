@@ -34,8 +34,7 @@ test("coordenação vê as abas dos dois módulos numa lista só, com nomes que 
     "Lançamentos",
     "Projetos",
     "Prestação de contas",
-    "Auditoria da gestão",
-    "Auditoria financeira",
+    "Auditoria",
     "Importação e piloto",
   ]);
 });

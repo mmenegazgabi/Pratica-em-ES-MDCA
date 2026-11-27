@@ -40,7 +40,9 @@ test("coordenação vê as abas da Gestão e do Financeiro numa lista só", asyn
   const lista = rotulos(raiz);
   assert.equal(lista[0], "Visão geral");
   assert.ok(lista.includes("Resumo financeiro"));
-  assert.ok(lista.includes("Auditoria da gestão"));
+  // Uma aba de Auditoria só, a da Gestão (com os dois módulos).
+  assert.deepEqual(lista.filter((r) => r.startsWith("Auditoria")), ["Auditoria"]);
+  assert.equal(itens(raiz).find((a) => a.textContent === "Auditoria").getAttribute("href"), "../Gestao/#/auditoria");
   assert.equal(itens(raiz).find((a) => a.textContent === "Visão geral").getAttribute("href"), "../Gestao/#/inicio");
   assert.deepEqual(
     itens(raiz).filter((a) => a.getAttribute("aria-current") === "page").map((a) => a.textContent),
