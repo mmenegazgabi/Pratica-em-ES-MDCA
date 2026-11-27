@@ -13,9 +13,10 @@ import { temPapel } from "./plataforma.js";
 const PAPEIS_DOS_DOIS_MODULOS = ["coordenacao", "direcao", "educador"];
 
 // Abas com o mesmo nome nos dois módulos ganham nomes diferentes no menu único.
-const NOMES_GESTAO = { "Indicadores e relatórios": "Relatório técnico", "Trilha de auditoria": "Auditoria da gestão" };
-const NOMES_FINANCEIRO = { inicio: "Resumo financeiro", relatorios: "Prestação de contas", auditoria: "Auditoria financeira" };
-const GRUPO_DO_FIM = "Auditoria e implantação"; // fica por último, com a auditoria financeira
+// A Auditoria é uma aba só, da Gestão, com a trilha dos dois módulos (telas/auditoria.js).
+const NOMES_GESTAO = { "Indicadores e relatórios": "Relatório técnico" };
+const NOMES_FINANCEIRO = { inicio: "Resumo financeiro", relatorios: "Prestação de contas" };
+const GRUPO_DO_FIM = "Auditoria e implantação"; // fica por último, depois das abas do Financeiro
 
 // Ícone de cada aba no desenho de cada módulo: {gestao, financeiro}.
 const ICONE_DA_SECAO = {
@@ -44,7 +45,6 @@ const ICONE_DO_FINANCEIRO = {
   projetos: "money",
   conciliacao: "check",
   relatorios: "chart",
-  auditoria: "shield",
   lancar: "plus",
 };
 const icones = ([gestao, financeiro] = ["file", "lancamentos"]) => ({ gestao, financeiro });
@@ -108,10 +108,5 @@ export function menuUnificado(sessao, papel, { modulo, atual = "" } = {}) {
     });
   }
 
-  const auditoriaFinanceira = financeiro.filter((i) => i.id === "auditoria");
-  const outrasDoFinanceiro = financeiro.filter((i) => i.id !== "auditoria");
-  const posAuditoria = fimDaGestao.findIndex((i) => i.rotulo === NOMES_GESTAO["Trilha de auditoria"]) + 1;
-  const fim = [...fimDaGestao.slice(0, posAuditoria), ...auditoriaFinanceira, ...fimDaGestao.slice(posAuditoria)];
-
-  return [...gestao, ...outrasDoFinanceiro, ...fim].map(({ id, ...item }) => item);
+  return [...gestao, ...financeiro, ...fimDaGestao].map(({ id, ...item }) => item);
 }

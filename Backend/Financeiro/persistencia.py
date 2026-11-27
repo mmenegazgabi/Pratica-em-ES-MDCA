@@ -100,10 +100,17 @@ _ids_auditoria = itertools.count(1)
 
 
 def _filtrar_auditoria(
-    eventos, acao: Optional[str], usuario_id: Optional[str], desde: Optional[date], ate: Optional[date]
+    eventos,
+    acao: Optional[str],
+    usuario_id: Optional[str],
+    desde: Optional[date],
+    ate: Optional[date],
+    modulos=("financeiro",),
 ):
     for evento in eventos:
         dia = evento["ocorrido_em"].date()
+        if evento.get("modulo", "financeiro") not in modulos:
+            continue
         if acao and evento["acao"] != acao:
             continue
         if usuario_id and evento["usuario_id"] != usuario_id:
@@ -225,6 +232,7 @@ class RepositorioMemoria:
                 "ocorrido_em": datetime.now(timezone.utc),
                 "usuario_id": usuario_id,
                 "usuario_nome": None,
+                "modulo": "financeiro",
                 "acao": acao,
                 "alvo_tipo": alvo_tipo,
                 "alvo_id": alvo_id,
@@ -234,10 +242,11 @@ class RepositorioMemoria:
         )
 
     def listar_auditoria(
-        self, *, acao=None, usuario_id=None, desde=None, ate=None, pagina=1, tamanho=50
+        self, *, modulos=("financeiro",), acao=None, usuario_id=None, desde=None, ate=None, pagina=1, tamanho=50
     ) -> Tuple[List[Dict[str, Any]], int]:
+        # Sem banco só existe a trilha do Financeiro (a Gestão e o login sempre usam o banco).
         eventos = sorted(
-            _filtrar_auditoria(AUDITORIA_EM_MEMORIA, acao, usuario_id, desde, ate),
+            _filtrar_auditoria(AUDITORIA_EM_MEMORIA, acao, usuario_id, desde, ate, modulos),
             key=lambda e: (e["ocorrido_em"], e["id"]),
             reverse=True,
         )
@@ -728,10 +737,10 @@ class RepositorioBanco:
         )
 
     def listar_auditoria(
-        self, *, acao=None, usuario_id=None, desde=None, ate=None, pagina=1, tamanho=50
+        self, *, modulos=("financeiro",), acao=None, usuario_id=None, desde=None, ate=None, pagina=1, tamanho=50
     ) -> Tuple[List[Dict[str, Any]], int]:
-        filtros = ["l.modulo = 'financeiro'"]
-        parametros: Dict[str, Any] = {}
+        filtros = ["l.modulo = ANY(:modulos)"]
+        parametros: Dict[str, Any] = {"modulos": list(modulos)}
         if acao:
             filtros.append("l.acao = :acao")
             parametros["acao"] = acao
@@ -746,11 +755,15 @@ class RepositorioBanco:
             parametros["ate"] = datetime.combine(ate + timedelta(days=1), datetime.min.time(), timezone.utc)
         onde = " AND ".join(filtros)
         total = self._executar(f"SELECT count(*) FROM log_auditoria l WHERE {onde}", parametros).scalar_one()
+        # alvo_nome: nome da conta quando o alvo é uma pessoa usuária (eventos do login e
+        # da administração, que não gravam descrição).
         linhas = self._executar(
             f"""
-            SELECT l.id, l.ocorrido_em, l.usuario_id, u.nome AS usuario_nome, l.acao, l.alvo_tipo,
-                   l.alvo_id, l.descricao, l.detalhes
-            FROM log_auditoria l LEFT JOIN usuarios u ON u.id = l.usuario_id
+            SELECT l.id, l.ocorrido_em, l.usuario_id, u.nome AS usuario_nome, l.modulo, l.acao,
+                   l.alvo_tipo, l.alvo_id, l.descricao, l.detalhes, a.nome AS alvo_nome
+            FROM log_auditoria l
+            LEFT JOIN usuarios u ON u.id = l.usuario_id
+            LEFT JOIN usuarios a ON a.id = l.alvo_id AND l.alvo_tipo IN ('usuario', 'usuarios')
             WHERE {onde}
             ORDER BY l.ocorrido_em DESC, l.id DESC
             LIMIT :tamanho OFFSET :inicio
