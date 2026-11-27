@@ -101,6 +101,20 @@ evidência e autorizações de imagem vencidas ou revogadas. Na Visão geral, o 
 "Antes de fechar o período" aparece só para quem gera relatórios (coordenação, direção
 e administração).
 
+### Relatório técnico (US-11)
+
+| Ação | Coordenação | Educador | Assist. social | Psicólogo | Direção | Administração |
+|---|---|---|---|---|---|---|
+| Prévia e emissão para consulta interna (com dados pessoais) | Todos | — | — | — | — | Todos |
+| Prévia e emissão para circulação externa (sem dados pessoais) | Todos | — | — | — | Todos | Todos |
+| Histórico de emissões | Todos | — | — | — | Todos | Todos |
+
+Rotas: `POST /gestao/relatorios-tecnicos/previa`, `POST /gestao/relatorios-tecnicos/exportacao?formato=pdf|xlsx`
+e `GET /gestao/relatorios-tecnicos/emissoes`. A seção financeira só entra para quem vê
+valores financeiros. Cada exportação fica na trilha (`relatorio_tecnico_emitido`), e é
+de lá que vem o histórico. A direção só emite para circulação externa porque não vê
+dados individuais das pessoas atendidas.
+
 ### Pessoas atendidas (US-03)
 
 Os cadastros têm dados de crianças e famílias. A Direção não vê cadastros individuais.
@@ -166,7 +180,7 @@ porque ainda não há programa para estar vinculado.
 
 ### Ainda sem rota na API
 
-Atendimentos técnicos (social e psicológico), relatórios e rede ainda não têm API.
+Atendimentos técnicos (social e psicológico) e rede ainda não têm API.
 A consulta à trilha de auditoria já tem (`GET /auditoria`, tela **Auditoria**):
 Coordenação, Direção e Administração veem tudo; a Psicologia vê só os próprios
 registros; detalhes em [permissoes-financeiro.md](permissoes-financeiro.md). A permissão de
@@ -199,6 +213,8 @@ PAPEIS_QUE_ACOMPANHAM_ALERTAS = {"assistente_social"}
 PAPEIS_QUE_CADASTRAM_PESSOAS = {"assistente_social"}
 PAPEIS_QUE_CADASTRAM_PROGRAMAS = {"administracao", "coordenacao"}
 PAPEIS_QUE_CONSULTAM_TODOS = {"administracao", "coordenacao", "direcao"}
+PAPEIS_QUE_EMITEM_RELATORIOS = {"administracao", "coordenacao"}
+PAPEIS_QUE_EMITEM_SO_RELATORIOS_EXTERNOS = {"direcao"}
 PAPEIS_QUE_GERENCIAM_TODOS = {"administracao", "coordenacao"}
 PAPEIS_QUE_REGISTRAM_ATIVIDADES = {"educador"}
 PAPEIS_QUE_VEEM_FINANCEIRO_DE_TODOS = {"administracao", "coordenacao", "direcao"}

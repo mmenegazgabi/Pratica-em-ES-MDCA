@@ -12,6 +12,7 @@ from Gestao.routers.equipe import router as equipe_router
 from Gestao.routers.indicadores import router as indicadores_router
 from Gestao.routers.pessoas import router as pessoas_router
 from Gestao.routers.programas import router as programas_router
+from Gestao.routers.relatorios import router as relatorios_router
 from Gestao.routers.turmas import router as turmas_router
 from Gestao.routers.usuarios import router as usuarios_router
 from Gestao.routers.visao_integrada import router as visao_integrada_router
@@ -26,3 +27,4 @@ router.include_router(atividades_router)
 router.include_router(alertas_router)
 router.include_router(visao_integrada_router)
 router.include_router(indicadores_router)
+router.include_router(relatorios_router)
