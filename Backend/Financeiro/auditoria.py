@@ -47,8 +47,39 @@ ROTULOS = {
 }
 
 
-def rotulo(acao: str) -> str:
-    return ROTULOS.get(acao, acao)
+# Ações dos outros módulos da trilha, para a tela única de Auditoria (GET /auditoria
+# com ``modulo=gestao``, ``plataforma`` ou ``todos``). Os códigos são os que
+# ``Gestao/`` e ``Acesso/`` gravam; um código sem rótulo aparece como veio.
+ROTULOS_DA_GESTAO = {
+    "consulta_visao_integrada": "Consultou a visão integrada",
+    "alerta_infrequencia": "Alerta de infrequência criado",
+    "acao_busca_ativa": "Registrou ação de busca ativa",
+    "alerta_encerrado": "Encerrou alerta de infrequência",
+    "download_evidencia": "Baixou evidência de atividade",
+    "download_documento": "Baixou documento de pessoa atendida",
+    "duplicidade_confirmada": "Cadastrou pessoa com possível duplicidade",
+    "autorizacao_revogada": "Revogou autorização",
+    "conflito_de_horario": "Matrícula com conflito de horário",
+    ACESSO_NEGADO: "Acesso negado",
+}
+ROTULOS_DA_PLATAFORMA = {
+    "login": "Entrou no sistema",
+    "login_falhou": "Tentativa de entrar sem sucesso",
+    "logout": "Saiu do sistema",
+    "primeiro_acesso": "Fez o primeiro acesso",
+    "usuario_criado": "Cadastrou conta",
+    "usuario_editado": "Editou conta",
+    "usuario_desativado": "Desativou conta",
+    "usuario_reativado": "Reativou conta",
+    "codigo_gerado": "Gerou código de acesso",
+    "codigo_emitido": "Emitiu código de primeiro acesso",
+    ACESSO_NEGADO: "Acesso negado",
+}
+_ROTULOS_POR_MODULO = {"financeiro": ROTULOS, "gestao": ROTULOS_DA_GESTAO, "plataforma": ROTULOS_DA_PLATAFORMA}
+
+
+def rotulo(acao: str, modulo: str = MODULO) -> str:
+    return _ROTULOS_POR_MODULO.get(modulo, ROTULOS).get(acao, acao)
 
 
 def alvo(*partes: Optional[str]) -> str:

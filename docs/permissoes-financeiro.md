@@ -43,7 +43,7 @@ mesmos da Gestão. Implementação: `Backend/Financeiro/autenticacao.py`; testes
 | Ver extrato importado | `GET /extrato` | Sim | Sim | Sim | — |
 | Dashboard da Diretoria | `GET /dashboard/projetos` | — | Sim | — | — |
 | Prestação de contas (PDF/XLSX) | `GET /relatorios/prestacao-contas` | Sim | Sim | — | — |
-| Auditoria do Financeiro | `GET /auditoria?modulo=financeiro` | Sim | Sim | — | — |
+| Auditoria (trilha única) | `GET /auditoria?modulo=…` | Sim | Sim | — | — |
 | Notificações e rascunhos | `/notificacoes`, `/rascunhos` | Os próprios | Os próprios | Os próprios | Os próprios |
 
 Sem login, todas as rotas acima respondem **401**.
@@ -56,6 +56,22 @@ conciliar lançamento; importar extrato bancário (quando entra algum item novo)
 prestação de contas; e todo **acesso negado (403)**, com quem
 tentou e a rota. A trilha é só de leitura. Detalhes em
 [persistencia-financeiro.md](persistencia-financeiro.md).
+
+### Tela única de Auditoria
+
+`GET /auditoria` lê a trilha dos três módulos: `modulo=financeiro` (o padrão),
+`gestao`, `plataforma` (login e administração de contas) ou `todos`. Cada item traz o
+`modulo`. Quem lê:
+
+- Coordenação, Direção e Administração: tudo;
+- Psicologia: só os registros feitos pela própria pessoa (a resposta vem com
+  `escopo: "proprios"`, e o filtro `usuario_id` não abre os dos outros);
+- os demais papéis: **403**, e a tentativa fica na trilha.
+
+Os papéis vêm da sessão (papéis da plataforma e vínculos ativos). A tela é uma só, na
+Gestão (`Frontend/Gestao/telas/auditoria.js`, aba **Auditoria** do menu único e do menu
+da Gestão), com coluna e filtro de módulo. O Financeiro não tem mais tela própria:
+`#/auditoria` no Financeiro leva para ela.
 
 ## Decisões em aberto (para o time)
 

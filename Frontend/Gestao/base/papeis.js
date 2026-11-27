@@ -22,7 +22,7 @@ export const DESCRICOES = {
   educator: "Registra atividades, frequência e evidências apenas nos programas em que atua.",
   social: "Acompanha famílias, atendimentos sociais, busca ativa e retornos da rede.",
   psych: "Consulta e registra atendimentos psicológicos. Acesso restrito aos próprios registros.",
-  director: "Consulta indicadores, relatórios técnicos e dados integrados, sem editar cadastros.",
+  director: "Consulta indicadores, relatórios técnicos, dados integrados e a auditoria, sem editar cadastros.",
   admin: "Acessa e gerencia todas as áreas da plataforma, incluindo usuários, perfis e programas de cada conta.",
 };
 
@@ -32,7 +32,7 @@ const TAREFAS = {
   technical: ["social", "psych"],
   social: ["social"],
   psych: ["psych"],
-  audit: ["coord", "psych"],
+  audit: ["coord", "psych", "director"],
   finance: ["coord", "director"],
   report: ["coord", "director"],
   record: ["coord", "educator"],
@@ -65,7 +65,7 @@ export const MENU = [
   ["Programas e público", [["Visão geral", ["inicio"]], ["Programas e turmas", ["programas", "turmas", "projetos"]], ["Pessoas e famílias", ["pessoas"]]]],
   ["Execução e atendimento", [["Atividades e frequência", ["atividades", "sincronizacao"]], ["Acompanhamento técnico", ["alertas", "atendimentos", "rede"]], ["Aprendizagem", ["aprendizagem"]]]],
   ["Resultados", [["Indicadores e relatórios", ["indicadores", "relatorios"]], ["Visão integrada", ["integracao"]]]],
-  ["Auditoria e implantação", [["Usuários e acessos", ["usuarios"]], ["Trilha de auditoria", ["auditoria"]], ["Importação e piloto", ["importacao"]]]],
+  ["Auditoria e implantação", [["Usuários e acessos", ["usuarios"]], ["Auditoria", ["auditoria"]], ["Importação e piloto", ["importacao"]]]],
 ];
 
 // Abas que ligam telas irmãs agrupadas no mesmo item do menu.

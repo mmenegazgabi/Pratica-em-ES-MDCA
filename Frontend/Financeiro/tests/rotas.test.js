@@ -47,7 +47,8 @@ test("telas novas: conciliação, relatórios e auditoria por papel", () => {
   assert.equal(rotaPermitida("conciliacao", "coordenacao"), false);
   assert.equal(rotaPermitida("relatorios", "direcao"), true);
   assert.equal(rotaPermitida("relatorios", "voluntario_financeiro"), false);
-  assert.equal(rotaPermitida("auditoria", "coordenacao"), true);
+  // A Auditoria saiu do Financeiro: é uma tela só, na Gestão (o app leva #/auditoria para lá).
+  assert.equal(rotaPermitida("auditoria", "coordenacao"), false);
   assert.equal(rotaPermitida("auditoria", "voluntario_financeiro"), false);
 });
 
