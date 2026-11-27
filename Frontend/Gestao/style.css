@@ -426,6 +426,8 @@ h1[tabindex="-1"]:focus{outline:none}
 .integrada-vinculo{margin-top:16px;font-size:12px}
 /* Visão geral (T-91): os três números do mês entram na mesma grade do cartão de alertas. */
 .visao-geral-numeros{display:contents}
+/* Relatório técnico (T-76): aviso de pendências antes da versão final. */
+.aviso-pendencias{margin:0 0 12px;padding:10px 14px;font-size:13px;border-left:3px solid var(--status-pending);background:color-mix(in srgb,var(--status-pending) 12%,var(--paper))}
 /* Indicadores (T-73): aviso do período e metas por programa. */
 .indicadores-periodo{margin:0;font-size:13px;color:var(--color-neutral-700)}.indicadores-periodo.em-aberto{padding:10px 14px;border-left:3px solid var(--status-pending);background:color-mix(in srgb,var(--status-pending) 12%,var(--paper))}.indicadores-meta .progress-label{display:flex;justify-content:space-between;gap:12px}
 .integrada-grid .meta-percentual{min-width:110px}

@@ -285,6 +285,22 @@ export function obterPendencias({ programaId = "", inicio = "", fim = "" } = {})
   return requisitar(`/gestao/pendencias${consulta ? `?${consulta}` : ""}`);
 }
 
+// Relatório técnico (T-75 · US-11).
+/**
+ * pedido: { programa_id, inicio?, fim?, finalidade: "interna"|"externa", secoes: [...], evidencias?: [ids] | null }
+ * Prévia: { titulo, cabecalho: [[rótulo, valor]], conteudo: [{ titulo, colunas, linhas, nota, vazio }], rodape,
+ *           pendencias: [{ tipo, descricao, quantidade }], evidencias_disponiveis: [{ id, data, turma, liberada_externa }],
+ *           finalidades_permitidas, periodo, secoes, programa }
+ */
+export const obterPreviaDoRelatorio = (pedido) => requisitar("/gestao/relatorios-tecnicos/previa", { metodo: "POST", dados: pedido });
+
+/** Arquivo do relatório (Blob); a emissão entra no histórico. formato: "pdf" | "xlsx". */
+export const exportarRelatorio = (pedido, formato) =>
+  requisitar(`/gestao/relatorios-tecnicos/exportacao?formato=${encodeURIComponent(formato)}`, { metodo: "POST", dados: pedido, arquivo: true, tempoLimite: 60000 });
+
+/** [{ momento, usuario, programa_id, programa, inicio, fim, finalidade, secoes, formato }] */
+export const listarEmissoes = () => requisitar("/gestao/relatorios-tecnicos/emissoes");
+
 // Pessoas atendidas, famílias e autorizações (T-48 · US-03; telas da T-49).
 const pessoa = (id) => `/gestao/pessoas/${encodeURIComponent(id)}`;
 
