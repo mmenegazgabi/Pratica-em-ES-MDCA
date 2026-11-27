@@ -11,6 +11,7 @@ export function lerRota(hash) {
   if (nome === "projetos" && id) return { tela: "projeto", parametros: { id: decodeURIComponent(id) } };
   if (nome === "projetos") return { tela: "projetos", parametros };
   if (["painel", "conciliacao", "relatorios", "auditoria"].includes(nome)) return { tela: nome, parametros };
+  // "auditoria" continua sendo lida para levar links antigos à tela única, na Gestão.
   return { tela: "inicio", parametros: {} };
 }
 

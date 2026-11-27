@@ -10,6 +10,7 @@ import { atualizarUsuario, lerSessao as lerSessaoDaPlataforma, sair as sairDaPla
 import { menuUnificado, sincronizarPapel } from "../Shared/menu-unificado.js";
 
 const INICIO_DA_PLATAFORMA = "../";
+const AUDITORIA_UNICA = "../Gestao/#/auditoria";
 
 export { definirContador } from "./base/contador.js";
 
@@ -140,6 +141,8 @@ export function iniciar(raiz, { redirecionar = (destino) => window.location.assi
 
     if (!sessao.papel || (tela === "papel" && variosPapeis)) return telaEntrarComo(papeis, tela);
     if (sessao.papel === "educador") return redirecionar("lancamento/");
+    // A Auditoria é uma tela só, na Gestão (com os três módulos); links antigos vão para lá.
+    if (tela === "auditoria") return redirecionar(AUDITORIA_UNICA);
     if (tela === "papel" || !rotaPermitida(tela, sessao.papel)) return navegar("#/inicio");
 
     const container = el("main", { class: "principal" }, el("p", { class: "carregando", role: "status" }, "Carregando…"));

@@ -12,7 +12,7 @@ import {
   totais,
   validarPeriodo,
 } from "../telas/painel-dados.js";
-import { filtrarAuditoria, formatarQuando, filtrosDaApi as filtrosDaAuditoria, intervaloDaPagina, ultimaPagina } from "../telas/auditoria-dados.js";
+import { filtrarAuditoria, formatarQuando, filtrosDaApi as filtrosDaAuditoria, intervaloDaPagina, rotuloDoModulo, ultimaPagina } from "../../Shared/auditoria-dados.js";
 
 describe("painel", () => {
   test("filtros da tela viram parâmetros da API; 'todos' e vazios ficam de fora", () => {
@@ -69,6 +69,18 @@ describe("auditoria", () => {
     assert.deepEqual(filtrarAuditoria(registros, "LEITURA").map((r) => r.quem), ["Luana"]);
   });
 
+  test("módulo na busca e no rótulo", () => {
+    const registros = [
+      { quem: "Luana", acao: "Aprovou despesa", alvo: "Leitura", modulo: "financeiro" },
+      { quem: "Paula", acao: "Baixou documento de pessoa atendida", alvo: null, modulo: "gestao" },
+    ];
+    assert.deepEqual(filtrarAuditoria(registros, "gestão").map((r) => r.quem), ["Paula"]);
+    assert.equal(rotuloDoModulo("gestao"), "Gestão");
+    assert.equal(rotuloDoModulo("plataforma"), "Acesso e contas");
+    assert.equal(rotuloDoModulo("todos"), "todos");
+    assert.equal(rotuloDoModulo("outro"), "outro");
+  });
+
   test("horário em Brasília, inclusive na virada do dia em UTC", () => {
     assert.equal(formatarQuando("2026-11-11T21:06:00+00:00"), "11/11/2026 18:06");
     assert.equal(formatarQuando("2026-11-12T01:30:00Z"), "11/11/2026 22:30");
@@ -76,7 +88,8 @@ describe("auditoria", () => {
   });
 
   test("parâmetros, intervalo e última página", () => {
-    assert.deepEqual(filtrosDaAuditoria({ desde: "", ate: "2026-11-11", pagina: 2 }), { desde: "", ate: "2026-11-11", pagina: 2, tamanho: 50 });
+    assert.deepEqual(filtrosDaAuditoria({ desde: "", ate: "2026-11-11", pagina: 2 }), { modulo: "todos", desde: "", ate: "2026-11-11", pagina: 2, tamanho: 50 });
+    assert.equal(filtrosDaAuditoria({ modulo: "gestao" }).modulo, "gestao");
     assert.equal(intervaloDaPagina(1, 50, 0), "Nenhum registro");
     assert.equal(intervaloDaPagina(1, 50, 3), "1–3 de 3");
     assert.equal(intervaloDaPagina(3, 50, 120), "101–120 de 120");

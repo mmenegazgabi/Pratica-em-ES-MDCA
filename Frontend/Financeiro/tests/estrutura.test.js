@@ -44,7 +44,7 @@ test("sem sessão da plataforma vai para a página inicial", () => {
 test("papel único entra direto no Início, com o nome do banco e o papel", async () => {
   sessaoDeTeste({ papeis: ["direcao"], nome: "Jane Almeida" });
   await irPara("#/inicio");
-  assert.deepEqual(rotulos(), ["Resumo financeiro", "Painel", "Projetos", "Prestação de contas", "Auditoria financeira"]);
+  assert.deepEqual(rotulos(), ["Resumo financeiro", "Painel", "Projetos", "Prestação de contas"]);
   assert.equal(raiz.querySelector('[aria-current="page"]').textContent.replace(/\d+$/, ""), "Resumo financeiro");
   const usuario = raiz.querySelector(".lateral__usuario").textContent;
   assert.match(usuario, /Jane Almeida/);
@@ -108,7 +108,7 @@ test("Trocar papel abre 'Entrar como' e a nova escolha vale", async () => {
   await esperar();
   assert.equal(window.location.hash, "#/inicio");
   assert.equal(localStorage.getItem("mdca.financeiro.papel"), "coordenacao");
-  assert.deepEqual(rotulos(), ["Resumo financeiro", "Lançamentos", "Projetos", "Prestação de contas", "Auditoria financeira"]);
+  assert.deepEqual(rotulos(), ["Resumo financeiro", "Lançamentos", "Projetos", "Prestação de contas"]);
 });
 
 test("papel salvo que a pessoa perdeu é ignorado", async () => {
@@ -160,4 +160,11 @@ test("Sair chama /auth/sair, apaga a sessão e volta à página inicial", async 
   assert.equal(localStorage.getItem("mdca.sessao"), null);
   assert.equal(localStorage.getItem("mdca.financeiro.papel"), null);
   assert.deepEqual(redirecionamentos, ["../"]);
+});
+
+test("#/auditoria leva à Auditoria única, na Gestão", async () => {
+  sessaoDeTeste({ papeis: ["coordenacao"], nome: "Luana Ferraz" });
+  redirecionamentos.length = 0;
+  await irPara("#/auditoria");
+  assert.deepEqual(redirecionamentos, ["../Gestao/#/auditoria"]);
 });

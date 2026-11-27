@@ -256,6 +256,18 @@ export function obterVisaoIntegrada(programaId, { inicio = "", fim = "" } = {}) 
   return requisitar(`${programa(programaId)}/visao-integrada${consulta ? `?${consulta}` : ""}`);
 }
 
+/**
+ * Trilha única de auditoria (GET /auditoria): `modulo` = todos, gestao, financeiro ou
+ * plataforma; `desde`/`ate` em AAAA-MM-DD; `pagina` e `tamanho`. Vazios ficam de fora.
+ * Resposta: { itens, total, pagina, tamanho, escopo } ("proprios" para a Psicologia).
+ */
+export function listarAuditoria(filtros = {}) {
+  const busca = new URLSearchParams();
+  for (const [chave, valor] of Object.entries(filtros)) if (valor !== "" && valor !== undefined && valor !== null) busca.set(chave, String(valor));
+  const consulta = busca.toString();
+  return requisitar(`/auditoria${consulta ? `?${consulta}` : ""}`);
+}
+
 // Pessoas atendidas, famílias e autorizações (T-48 · US-03; telas da T-49).
 const pessoa = (id) => `/gestao/pessoas/${encodeURIComponent(id)}`;
 

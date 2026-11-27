@@ -75,13 +75,12 @@ const ITENS = {
   projetos: { id: "projetos", rotulo: "Projetos", icone: "projetos", rota: "#/projetos" },
   conciliacao: { id: "conciliacao", rotulo: "Conciliação", icone: "conciliacao", rota: "#/conciliacao" },
   relatorios: { id: "relatorios", rotulo: "Relatórios", icone: "relatorios", rota: "#/relatorios" },
-  auditoria: { id: "auditoria", rotulo: "Auditoria", icone: "auditoria", rota: "#/auditoria" },
 };
 
 const MENU_POR_PAPEL = {
-  coordenacao: ["inicio", "lancamentos", "projetos", "relatorios", "auditoria"],
+  coordenacao: ["inicio", "lancamentos", "projetos", "relatorios"],
   // O painel é o dashboard da Diretoria (US-07): a API só responde para a Direção.
-  direcao: ["inicio", "painel", "projetos", "relatorios", "auditoria"],
+  direcao: ["inicio", "painel", "projetos", "relatorios"],
   voluntario_financeiro: ["inicio", "lancamentos", "conciliacao"],
   educador: [],
 };
