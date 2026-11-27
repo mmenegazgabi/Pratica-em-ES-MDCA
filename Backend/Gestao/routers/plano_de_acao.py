@@ -16,6 +16,7 @@ from sqlalchemy.engine import Connection
 # Acesso por programa (T-87): quem chama vem da sessão do login único (ou do token de
 # serviço com X-Usuario-Id, em testes) e os papéis vêm do banco.
 from Gestao.acesso import Acesso, exigir_consulta_ao_programa, exigir_gestao_do_programa
+from Gestao import auditoria
 from Gestao import plano_de_acao as plano
 from Gestao.banco import obter_conexao
 from Gestao.programas import ErroDeCadastro
@@ -144,6 +145,14 @@ def cadastrar_objetivo(
         objetivo = plano.cadastrar_objetivo(conexao, programa_id, descricao=dados.descricao)
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=_acesso.usuario_id,
+        acao=auditoria.OBJETIVO_CADASTRADO,
+        alvo_tipo="objetivo",
+        alvo_id=objetivo.id,
+        programa_id=programa_id,
+    )
     conexao.commit()
     return objetivo
 
@@ -171,6 +180,14 @@ def cadastrar_acao(
         acao = plano.cadastrar_acao(conexao, programa_id, **dados.model_dump())
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=_acesso.usuario_id,
+        acao=auditoria.ACAO_CADASTRADA,
+        alvo_tipo="acao",
+        alvo_id=acao.id,
+        programa_id=programa_id,
+    )
     conexao.commit()
     return acao
 
@@ -198,6 +215,14 @@ def cadastrar_meta(
         meta = plano.cadastrar_meta(conexao, programa_id, **dados.model_dump())
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=_acesso.usuario_id,
+        acao=auditoria.META_CADASTRADA,
+        alvo_tipo="meta",
+        alvo_id=meta.id,
+        programa_id=programa_id,
+    )
     conexao.commit()
     return meta
 
@@ -227,6 +252,15 @@ def registrar_realizado(
         registro = plano.registrar_realizado(conexao, programa_id, meta_id, **dados.model_dump())
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=_acesso.usuario_id,
+        acao=auditoria.REALIZADO_REGISTRADO,
+        alvo_tipo="registro_meta",
+        alvo_id=registro.id,
+        programa_id=programa_id,
+        detalhes={"meta_id": meta_id},
+    )
     conexao.commit()
     return registro
 

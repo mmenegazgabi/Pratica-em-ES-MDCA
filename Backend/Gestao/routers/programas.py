@@ -8,7 +8,7 @@ from sqlalchemy.engine import Connection
 # Acesso por programa (T-87): quem chama vem de ``exigir_usuario`` (código de acesso com
 # X-Usuario-Id, ou o token de sessão do login da T-35) e os papéis vêm do banco.
 from Financeiro.autenticacao import exigir_usuario
-from Gestao import programas
+from Gestao import auditoria, programas
 from Gestao.acesso import (
     Acesso,
     exigir_cadastro_de_programa,
@@ -92,6 +92,14 @@ def cadastrar(
         programa = programas.cadastrar_programa(conexao, **dados.model_dump())
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=_usuario,
+        acao=auditoria.PROGRAMA_CADASTRADO,
+        alvo_tipo="programa",
+        alvo_id=programa.id,
+        programa_id=programa.id,
+    )
     conexao.commit()
     return programa
 
@@ -108,6 +116,15 @@ def editar(
         programa = programas.editar_programa(conexao, programa_id, dados.model_dump(exclude_unset=True))
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=_acesso.usuario_id,
+        acao=auditoria.PROGRAMA_EDITADO,
+        alvo_tipo="programa",
+        alvo_id=programa_id,
+        programa_id=programa_id,
+        detalhes={"campos": sorted(dados.model_dump(exclude_unset=True))},
+    )
     conexao.commit()
     return programa
 

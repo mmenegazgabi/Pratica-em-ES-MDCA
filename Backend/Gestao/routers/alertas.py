@@ -136,7 +136,17 @@ def obter_alerta(
     conexao: Connection = Depends(obter_conexao),
 ) -> alertas.Alerta:
     _acesso_ao_alerta(conexao, usuario_id, alerta_id, requisicao)
-    return alertas.obter(conexao, alerta_id)
+    alerta = alertas.obter(conexao, alerta_id)
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=usuario_id,
+        acao=auditoria.CONSULTA_ALERTA,
+        alvo_tipo="alerta",
+        alvo_id=alerta_id,
+        programa_id=alerta.programa_id,
+    )
+    conexao.commit()
+    return alerta
 
 
 @router.post("/alertas/{alerta_id}/acoes", response_model=AlertaSaida, status_code=201)

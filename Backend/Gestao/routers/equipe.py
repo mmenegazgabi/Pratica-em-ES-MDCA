@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Connection
 
-from Gestao import equipe
+from Gestao import auditoria, equipe
 from Gestao.acesso import Acesso, exigir_consulta_ao_programa, exigir_gestao_do_programa
 from Gestao.banco import obter_conexao
 
@@ -83,6 +83,15 @@ def vincular(
         )
     except equipe.ErroDeEquipe as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.VINCULO_CADASTRADO,
+        alvo_tipo="vinculo",
+        alvo_id=vinculo.id,
+        programa_id=acesso.programa_id,
+        detalhes={"usuario_vinculado": vinculo.usuario_id, "papel_id": vinculo.papel_id},
+    )
     conexao.commit()
     return vinculo
 
@@ -100,6 +109,14 @@ def registrar_desligamento(
         )
     except equipe.ErroDeEquipe as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.VINCULO_DESLIGADO,
+        alvo_tipo="vinculo",
+        alvo_id=vinculo_id,
+        programa_id=acesso.programa_id,
+    )
     conexao.commit()
     return vinculo
 
@@ -124,5 +141,13 @@ def criar_espaco(
         )
     except equipe.ErroDeEquipe as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.ESPACO_CADASTRADO,
+        alvo_tipo="espaco",
+        alvo_id=espaco.id,
+        programa_id=acesso.programa_id,
+    )
     conexao.commit()
     return espaco

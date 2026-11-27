@@ -263,6 +263,14 @@ def cadastrar_pessoa(
         )
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=usuario_id,
+        acao=auditoria.PESSOA_CADASTRADA,
+        alvo_tipo="pessoa",
+        alvo_id=pessoa.id,
+        programa_id=dados.programa_id,
+    )
     if duplicados:
         auditoria.registrar(
             conexao,
@@ -280,10 +288,20 @@ def cadastrar_pessoa(
 @router.get("/pessoas/{pessoa_id}", response_model=PessoaSaida)
 def obter_pessoa(
     pessoa_id: str,
-    _acesso: AcessoAPessoas = Depends(exigir_consulta_a_pessoa),
+    acesso: AcessoAPessoas = Depends(exigir_consulta_a_pessoa),
     conexao: Connection = Depends(obter_conexao),
 ):
-    return pessoas.obter(conexao, pessoa_id)
+    pessoa = pessoas.obter(conexao, pessoa_id)
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.CONSULTA_PESSOA,
+        alvo_tipo="pessoa",
+        alvo_id=pessoa_id,
+        programa_id=acesso.programa_id,
+    )
+    conexao.commit()
+    return pessoa
 
 
 @router.get("/pessoas/{pessoa_id}/trajetoria", response_model=List[EventoSaida])
@@ -298,20 +316,38 @@ def obter_trajetoria(
     para quem acompanha os alertas do programa.
     """
     ve = acompanha_alertas(conexao, acesso.usuario_id, acesso.programa_id)
-    return trajetoria.trajetoria(conexao, pessoa_id, ve_acompanhamento=ve)
+    eventos = trajetoria.trajetoria(conexao, pessoa_id, ve_acompanhamento=ve)
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.CONSULTA_TRAJETORIA,
+        alvo_tipo="pessoa",
+        alvo_id=pessoa_id,
+        programa_id=acesso.programa_id,
+    )
+    conexao.commit()
+    return eventos
 
 
 @router.post("/pessoas/{pessoa_id}/responsaveis", response_model=PessoaSaida, status_code=201)
 def incluir_responsavel(
     pessoa_id: str,
     dados: ResponsavelEntrada,
-    _acesso: AcessoAPessoas = Depends(exigir_cadastro_na_pessoa),
+    acesso: AcessoAPessoas = Depends(exigir_cadastro_na_pessoa),
     conexao: Connection = Depends(obter_conexao),
 ):
     try:
         pessoa = pessoas.incluir_responsavel(conexao, pessoa_id, dados.para_dominio())
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.RESPONSAVEL_INCLUIDO,
+        alvo_tipo="pessoa",
+        alvo_id=pessoa_id,
+        programa_id=acesso.programa_id,
+    )
     conexao.commit()
     return pessoa
 
@@ -359,6 +395,15 @@ async def registrar_documento(
         )
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.DOCUMENTO_ENVIADO,
+        alvo_tipo="documento_pessoa",
+        alvo_id=documento.id,
+        programa_id=acesso.programa_id,
+        detalhes={"pessoa_id": pessoa_id, "tipo": tipo},
+    )
     conexao.commit()
     return documento
 
@@ -418,6 +463,15 @@ def registrar_autorizacao(
         )
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.AUTORIZACAO_REGISTRADA,
+        alvo_tipo="autorizacao",
+        alvo_id=autorizacao.id,
+        programa_id=acesso.programa_id,
+        detalhes={"pessoa_id": pessoa_id, "tipo": autorizacao.tipo},
+    )
     conexao.commit()
     return autorizacao
 

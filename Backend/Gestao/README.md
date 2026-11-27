@@ -86,6 +86,25 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 400 (usuário ou papel inexistente, papel `coordenacao` — que é da conta, não de vínculo —,
 saída antes da entrada) e 422 (corpo inválido).
 
+### Auditoria (US-13)
+
+Tudo vai para a trilha única (`log_auditoria`), por `Gestao/auditoria.py`, na mesma
+transação da ação: se ela falhar, o evento também não fica. A consulta é a tela única de
+Auditoria (`GET /auditoria`), com filtros por módulo, pessoa, ação e período.
+
+- **Consultas a dados sensíveis:** cadastro e trajetória de uma pessoa, chamada de um
+  encontro e alerta de infrequência. Listas não entram, só a abertura de um registro.
+- **Alterações:** programas, plano de ação, equipe, espaços, pessoas, responsáveis,
+  documentos, autorizações, turmas, matrículas, lista de espera, encontros e evidências.
+  O reenvio de um encontro ou evidência pela fila offline não duplica o evento.
+- **Também:** acessos negados, downloads, alertas automáticos e relatórios emitidos.
+- **Cada evento** guarda quem fez, quando, a ação, o item (`alvo_tipo` e `alvo_id`) e o
+  programa. O detalhe mostra o tipo e o programa (ex.: "Pessoa atendida · Semear"), sem
+  nome de pessoa atendida.
+- **Rótulos da tela** ("Consultou cadastro de pessoa atendida"): ficam em `ROTULOS`, em
+  `Gestao/auditoria.py`. O `Financeiro/auditoria.py` lê de lá. Um teste confere que toda
+  ação gravada pela Gestão tem rótulo.
+
 ## Acesso às rotas de programa (provisório até a T-33)
 
 - O backend aceita a sessão do login único (`docs/login.md`): com o token da sessão,

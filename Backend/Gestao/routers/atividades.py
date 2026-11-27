@@ -210,6 +210,15 @@ def registrar_atividade(
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
     if criada:
+        auditoria.registrar_evento(
+            conexao,
+            usuario_id=acesso.usuario_id,
+            acao=auditoria.ENCONTRO_REGISTRADO,
+            alvo_tipo="atividade",
+            alvo_id=atividade.id,
+            programa_id=acesso.programa_id,
+            detalhes={"turma_id": turma_id, "data": atividade.data.isoformat()},
+        )
         # US-06: quem atingiu o limite de faltas do programa ganha um alerta para a equipe.
         for alerta_id in alertas.avaliar_chamada(conexao, atividade.id):
             auditoria.registrar(
@@ -234,7 +243,18 @@ def obter_atividade(
     acesso: Acesso = Depends(exigir_consulta_ao_programa),
     conexao: Connection = Depends(obter_conexao),
 ) -> atividades.Atividade:
-    return _atividade_visivel(conexao, acesso, atividade_id, requisicao)
+    atividade = _atividade_visivel(conexao, acesso, atividade_id, requisicao)
+    # A chamada traz o nome e a presença de cada pessoa: a consulta fica na trilha.
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.CONSULTA_CHAMADA,
+        alvo_tipo="atividade",
+        alvo_id=atividade_id,
+        programa_id=acesso.programa_id,
+    )
+    conexao.commit()
+    return atividade
 
 
 @router.post("/atividades/{atividade_id}/evidencias", response_model=EvidenciaSaida, status_code=201)
@@ -290,6 +310,16 @@ async def enviar_evidencia(
         content_type=tipo.content_type,
         tamanho=len(conteudo),
     )
+    if criada:
+        auditoria.registrar_evento(
+            conexao,
+            usuario_id=acesso.usuario_id,
+            acao=auditoria.EVIDENCIA_ENVIADA,
+            alvo_tipo="evidencia",
+            alvo_id=evidencia.id,
+            programa_id=acesso.programa_id,
+            detalhes={"atividade_id": atividade_id},
+        )
     conexao.commit()
     if not criada:
         resposta.status_code = 200

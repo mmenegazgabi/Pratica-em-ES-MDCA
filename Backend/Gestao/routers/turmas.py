@@ -162,6 +162,14 @@ def cadastrar_turma(
         turma = turmas.cadastrar_turma(conexao, acesso.programa_id, dados.model_dump(), usuario_id=acesso.usuario_id)
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.TURMA_CADASTRADA,
+        alvo_tipo="turma",
+        alvo_id=turma.id,
+        programa_id=acesso.programa_id,
+    )
     conexao.commit()
     return turma
 
@@ -196,6 +204,15 @@ def editar_turma(
         turma = turmas.editar_turma(conexao, acesso.programa_id, turma_id, dados.model_dump(exclude_unset=True))
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.TURMA_EDITADA,
+        alvo_tipo="turma",
+        alvo_id=turma_id,
+        programa_id=acesso.programa_id,
+        detalhes={"campos": sorted(dados.model_dump(exclude_unset=True))},
+    )
     conexao.commit()
     return turma
 
@@ -215,6 +232,15 @@ def inscrever(
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
     _alertar_conflitos(conexao, acesso, turma_id, inscricao)
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.INSCRICAO_REGISTRADA,
+        alvo_tipo="matricula",
+        alvo_id=inscricao.matricula.id,
+        programa_id=acesso.programa_id,
+        detalhes={"turma_id": turma_id, "pessoa_id": inscricao.matricula.pessoa_id, "situacao": inscricao.matricula.situacao},
+    )
     conexao.commit()
     return inscricao
 
@@ -231,6 +257,15 @@ def chamar_lista_de_espera(
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
     _alertar_conflitos(conexao, acesso, turma_id, inscricao)
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.LISTA_DE_ESPERA_CHAMADA,
+        alvo_tipo="matricula",
+        alvo_id=inscricao.matricula.id,
+        programa_id=acesso.programa_id,
+        detalhes={"turma_id": turma_id, "pessoa_id": inscricao.matricula.pessoa_id},
+    )
     conexao.commit()
     return inscricao
 
@@ -250,5 +285,14 @@ def desligar(
         )
     except ErroDeCadastro as erro:
         raise _http(erro) from erro
+    auditoria.registrar_evento(
+        conexao,
+        usuario_id=acesso.usuario_id,
+        acao=auditoria.MATRICULA_DESLIGADA,
+        alvo_tipo="matricula",
+        alvo_id=matricula_id,
+        programa_id=acesso.programa_id,
+        detalhes={"turma_id": turma_id, "pessoa_id": matricula.pessoa_id},
+    )
     conexao.commit()
     return matricula

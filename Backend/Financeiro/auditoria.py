@@ -50,18 +50,9 @@ ROTULOS = {
 # Ações dos outros módulos da trilha, para a tela única de Auditoria (GET /auditoria
 # com ``modulo=gestao``, ``plataforma`` ou ``todos``). Os códigos são os que
 # ``Gestao/`` e ``Acesso/`` gravam; um código sem rótulo aparece como veio.
-ROTULOS_DA_GESTAO = {
-    "consulta_visao_integrada": "Consultou a visão integrada",
-    "alerta_infrequencia": "Alerta de infrequência criado",
-    "acao_busca_ativa": "Registrou ação de busca ativa",
-    "alerta_encerrado": "Encerrou alerta de infrequência",
-    "download_evidencia": "Baixou evidência de atividade",
-    "download_documento": "Baixou documento de pessoa atendida",
-    "duplicidade_confirmada": "Cadastrou pessoa com possível duplicidade",
-    "autorizacao_revogada": "Revogou autorização",
-    "conflito_de_horario": "Matrícula com conflito de horário",
-    ACESSO_NEGADO: "Acesso negado",
-}
+# Os rótulos da Gestão moram no próprio módulo (``Gestao/auditoria.py``, T-81): ação nova
+# da Gestão ganha rótulo lá, sem mexer neste arquivo.
+from Gestao.auditoria import ROTULOS as ROTULOS_DA_GESTAO  # noqa: E402
 ROTULOS_DA_PLATAFORMA = {
     "login": "Entrou no sistema",
     "login_falhou": "Tentativa de entrar sem sucesso",

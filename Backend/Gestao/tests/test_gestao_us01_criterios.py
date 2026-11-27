@@ -96,6 +96,11 @@ def como(cabecalhos, usuario_id):
     return {**cabecalhos, "X-Usuario-Id": usuario_id}
 
 
+def negacoes(banco):
+    """Só os acessos negados: as alterações permitidas também entram na trilha (T-81)."""
+    return [r for r in registros(banco) if r["acao"] == "acesso_negado"]
+
+
 def registros(banco):
     with banco.connect() as conexao:
         linhas = conexao.execute(
@@ -319,7 +324,7 @@ def test_negacoes_do_desligado_continuam_na_trilha_depois_do_revinculo(cliente, 
     )
 
     assert cliente.get(EQUIPE, headers=como(cabecalhos, "rafael")).status_code == 200
-    assert [r["usuario_id"] for r in registros(programa)] == ["rafael"]
+    assert [r["usuario_id"] for r in negacoes(programa)] == ["rafael"]
 
 
 # --- Critério 3: acesso negado gera registro na trilha de auditoria -------------------
@@ -386,7 +391,7 @@ def test_registro_de_acesso_negado_nao_pode_ser_alterado_nem_apagado(cliente, ca
         with pytest.raises(DBAPIError, match="apenas inclus"):
             with programa.begin() as conexao:
                 conexao.execute(sa.text(comando))
-    assert [r["usuario_id"] for r in registros(programa)] == ["rafael"]
+    assert [r["usuario_id"] for r in negacoes(programa)] == ["rafael"]
 
 
 @pytest.mark.parametrize(
@@ -405,7 +410,7 @@ def test_acesso_permitido_nao_gera_registro_de_negacao(cliente, cabecalhos, prog
     resposta = cliente.request(metodo, rota, json=corpo, headers=como(cabecalhos, usuario))
 
     assert resposta.status_code < 300
-    assert registros(programa) == []
+    assert negacoes(programa) == []
 
 
 @pytest.mark.parametrize(
