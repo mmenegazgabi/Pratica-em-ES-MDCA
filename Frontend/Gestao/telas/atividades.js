@@ -122,7 +122,7 @@ const avisoDeCopia = (copiaDe, o_que) =>
 export const rotaDoEncontro = (programaId, atividadeId) =>
   `#/atividades/${encodeURIComponent(programaId)}/encontro/${encodeURIComponent(atividadeId)}`;
 
-const rotaDoRegistro = (programaId, turmaId, data) =>
+export const rotaDoRegistro = (programaId, turmaId, data) =>
   `#/atividades/${encodeURIComponent(programaId)}/registro/${encodeURIComponent(turmaId)}?data=${data}`;
 
 // --- Agenda --------------------------------------------------------------------------

@@ -273,6 +273,19 @@ export function obterIndicadores({ programaId = "", inicio = "", fim = "" } = {}
 }
 
 /**
+ * Pendências do período em números (T-91): mesmos filtros de obterIndicadores.
+ * { periodo, totais: { chamadas_sem_registro, encontros_sem_evidencia, autorizacoes_de_imagem_vencidas, total }, programas }
+ */
+export function obterPendencias({ programaId = "", inicio = "", fim = "" } = {}) {
+  const busca = new URLSearchParams();
+  if (programaId) busca.set("programa_id", programaId);
+  if (inicio) busca.set("inicio", inicio);
+  if (fim) busca.set("fim", fim);
+  const consulta = busca.toString();
+  return requisitar(`/gestao/pendencias${consulta ? `?${consulta}` : ""}`);
+}
+
+/**
  * Trilha única de auditoria (GET /auditoria): `modulo` = todos, gestao, financeiro ou
  * plataforma; `desde`/`ate` em AAAA-MM-DD; `pagina` e `tamanho`. Vazios ficam de fora.
  * Resposta: { itens, total, pagina, tamanho, escopo } ("proprios" para a Psicologia).

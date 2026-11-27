@@ -37,6 +37,7 @@ from typing import Dict, List, Optional, Sequence
 import sqlalchemy as sa
 from sqlalchemy.engine import Connection
 
+from Gestao.autorizacoes import REVOGADA, VENCIDA, autorizacoes_por_pessoa, situacao_de_imagem
 from Gestao.erros import DadosInvalidos
 from Gestao.plano_de_acao import percentual
 from Gestao.visao_integrada import execucao_fisica
@@ -235,3 +236,121 @@ def calcular(
         percentual_medio_das_metas=_media(todas_as_metas),
     )
     return Indicadores(periodo=recorte, totais=totais, programas=por_programa)
+
+
+# --- Pendências antes de fechar o período (T-91) ------------------------------------
+#
+# O que falta registrar no recorte, em números (sem nome de pessoa):
+#
+# - **Chamadas sem registro:** dias previstos na agenda da turma (dias da semana), já
+#   passados (até ontem), desde que a turma existe, sem encontro registrado.
+# - **Encontros sem evidência:** encontros do período sem nenhuma foto ou documento.
+# - **Autorizações de imagem vencidas ou revogadas:** pessoas ativas do programa cuja
+#   autorização de imagem não está vigente hoje (quem nunca teve não entra: é outro caso).
+
+
+@dataclass(frozen=True)
+class NumerosDePendencia:
+    chamadas_sem_registro: int
+    encontros_sem_evidencia: int
+    autorizacoes_de_imagem_vencidas: int
+
+    @property
+    def total(self) -> int:
+        return self.chamadas_sem_registro + self.encontros_sem_evidencia + self.autorizacoes_de_imagem_vencidas
+
+
+@dataclass(frozen=True)
+class PendenciasDoPrograma:
+    programa_id: str
+    nome: str
+    identificador: Optional[str]
+    numeros: NumerosDePendencia
+
+
+@dataclass(frozen=True)
+class Pendencias:
+    periodo: Periodo
+    totais: NumerosDePendencia
+    programas: List[PendenciasDoPrograma]
+
+
+def _contagem_por_programa(conexao: Connection, sql: str, parametros: dict) -> Dict[str, int]:
+    return dict(conexao.execute(sa.text(sql), parametros).all())
+
+
+def _autorizacoes_vencidas(conexao: Connection, ids: Sequence[str], hoje: date) -> Dict[str, int]:
+    pessoas = conexao.execute(
+        sa.text("SELECT id, programa_id FROM pessoas WHERE programa_id = ANY(:ids) AND situacao = 'ativo'"),
+        {"ids": list(ids)},
+    ).all()
+    autorizacoes = autorizacoes_por_pessoa(conexao, [p.id for p in pessoas], hoje=hoje)
+    contagem: Dict[str, int] = {}
+    for pessoa in pessoas:
+        if situacao_de_imagem(autorizacoes.get(pessoa.id, [])) in (VENCIDA, REVOGADA):
+            contagem[pessoa.programa_id] = contagem.get(pessoa.programa_id, 0) + 1
+    return contagem
+
+
+def pendencias(
+    conexao: Connection,
+    programa_ids: Optional[Sequence[str]],
+    recorte: Periodo,
+    hoje: date,
+) -> Pendencias:
+    """Pendências dos programas (``None`` = todos) no período, por programa e no total."""
+    programas = _programas(conexao, programa_ids)
+    ids = [p.id for p in programas]
+    parametros = {"ids": ids, "inicio": recorte.inicio, "fim": recorte.fim, "ontem": hoje - timedelta(days=1)}
+
+    sem_registro = _contagem_por_programa(
+        conexao,
+        """
+        SELECT t.programa_id, count(*)
+        FROM turmas t
+        CROSS JOIN LATERAL generate_series(
+            greatest(CAST(:inicio AS date), CAST(t.criado_em AS date)),
+            least(CAST(:fim AS date), CAST(:ontem AS date)),
+            interval '1 day'
+        ) AS dia
+        WHERE t.programa_id = ANY(:ids)
+          AND CAST(extract(isodow FROM dia) AS smallint) = ANY(t.dias_semana)
+          AND NOT EXISTS (
+              SELECT 1 FROM atividades a WHERE a.turma_id = t.id AND a.data = CAST(dia AS date)
+          )
+        GROUP BY t.programa_id
+        """,
+        parametros,
+    )
+    sem_evidencia = _contagem_por_programa(
+        conexao,
+        """
+        SELECT a.programa_id, count(*)
+        FROM atividades a
+        WHERE a.programa_id = ANY(:ids) AND a.data BETWEEN :inicio AND :fim
+          AND NOT EXISTS (SELECT 1 FROM evidencias e WHERE e.atividade_id = a.id)
+        GROUP BY a.programa_id
+        """,
+        parametros,
+    )
+    vencidas = _autorizacoes_vencidas(conexao, ids, hoje)
+
+    por_programa = [
+        PendenciasDoPrograma(
+            programa_id=p.id,
+            nome=p.nome,
+            identificador=p.identificador,
+            numeros=NumerosDePendencia(
+                chamadas_sem_registro=sem_registro.get(p.id, 0),
+                encontros_sem_evidencia=sem_evidencia.get(p.id, 0),
+                autorizacoes_de_imagem_vencidas=vencidas.get(p.id, 0),
+            ),
+        )
+        for p in programas
+    ]
+    totais = NumerosDePendencia(
+        chamadas_sem_registro=sum(p.numeros.chamadas_sem_registro for p in por_programa),
+        encontros_sem_evidencia=sum(p.numeros.encontros_sem_evidencia for p in por_programa),
+        autorizacoes_de_imagem_vencidas=sum(p.numeros.autorizacoes_de_imagem_vencidas for p in por_programa),
+    )
+    return Pendencias(periodo=recorte, totais=totais, programas=por_programa)

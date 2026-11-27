@@ -42,6 +42,7 @@ test("o alerta da API vira aviso com título, descrição e destino no acompanha
     type: "Infrequência",
     status: "Em aberto",
     person: "pe-lara",
+    programa: undefined,
     date: "2026-11-05",
     link: "/alertas/al-1",
     origem: "api",

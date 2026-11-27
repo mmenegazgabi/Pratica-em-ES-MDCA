@@ -105,6 +105,15 @@ o cálculo único que a tela de Indicadores, a Visão geral e o relatório técn
 - **Sem dado pessoal:** só contagens, somas e percentuais.
 - Período invertido ou com mais de 366 dias: **400**.
 
+`GET /gestao/pendencias` (T-91, Visão geral) usa os mesmos filtros, o mesmo recorte e o
+mesmo acesso, e devolve só contagens do que falta antes de fechar o período:
+
+- **Chamadas sem registro:** dias previstos da turma (dias da semana), desde a criação
+  da turma até ontem, sem encontro registrado.
+- **Encontros sem evidência:** encontros do período sem foto ou documento.
+- **Autorizações de imagem vencidas ou revogadas:** pessoas ativas do programa sem
+  autorização vigente hoje (quem nunca teve não entra).
+
 ## Acesso às rotas de programa (provisório até a T-33)
 
 - O backend aceita a sessão do login único (`docs/login.md`): com o token da sessão,
