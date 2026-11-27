@@ -16,6 +16,7 @@ Gestao/
   plano_de_acao.py  # objetivos, ações, metas, registros do realizado e painel
   equipe.py       # equipe e espaços de cada programa
   indicadores.py  # indicadores agregados por programa e período (US-10)
+  relatorio_tecnico.py  # relatório técnico do programa (US-11), desenhado por Shared/relatorios.py
   usuarios.py     # usuários e papéis da plataforma (só consulta)
   routers/        # rotas FastAPI, todas com prefixo /gestao
     __init__.py   # junta todos os routers de Gestão num só
@@ -113,6 +114,30 @@ mesmo acesso, e devolve só contagens do que falta antes de fechar o período:
 - **Encontros sem evidência:** encontros do período sem foto ou documento.
 - **Autorizações de imagem vencidas ou revogadas:** pessoas ativas do programa sem
   autorização vigente hoje (quem nunca teve não entra).
+
+### Relatório técnico (US-11)
+
+| Rota | O que faz |
+|---|---|
+| `POST /gestao/relatorios-tecnicos/previa` | O conteúdo do relatório (mesmas seções e linhas do arquivo) e as pendências |
+| `POST /gestao/relatorios-tecnicos/exportacao?formato=pdf\|xlsx` | O arquivo; a emissão fica na trilha (`relatorio_tecnico_emitido`) |
+| `GET /gestao/relatorios-tecnicos/emissoes` | Histórico das emissões, lido da trilha |
+
+Corpo da prévia e da exportação: `programa_id`, `inicio`, `fim` (sem datas, o mês atual),
+`finalidade` (`interna` ou `externa`), `secoes` (`plano`, `pessoas`, `atividades`,
+`indicadores`, `evidencias`, `financeiro`) e `evidencias` (ids; vazio = todas do período).
+
+- **Quem emite:** coordenação e administração, nas duas finalidades; direção, só
+  `externa`; a equipe não emite. A seção financeira só entra para quem vê valores
+  financeiros.
+- **Circulação externa sem dados pessoais:**
+  - pessoas aparecem só em número por turma;
+  - os encontros saem sem o conteúdo digitado;
+  - entram só as evidências em que todas as pessoas presentes têm autorização de imagem
+    vigente, sem descrição nem nome do arquivo.
+- **Pendências antes da versão final:** chamadas sem registro, encontros sem evidência,
+  autorizações de imagem vencidas e evidências barradas. Aparecem na prévia, mas não
+  bloqueiam a emissão.
 
 ## Acesso às rotas de programa (provisório até a T-33)
 

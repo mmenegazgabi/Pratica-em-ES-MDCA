@@ -523,3 +523,47 @@ def exigir_acesso_aos_usuarios(
     conexao: Connection = Depends(obter_conexao),
 ) -> str:
     return verificar_acesso_aos_usuarios(conexao, usuario_id, requisicao=requisicao)
+
+
+# Relatório técnico (T-75 · US-11): quem emite. A coordenação e a administração emitem nas
+# duas finalidades; a direção só para circulação externa, porque não vê dados individuais
+# das pessoas atendidas. A equipe dos programas não emite.
+PAPEIS_QUE_EMITEM_RELATORIOS = {"coordenacao", "administracao"}
+PAPEIS_QUE_EMITEM_SO_RELATORIOS_EXTERNOS = {"direcao"}
+SEM_PERMISSAO_PARA_RELATORIO = "Seu perfil não emite relatórios técnicos."
+SO_RELATORIO_EXTERNO = "Seu perfil emite só relatórios para circulação externa, sem dados pessoais."
+
+
+def finalidades_do_relatorio(conexao: Connection, usuario_id: str) -> Set[str]:
+    """Finalidades que o usuário pode emitir: {"interna", "externa"}, só {"externa"} ou nada."""
+    globais = _ativo_e_papeis_globais(conexao, usuario_id) or set()
+    if globais & PAPEIS_QUE_EMITEM_RELATORIOS:
+        return {"interna", "externa"}
+    if globais & PAPEIS_QUE_EMITEM_SO_RELATORIOS_EXTERNOS:
+        return {"externa"}
+    return set()
+
+
+def verificar_emissao_de_relatorio(
+    conexao: Connection,
+    usuario_id: str,
+    programa_id: str,
+    finalidade: str,
+    *,
+    requisicao: Optional[Request] = None,
+) -> None:
+    if not programa_existe(conexao, programa_id):
+        raise HTTPException(status_code=404, detail=PROGRAMA_NAO_ENCONTRADO)
+    permitidas = finalidades_do_relatorio(conexao, usuario_id)
+    if finalidade in permitidas:
+        return
+    _registrar_negacao(
+        conexao,
+        usuario_id,
+        alvo_tipo="programa",
+        alvo_id=programa_id,
+        operacao="relatorio_tecnico",
+        descricao=f"Tentativa de emitir relatório técnico ({finalidade}) sem permissão",
+        requisicao=requisicao,
+    )
+    raise HTTPException(status_code=403, detail=SO_RELATORIO_EXTERNO if permitidas else SEM_PERMISSAO_PARA_RELATORIO)
