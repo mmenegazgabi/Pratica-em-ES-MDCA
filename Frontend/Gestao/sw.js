@@ -37,6 +37,7 @@ const ARQUIVOS = [
   "telas/auditoria.js",
   "telas/atividades.js",
   "telas/equipe.js",
+  "telas/indicadores.js",
   "telas/pessoas.js",
   "telas/plano.js",
   "telas/programas.js",

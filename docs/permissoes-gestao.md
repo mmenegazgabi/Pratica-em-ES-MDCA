@@ -81,6 +81,19 @@ financeiros recebe a visão com `financeira: null`, sem 403. Toda consulta é re
 na auditoria (`consulta_visao_integrada`). Os valores financeiros vêm dos orçamentos do
 próprio programa no banco (vínculo só pelo id; veja `docs/persistencia-financeiro.md`).
 
+### Indicadores (US-10)
+
+| Ação | Coordenação | Educador | Assist. social | Psicólogo | Direção | Administração |
+|---|---|---|---|---|---|---|
+| Consultar os indicadores agregados | Todos | Programa | Programa | Programa | Todos | Todos |
+
+Rota: `GET /gestao/indicadores`, com `programa_id`, `inicio` e `fim` opcionais (sem
+datas, o mês atual). Sem `programa_id`, a resposta traz só os programas que a pessoa
+pode consultar; com um programa fora do seu recorte, 403 registrado na trilha. A
+resposta só tem números agregados (pessoas acompanhadas, encontros, presenças e
+ausências, frequência, horas e média das metas), sem dado pessoal, e diz se o período
+já fechou (`fechado`: o fim já passou).
+
 ### Pessoas atendidas (US-03)
 
 Os cadastros têm dados de crianças e famílias. A Direção não vê cadastros individuais.
@@ -146,10 +159,10 @@ porque ainda não há programa para estar vinculado.
 
 ### Ainda sem rota na API
 
-Frequência consolidada, atendimentos técnicos (social e psicológico), relatórios e
-rede ainda não têm API. A consulta à trilha de auditoria já tem (`GET /auditoria`,
-tela **Auditoria**): Coordenação, Direção e Administração veem tudo; a Psicologia vê só
-os próprios registros; detalhes em [permissoes-financeiro.md](permissoes-financeiro.md). A permissão de
+Atendimentos técnicos (social e psicológico), relatórios e rede ainda não têm API.
+A consulta à trilha de auditoria já tem (`GET /auditoria`, tela **Auditoria**):
+Coordenação, Direção e Administração veem tudo; a Psicologia vê só os próprios
+registros; detalhes em [permissoes-financeiro.md](permissoes-financeiro.md). A permissão de
 cada um entra nesta matriz junto com a US correspondente. Por enquanto, as telas
 dessas funcionalidades são só demonstração, com o menu por perfil em
 [`Frontend/Gestao/base/papeis.js`](../Frontend/Gestao/base/papeis.js).
