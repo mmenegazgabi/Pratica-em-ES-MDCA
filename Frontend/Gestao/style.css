@@ -424,6 +424,8 @@ h1[tabindex="-1"]:focus{outline:none}
 .integrada-grid>.card{container-type:inline-size}
 @container (max-width:560px){.integrada-grid .integrada-stats{grid-template-columns:1fr}.integrada-grid .integrada-stats .stat{padding-left:0}.integrada-grid .integrada-stats .stat+.stat{border-left:0;border-top:1px solid var(--line)}}
 .integrada-vinculo{margin-top:16px;font-size:12px}
+/* Indicadores (T-73): aviso do período e metas por programa. */
+.indicadores-periodo{margin:0;font-size:13px;color:var(--color-neutral-700)}.indicadores-periodo.em-aberto{padding:10px 14px;border-left:3px solid var(--status-pending);background:color-mix(in srgb,var(--status-pending) 12%,var(--paper))}.indicadores-meta .progress-label{display:flex;justify-content:space-between;gap:12px}
 .integrada-grid .meta-percentual{min-width:110px}
 .integrada-grid .meta-percentual .progress{margin-top:6px}
 .integrada-grid td small{display:block;color:var(--color-neutral-700)}

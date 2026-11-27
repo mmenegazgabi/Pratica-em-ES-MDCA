@@ -15,6 +15,7 @@ Gestao/
   programas.py    # programas (regras e consultas, um arquivo por assunto)
   plano_de_acao.py  # objetivos, ações, metas, registros do realizado e painel
   equipe.py       # equipe e espaços de cada programa
+  indicadores.py  # indicadores agregados por programa e período (US-10)
   usuarios.py     # usuários e papéis da plataforma (só consulta)
   routers/        # rotas FastAPI, todas com prefixo /gestao
     __init__.py   # junta todos os routers de Gestão num só
@@ -85,6 +86,24 @@ Respostas de erro: 404 (programa ou vínculo inexistente), 403 (sem permissão),
 409 (vínculo ativo repetido, desligamento já registrado, espaço com nome repetido),
 400 (usuário ou papel inexistente, papel `coordenacao` — que é da conta, não de vínculo —,
 saída antes da entrada) e 422 (corpo inválido).
+
+### Indicadores (US-10)
+
+`GET /gestao/indicadores?programa_id=&inicio=&fim=` devolve os indicadores do período
+(sem datas, o mês atual; com só uma das datas, o mês dela), por programa e no total. É
+o cálculo único que a tela de Indicadores, a Visão geral e o relatório técnico usam.
+
+- **Quem vê:** cada pessoa vê os programas que pode consultar (equipe: os do seu vínculo
+  ativo; direção, coordenação e administração: todos). Com `programa_id` fora do
+  recorte, **403** registrado em `log_auditoria`; programa inexistente, **404**.
+- **Período fechado:** `periodo.fechado` é verdadeiro quando o fim já passou. Um
+  período que inclui hoje ainda pode mudar. Não há fechamento manual.
+- **Números:** pessoas acompanhadas (matrícula na turma durante o período, sem lista de
+  espera), encontros realizados, presenças e ausências (falta justificada conta como
+  ausência), frequência, horas (duração da turma em cada encontro) e a média das metas
+  com o realizado acumulado até o fim do período.
+- **Sem dado pessoal:** só contagens, somas e percentuais.
+- Período invertido ou com mais de 366 dias: **400**.
 
 ## Acesso às rotas de programa (provisório até a T-33)
 

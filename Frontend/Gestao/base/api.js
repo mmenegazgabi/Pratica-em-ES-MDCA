@@ -256,6 +256,22 @@ export function obterVisaoIntegrada(programaId, { inicio = "", fim = "" } = {}) 
   return requisitar(`${programa(programaId)}/visao-integrada${consulta ? `?${consulta}` : ""}`);
 }
 
+// Indicadores agregados por programa e período (T-72 · US-10).
+/**
+ * filtros: { programaId?, inicio?, fim? } em AAAA-MM-DD; sem datas, o mês atual.
+ * { periodo: { inicio, fim, fechado }, totais: Numeros, programas: [{ programa_id, nome, identificador, numeros }] }
+ * Numeros: { pessoas_acompanhadas, encontros_realizados, presencas, ausencias, frequencia,
+ *            horas_de_atividades, metas, percentual_medio_das_metas }
+ */
+export function obterIndicadores({ programaId = "", inicio = "", fim = "" } = {}) {
+  const busca = new URLSearchParams();
+  if (programaId) busca.set("programa_id", programaId);
+  if (inicio) busca.set("inicio", inicio);
+  if (fim) busca.set("fim", fim);
+  const consulta = busca.toString();
+  return requisitar(`/gestao/indicadores${consulta ? `?${consulta}` : ""}`);
+}
+
 // Pessoas atendidas, famílias e autorizações (T-48 · US-03; telas da T-49).
 const pessoa = (id) => `/gestao/pessoas/${encodeURIComponent(id)}`;
 
