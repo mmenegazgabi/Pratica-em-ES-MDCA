@@ -188,13 +188,23 @@ def reais(texto: str) -> Decimal:
 
 
 def linhas_pdf(conteudo: bytes):
-    """Linhas de texto de todas as páginas, sem o rodapé e o número de página."""
+    """Textos desenhados no PDF, na ordem do desenho, sem o rodapé e o número de página.
+
+    Cada item é um trecho que o reportlab desenhou: uma linha de uma célula da tabela.
+    Lê pelos trechos (``visitor_text``), e não pelas quebras de linha do texto extraído,
+    porque o jeito como o pypdf junta trechos da mesma altura numa linha muda entre
+    versões: com pypdf 7.2 e reportlab 5.1.2, as células de uma linha da tabela saem
+    juntas ("Orçado R$ 1.000,00") em vez de uma por linha.
+    """
     linhas = []
     for pagina in PdfReader(io.BytesIO(conteudo)).pages:
-        for linha in pagina.extract_text().splitlines():
-            linha = linha.strip()
-            if linha and not linha.startswith(RODAPE) and not re.fullmatch(r"Página \d+", linha):
-                linhas.append(linha)
+        trechos = []
+        pagina.extract_text(visitor_text=lambda texto, *_: trechos.append(texto))
+        for trecho in trechos:
+            for linha in trecho.splitlines():
+                linha = linha.strip()
+                if linha and not linha.startswith(RODAPE) and not re.fullmatch(r"Página \d+", linha):
+                    linhas.append(linha)
     return linhas
 
 
