@@ -351,3 +351,97 @@ def test_programa_que_nao_existe_recebe_404(cliente, cabecalhos, dados):
 
 def test_sem_login_recebe_401(cliente, dados):
     assert cliente.get(INDICADORES).status_code == 401
+
+
+# --- 6. Pendências antes de fechar o período (T-91) --------------------------------
+
+PENDENCIAS = "/gestao/pendencias"
+
+
+@pytest.fixture
+def com_pendencias(dados):
+    """Turmas criadas em 01/09, só às quartas (t-1, t-2) e quintas (t-9); uma evidência no
+    encontro de 02/09; autorização de imagem vencida (Lara, Caio), revogada (Nina) e
+    vigente (Davi); Rui nunca teve."""
+    with dados.begin() as c:
+        c.execute(sa.text("UPDATE turmas SET criado_em = '2026-09-01', dias_semana = '{3}' WHERE id IN ('t-1', 't-2')"))
+        c.execute(sa.text("UPDATE turmas SET criado_em = '2026-09-01', dias_semana = '{4}' WHERE id = 't-9'"))
+        c.execute(
+            sa.text(
+                "INSERT INTO evidencias (id, registro_id, atividade_id, programa_id, autor_id, data, chave_arquivo, nome_arquivo, content_type, tamanho) "
+                "VALUES ('ev-1', 'ev-1', 'a-1', 'p-1', 'jessica', '2026-09-02', 'gestao/evidencias/ev-1', 'foto.jpg', 'image/jpeg', 10)"
+            )
+        )
+        c.execute(
+            sa.text(
+                "INSERT INTO autorizacoes (id, pessoa_id, tipo, valida_de, valida_ate, revogada_em) VALUES "
+                "('au-1', 'pe-lara', 'uso_de_imagem', '2025-01-01', '2026-01-31', NULL), "
+                "('au-2', 'pe-davi', 'uso_de_imagem', '2026-01-01', '2099-12-31', NULL), "
+                "('au-3', 'pe-nina', 'uso_de_imagem', '2026-01-01', '2099-12-31', '2026-06-01'), "
+                "('au-4', 'pe-caio', 'uso_de_imagem', '2025-01-01', '2026-02-28', NULL)"
+            )
+        )
+    return dados
+
+
+def pendencias(cliente, cabecalhos, usuario="dora", **params):
+    resposta = cliente.get(PENDENCIAS, params=params, headers=como(cabecalhos, usuario))
+    assert resposta.status_code == 200, resposta.text
+    return resposta.json()
+
+
+def test_pendencias_de_setembro_por_programa_e_no_total(cliente, cabecalhos, com_pendencias):
+    corpo = pendencias(cliente, cabecalhos, **SETEMBRO)
+    numeros = {p["programa_id"]: p["numeros"] for p in corpo["programas"]}
+
+    # t-1: quartas 2, 9, 16, 23 e 30 (2 e 9 registradas) = 3; t-2: só a de 16 registrada = 4.
+    # Evidência só no encontro de 02/09. Lara vencida e Nina revogada; Rui nunca teve.
+    assert numeros["p-1"] == {
+        "chamadas_sem_registro": 7,
+        "encontros_sem_evidencia": 2,
+        "autorizacoes_de_imagem_vencidas": 2,
+        "total": 11,
+    }
+    # t-9: quintas 3, 10, 17 e 24 (3 registrada) = 3.
+    assert numeros["p-2"] == {
+        "chamadas_sem_registro": 3,
+        "encontros_sem_evidencia": 1,
+        "autorizacoes_de_imagem_vencidas": 1,
+        "total": 5,
+    }
+    assert numeros["p-3"]["total"] == 0
+    assert corpo["totais"] == {
+        "chamadas_sem_registro": 10,
+        "encontros_sem_evidencia": 3,
+        "autorizacoes_de_imagem_vencidas": 3,
+        "total": 16,
+    }
+
+
+def test_chamada_antes_da_turma_existir_nao_e_pendencia(cliente, cabecalhos, com_pendencias):
+    # Agosto: as turmas só foram criadas em setembro.
+    assert pendencias(cliente, cabecalhos, **AGOSTO)["totais"]["chamadas_sem_registro"] == 0
+
+
+def test_dia_de_hoje_e_futuro_nao_contam_como_chamada_sem_registro(cliente, cabecalhos, com_pendencias):
+    with com_pendencias.begin() as c:
+        c.execute(sa.text("UPDATE turmas SET criado_em = now(), dias_semana = '{1,2,3,4,5,6,7}'"))
+
+    # Turmas criadas hoje, todos os dias: até ontem não havia encontro previsto.
+    assert pendencias(cliente, cabecalhos)["totais"]["chamadas_sem_registro"] == 0
+
+
+def test_pendencias_seguem_o_recorte_de_quem_consulta(cliente, cabecalhos, com_pendencias):
+    corpo = pendencias(cliente, cabecalhos, "jessica", **SETEMBRO)
+
+    assert [p["programa_id"] for p in corpo["programas"]] == ["p-1"]
+    assert corpo["totais"]["total"] == 11
+    assert cliente.get(PENDENCIAS, params={"programa_id": "p-2"}, headers=como(cabecalhos, "jessica")).status_code == 403
+
+
+def test_pendencias_nao_tem_dados_pessoais(cliente, cabecalhos, com_pendencias):
+    texto = json.dumps(pendencias(cliente, cabecalhos, **SETEMBRO), ensure_ascii=False)
+
+    for nome in NOMES:
+        assert nome.split()[0] not in texto
+    assert "pe-" not in texto

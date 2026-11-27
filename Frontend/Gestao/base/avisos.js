@@ -16,6 +16,7 @@ export const comoAviso = (a) => ({
   type: "Infrequência",
   status: "Em aberto",
   person: a.pessoa_id,
+  programa: a.programa_id,
   date: String(a.criado_em || "").slice(0, 10),
   link: `/alertas/${a.id}`,
   origem: "api",

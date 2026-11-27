@@ -272,6 +272,19 @@ export function obterIndicadores({ programaId = "", inicio = "", fim = "" } = {}
   return requisitar(`/gestao/indicadores${consulta ? `?${consulta}` : ""}`);
 }
 
+/**
+ * Pendências do período em números (T-91): mesmos filtros de obterIndicadores.
+ * { periodo, totais: { chamadas_sem_registro, encontros_sem_evidencia, autorizacoes_de_imagem_vencidas, total }, programas }
+ */
+export function obterPendencias({ programaId = "", inicio = "", fim = "" } = {}) {
+  const busca = new URLSearchParams();
+  if (programaId) busca.set("programa_id", programaId);
+  if (inicio) busca.set("inicio", inicio);
+  if (fim) busca.set("fim", fim);
+  const consulta = busca.toString();
+  return requisitar(`/gestao/pendencias${consulta ? `?${consulta}` : ""}`);
+}
+
 // Pessoas atendidas, famílias e autorizações (T-48 · US-03; telas da T-49).
 const pessoa = (id) => `/gestao/pessoas/${encodeURIComponent(id)}`;
 

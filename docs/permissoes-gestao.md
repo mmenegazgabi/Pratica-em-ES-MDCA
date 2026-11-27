@@ -86,6 +86,7 @@ próprio programa no banco (vínculo só pelo id; veja `docs/persistencia-financ
 | Ação | Coordenação | Educador | Assist. social | Psicólogo | Direção | Administração |
 |---|---|---|---|---|---|---|
 | Consultar os indicadores agregados | Todos | Programa | Programa | Programa | Todos | Todos |
+| Consultar as pendências do período (em números) | Todos | Programa | Programa | Programa | Todos | Todos |
 
 Rota: `GET /gestao/indicadores`, com `programa_id`, `inicio` e `fim` opcionais (sem
 datas, o mês atual). Sem `programa_id`, a resposta traz só os programas que a pessoa
@@ -93,6 +94,12 @@ pode consultar; com um programa fora do seu recorte, 403 registrado na trilha. A
 resposta só tem números agregados (pessoas acompanhadas, encontros, presenças e
 ausências, frequência, horas e média das metas), sem dado pessoal, e diz se o período
 já fechou (`fechado`: o fim já passou).
+
+Rota das pendências: `GET /gestao/pendencias`, com os mesmos filtros e o mesmo recorte.
+Traz, por programa e no total, só contagens: chamadas sem registro, encontros sem
+evidência e autorizações de imagem vencidas ou revogadas. Na Visão geral, o cartão
+"Antes de fechar o período" aparece só para quem gera relatórios (coordenação, direção
+e administração).
 
 ### Pessoas atendidas (US-03)
 

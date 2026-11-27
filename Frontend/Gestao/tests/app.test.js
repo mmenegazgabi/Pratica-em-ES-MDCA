@@ -1,4 +1,4 @@
-// Aplicação inteira no jsdom: menu lateral do protótipo, aviso de demonstração,
+// Aplicação inteira no jsdom: menu lateral, Visão geral pela API (T-91),
 // Programas pela API, troca de módulo e menu por perfil.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -27,6 +27,8 @@ const RESPOSTAS = [
   [/\/gestao\/programas$/, [{ id: "p-1", nome: "Semear" }]],
   [/\/gestao\/programas\/p-1\/turmas$/, [{ id: "t-9", programa_id: "p-1", nome: "Oficina de arte", espaco: "Ateliê", responsavel: "Jéssica", capacidade: 2, ativas: 2, em_espera: 1, vagas_livres: 0, dias_semana: [1, 3], hora_inicio: "14:00:00", hora_fim: "16:00:00" }]],
   [/\/gestao\/alertas(\?situacao=aberto)?$/, [{ id: "al-9", descricao: "4 faltas seguidas na turma Oficina de arte.", titulo: "Lara Oliveira precisa de um contato", programa_id: "p-1", pessoa_id: "pe-lara", pessoa: "Lara Oliveira", turma: "Oficina de arte", responsavel: "Patrícia Souza", situacao: "aberto", faltas_consecutivas: 3, limite: 3, primeira_falta: "2026-11-03", ultima_falta: "2026-11-05", criado_em: "2026-11-05T18:00:00Z" }]],
+  [/\/gestao\/indicadores/, { periodo: { inicio: "2026-11-01", fim: "2026-11-30", fechado: false }, totais: { pessoas_acompanhadas: 3, encontros_realizados: 4, presencas: 9, ausencias: 3, frequencia: 75, horas_de_atividades: 8, metas: 1, percentual_medio_das_metas: 63.3 }, programas: [{ programa_id: "p-1", nome: "Semear", identificador: "SEMEAR", numeros: { pessoas_acompanhadas: 3, encontros_realizados: 4, presencas: 9, ausencias: 3, frequencia: 75, horas_de_atividades: 8, metas: 1, percentual_medio_das_metas: 63.3 } }] }],
+  [/\/gestao\/pendencias/, { periodo: { inicio: "2026-11-01", fim: "2026-11-30", fechado: false }, totais: { chamadas_sem_registro: 2, encontros_sem_evidencia: 1, autorizacoes_de_imagem_vencidas: 0, total: 3 }, programas: [] }],
   [/\/gestao\/pessoas$/, [{ id: "pe-lara", nome: "Lara Oliveira", data_nascimento: "2013-05-12", programa_id: "p-1", programa: "Semear", nucleo_familiar: { id: "f-1", nome: "Oliveira" }, responsaveis: [], situacao: "ativo", autorizacao_imagem: "vigente" }]],
 ];
 globalThis.fetch = async (url, opcoes = {}) => {
@@ -52,15 +54,21 @@ async function irPara(hash) {
   await esperar();
 }
 
-test("abre na Visão geral com o menu único (Gestão e Financeiro) e o aviso de demonstração", () => {
-  assert.equal($("#main h1").textContent.startsWith("Bom dia"), true);
+test("abre na Visão geral pela API, com o menu único (Gestão e Financeiro) e sem o aviso de demonstração", async () => {
+  await esperar();
+  assert.match($("#main h1").textContent, /^(Bom dia|Boa tarde|Boa noite), Ana\./);
   // Coordenação também é papel do Financeiro: as abas dos dois módulos vêm numa lista só.
   assert.equal(document.querySelectorAll(".lateral .lateral__grupo").length, 0);
   assert.equal(menu()[0], "Visão geral");
   assert.ok(menu().includes("Resumo financeiro"));
-  assert.ok($(".demo-banner"));
-  // A única chamada da Visão geral é a dos alertas abertos, para os avisos da equipe (T-90).
-  assert.deepEqual(chamadas.map((c) => c.url.replace(/^https?:\/\/[^/]+/, "")), ["/gestao/alertas?situacao=aberto"]);
+  // T-91: a Visão geral deixou de ser demonstração.
+  assert.equal($(".demo-banner"), null);
+  const urls = chamadas.map((c) => c.url.replace(/^https?:\/\/[^/]+/, ""));
+  assert.ok(urls.includes("/gestao/alertas?situacao=aberto"));
+  assert.ok(urls.some((u) => u.startsWith("/gestao/indicadores?inicio=")));
+  assert.ok(urls.some((u) => u.startsWith("/gestao/pendencias?inicio=")));
+  assert.ok(urls.some((u) => u.startsWith("/gestao/programas/p-1/agenda?")));
+  assert.match($("#main").textContent, /Pessoas acompanhadas\s*3/);
 });
 
 test("notificações e Visão geral mostram os alertas reais da API, sem os de infrequência fictícios (T-90)", async () => {
