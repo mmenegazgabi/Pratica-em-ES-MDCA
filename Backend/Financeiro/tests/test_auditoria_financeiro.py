@@ -226,10 +226,13 @@ def test_auditoria_do_financeiro_nao_mostra_eventos_da_gestao(banco_financeiro):
         c.execute(sa.text("INSERT INTO log_auditoria (usuario_id, modulo, acao) VALUES ('ana', 'gestao', 'consulta_pessoa')"))
     criar_orcamento()
 
+    # Sem ``modulo``, continua só o Financeiro (como as telas pediam antes).
     itens = client.get("/auditoria", headers=COORD).json()["itens"]
-
-    assert [i["codigo"] for i in itens] == ["criar_orcamento"]
-    assert client.get("/auditoria", params={"modulo": "gestao"}, headers=COORD).status_code == 422
+    assert [(i["codigo"], i["modulo"]) for i in itens] == [("criar_orcamento", "financeiro")]
+    # A Gestão vem quando é pedida (a tela única de Auditoria usa ``todos``).
+    gestao = client.get("/auditoria", params={"modulo": "gestao"}, headers=COORD).json()["itens"]
+    assert [(i["codigo"], i["modulo"]) for i in gestao] == [("consulta_pessoa", "gestao")]
+    assert client.get("/auditoria", params={"modulo": "outro"}, headers=COORD).status_code == 422
 
 
 def test_filtros_e_paginas_da_auditoria(banco_financeiro):

@@ -60,7 +60,7 @@ test("papel tirado depois do login some do menu", async () => {
   sessaoDeTeste({ papeis: ["direcao", "coordenacao"], papel: "coordenacao" });
   eu = [200, pessoa(["direcao"])];
   await abrir();
-  assert.deepEqual(rotulos(raiz), ["Resumo financeiro", "Painel", "Projetos", "Prestação de contas", "Auditoria financeira"]);
+  assert.deepEqual(rotulos(raiz), ["Resumo financeiro", "Painel", "Projetos", "Prestação de contas"]);
   assert.match(raiz.querySelector(".lateral__usuario").textContent, /Diretoria/);
 });
 
@@ -77,7 +77,7 @@ test("sem rede segue com a sessão guardada", async () => {
   await abrir();
   assert.equal(chamadasEu, 1);
   assert.deepEqual(destinos, []);
-  assert.deepEqual(rotulos(raiz), ["Resumo financeiro", "Lançamentos", "Projetos", "Prestação de contas", "Auditoria financeira"]);
+  assert.deepEqual(rotulos(raiz), ["Resumo financeiro", "Lançamentos", "Projetos", "Prestação de contas"]);
   assert.notEqual(localStorage.getItem("mdca.sessao"), null);
 });
 

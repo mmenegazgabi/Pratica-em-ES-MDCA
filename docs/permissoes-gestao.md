@@ -166,8 +166,10 @@ porque ainda não há programa para estar vinculado.
 
 ### Ainda sem rota na API
 
-Atendimentos técnicos (social e psicológico), relatórios,
-rede e a consulta à trilha de auditoria ainda não têm API. A permissão de
+Atendimentos técnicos (social e psicológico), relatórios e rede ainda não têm API.
+A consulta à trilha de auditoria já tem (`GET /auditoria`, tela **Auditoria**):
+Coordenação, Direção e Administração veem tudo; a Psicologia vê só os próprios
+registros; detalhes em [permissoes-financeiro.md](permissoes-financeiro.md). A permissão de
 cada um entra nesta matriz junto com a US correspondente. Por enquanto, as telas
 dessas funcionalidades são só demonstração, com o menu por perfil em
 [`Frontend/Gestao/base/papeis.js`](../Frontend/Gestao/base/papeis.js).
